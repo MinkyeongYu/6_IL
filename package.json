@@ -22,7 +22,8 @@
     "prettier": "^3.8.3",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.58.2",
-    "vite": "^5.4.21"
+    "vite": "^5.4.21",
+    "vitest": "^1.6.1"
   },
   "dependencies": {
     "phaser": "^3.90.0"
