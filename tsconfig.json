@@ -16,7 +16,7 @@
     "isolatedModules": true,
     "verbatimModuleSyntax": true,
     "allowSyntheticDefaultImports": true,
-    "types": ["vite/client", "vitest"],
+    "types": ["vite/client"],
     "baseUrl": ".",
     "paths": {
       "@/*": ["src/*"]
