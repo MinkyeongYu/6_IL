@@ -13,5 +13,8 @@
     "format": "prettier --write .",
     "test": "vitest run",
     "test:watch": "vitest"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3"
   }
 }
