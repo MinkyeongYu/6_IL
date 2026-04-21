@@ -15,7 +15,6 @@ import { Position } from '@/ecs/components/position';
 import { SpriteRef } from '@/ecs/components/sprite-ref';
 import { PlayerTag } from '@/ecs/components/tags';
 import { Health } from '@/ecs/components/health';
-import { PLAYER } from '@/config/balance';
 import { createWaveSpawner } from '@/gameplay/enemies/wave-spawner';
 import { spawnZombie } from '@/gameplay/enemies/zombie-factory';
 import { zombieAiSystem } from '@/gameplay/enemies/zombie-ai';
@@ -24,7 +23,9 @@ import { spriteSyncSystem } from '@/ecs/systems/sprite-sync';
 import { cleanupSystem } from '@/ecs/systems/cleanup';
 import { createRng, type Rng } from '@/util/rng';
 import { playerAttackSystem } from '@/gameplay/combat/attack-controller';
-import { saveGame } from '@/gameplay/persistence/save-load';
+import { saveGame, clearSave } from '@/gameplay/persistence/save-load';
+import { DeathOverlay } from '@/ui/death-overlay';
+import { showToast, getTutorialFlags, markSeen } from '@/ui/tutorial';
 
 const playerQuery = defineQuery([PlayerTag]);
 
@@ -64,6 +65,7 @@ export class VillageScene extends Phaser.Scene {
 
   create(): void {
     this.cameras.main.setBackgroundColor('#1b2434');
+    this.cameras.main.fadeIn(600, 0, 0, 0);
     this.input2 = new InputAdapter(this);
 
     this.grid = createVillageGrid(VILLAGE_GRID_SIZE, VILLAGE_GRID_SIZE, TILE_SIZE);
@@ -100,6 +102,21 @@ export class VillageScene extends Phaser.Scene {
     this.input.keyboard?.on('keydown-ONE', () => this.placement.start('barricade'));
     this.input.keyboard?.on('keydown-TWO', () => this.placement.start('campfire'));
 
+    this.bus.on('build:request', ({ kind }) => this.placement.start(kind));
+
+    // 첫 밤 튜토리얼
+    const flags = getTutorialFlags();
+    if (!flags.firstNight) {
+      showToast({
+        scene: this,
+        title: '밤이 다가옵니다',
+        body:
+          '왼쪽 하단 버튼으로 모닥불(🔥)과 바리게이트(🪵) 설치.\n' +
+          '곧 좀비가 외곽에서 몰려옵니다. 새벽까지 살아남으세요.',
+        onClose: () => markSeen('firstNight'),
+      });
+    }
+
     const isNight = this.cycle.phase === 'night' || this.cycle.phase === 'evening';
     const r = (isNight ? VISION.nightRadiusTiles : VISION.dayRadiusTiles) * TILE_SIZE;
     this.vision = new VisionMask(this, GAME_WIDTH, GAME_HEIGHT, r);
@@ -129,7 +146,7 @@ export class VillageScene extends Phaser.Scene {
       });
     });
 
-    // 새벽 시작 시 자동 저장 + Snowfield로 복귀
+    // 새벽 시작 시 자동 저장 + 페이드 아웃 후 Snowfield로 복귀
     this.bus.on('dawn:started', () => {
       saveGame({
         version: 1,
@@ -137,11 +154,14 @@ export class VillageScene extends Phaser.Scene {
         resources: this.resources.snapshot(),
         weatherRng: 42,
       });
-      this.scene.start('Snowfield', {
-        world: this.world,
-        resources: this.resources,
-        bus: this.bus,
-        cycle: this.cycle,
+      this.cameras.main.fadeOut(800, 0, 0, 0);
+      this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => {
+        this.scene.start('Snowfield', {
+          world: this.world,
+          resources: this.resources,
+          bus: this.bus,
+          cycle: this.cycle,
+        });
       });
     });
   }
@@ -167,14 +187,9 @@ export class VillageScene extends Phaser.Scene {
     ) {
       this.playerDied = true;
       this.bus.emit('player:died', { day: this.cycle.day });
-      this.cameras.main.shake(300, 0.01);
-      const peid = this.playerEid;
-      this.time.delayedCall(2000, () => {
-        Health.current[peid] = PLAYER.maxHp;
-        Health.dead[peid] = 0;
-        Position.x[peid] = (VILLAGE_GRID_SIZE * TILE_SIZE) / 2;
-        Position.y[peid] = (VILLAGE_GRID_SIZE * TILE_SIZE) / 2;
-        this.playerDied = false;
+      DeathOverlay.show(this, () => {
+        clearSave();
+        window.location.reload();
       });
     }
 

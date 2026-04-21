@@ -21,7 +21,11 @@ import type { GameEvents } from '@/events/types';
 import { DAY_CYCLE, VISION } from '@/config/balance';
 import { GAME_WIDTH, GAME_HEIGHT, TILE_SIZE } from '@/config/constants';
 import { VisionMask } from '@/gameplay/vision/vision-mask';
-import { loadGame } from '@/gameplay/persistence/save-load';
+import { loadGame, clearSave } from '@/gameplay/persistence/save-load';
+import { DeathOverlay } from '@/ui/death-overlay';
+import { Health } from '@/ecs/components/health';
+import { ChunkManager } from '@/gameplay/world/chunk-manager';
+import { showOpening, showToast, getTutorialFlags, markSeen } from '@/ui/tutorial';
 import { SpriteRef } from '@/ecs/components/sprite-ref';
 import { Position } from '@/ecs/components/position';
 import { PlayerTag, TreeTag, DeerTag } from '@/ecs/components/tags';
@@ -40,6 +44,8 @@ export class SnowfieldScene extends Phaser.Scene {
   private bus!: EventBus<GameEvents>;
   private cycle!: DayNightController;
   private vision!: VisionMask;
+  private playerDied = false;
+  private chunks!: ChunkManager;
 
   constructor() {
     super({ key: 'Snowfield' });
@@ -86,6 +92,7 @@ export class SnowfieldScene extends Phaser.Scene {
 
   create(): void {
     this.cameras.main.setBackgroundColor('#9bb4c8');
+    this.cameras.main.fadeIn(600, 0, 0, 0);
     this.input2 = new InputAdapter(this);
 
     // 플레이어가 이미 존재하면(씬 재진입) 엔티티 재사용, 스프라이트만 새로 등록
@@ -135,13 +142,46 @@ export class SnowfieldScene extends Phaser.Scene {
 
     this.vision = new VisionMask(this, GAME_WIDTH, GAME_HEIGHT, VISION.dayRadiusTiles * TILE_SIZE);
 
-    // 저녁 시작 시 Village 신으로 전환
+    this.chunks = new ChunkManager(this.world, this, this.spriteMap, this.nextGid);
+
+    // 튜토리얼: 첫 진입 시 오프닝 + 첫 채집 안내
+    const flags = getTutorialFlags();
+    if (!flags.opening) {
+      showOpening({
+        scene: this,
+        onComplete: () => {
+          markSeen('opening');
+          if (!flags.firstGather) {
+            showToast({
+              scene: this,
+              title: '첫 채집',
+              body:
+                'WASD/방향키로 이동. 초록 나무 가까이 가서 E(또는 Space)로 벌목.\n' +
+                '갈색 사슴 가까이서 E를 누르면 사냥. 자원은 좌상단에 표시됩니다.',
+              onClose: () => markSeen('firstGather'),
+            });
+          }
+        },
+      });
+    } else if (!flags.firstGather) {
+      showToast({
+        scene: this,
+        title: '첫 채집',
+        body: 'WASD로 이동. 나무/사슴 가까이서 E 키로 채집.',
+        onClose: () => markSeen('firstGather'),
+      });
+    }
+
+    // 저녁 시작 시 페이드 아웃 후 Village 신으로 전환
     this.bus.on('evening:started', () => {
-      this.scene.start('Village', {
-        world: this.world,
-        resources: this.resources,
-        bus: this.bus,
-        cycle: this.cycle,
+      this.cameras.main.fadeOut(800, 0, 0, 0);
+      this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => {
+        this.scene.start('Village', {
+          world: this.world,
+          resources: this.resources,
+          bus: this.bus,
+          cycle: this.cycle,
+        });
       });
     });
   }
@@ -176,6 +216,18 @@ export class SnowfieldScene extends Phaser.Scene {
 
     this.cycle.update(dt);
 
-    this.vision.update(Position.x[this.playerEid] ?? 0, Position.y[this.playerEid] ?? 0);
+    this.chunks.ensureLoaded(px, py);
+    this.chunks.unloadFar(px, py);
+
+    this.vision.update(px, py);
+
+    if ((Health.current[this.playerEid] ?? 0) <= 0 && !this.playerDied) {
+      this.playerDied = true;
+      this.bus.emit('player:died', { day: this.cycle.day });
+      DeathOverlay.show(this, () => {
+        clearSave();
+        window.location.reload();
+      });
+    }
   }
 }

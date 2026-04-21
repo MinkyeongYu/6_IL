@@ -15,4 +15,5 @@ export type GameEvents = {
   'building:destroyed': { eid: number; kind: string };
   'wave:started': { day: number; waveIndex: number; enemyCount: number };
   'wave:cleared': { day: number; waveIndex: number };
+  'build:request': { kind: 'campfire' | 'barricade' };
 };
