@@ -12,6 +12,13 @@ import { VILLAGE_GRID_SIZE, TILE_SIZE } from '@/config/constants';
 import { Position } from '@/ecs/components/position';
 import { SpriteRef } from '@/ecs/components/sprite-ref';
 import { PlayerTag } from '@/ecs/components/tags';
+import { createWaveSpawner } from '@/gameplay/enemies/wave-spawner';
+import { spawnZombie } from '@/gameplay/enemies/zombie-factory';
+import { zombieAiSystem } from '@/gameplay/enemies/zombie-ai';
+import { movementSystem } from '@/ecs/systems/movement';
+import { spriteSyncSystem } from '@/ecs/systems/sprite-sync';
+import { cleanupSystem } from '@/ecs/systems/cleanup';
+import { createRng } from '@/util/rng';
 
 const playerQuery = defineQuery([PlayerTag]);
 
@@ -53,7 +60,7 @@ export class VillageScene extends Phaser.Scene {
     this.grid = createVillageGrid(VILLAGE_GRID_SIZE, VILLAGE_GRID_SIZE, TILE_SIZE);
     this.drawGrid();
 
-    // 플레이어 스프라이트 재등록 (마을 중앙 근처에 배치)
+    // 플레이어 스프라이트 재등록 + 마을 중앙 배치
     const peid = playerQuery(this.world)[0];
     if (peid !== undefined) {
       this.playerEid = peid;
@@ -84,7 +91,25 @@ export class VillageScene extends Phaser.Scene {
     this.input.keyboard?.on('keydown-ONE', () => this.placement.start('barricade'));
     this.input.keyboard?.on('keydown-TWO', () => this.placement.start('campfire'));
 
-    // 새벽 시작 시 Snowfield로 복귀
+    // 밤 시작 시 좀비 웨이브 스폰
+    this.bus.on('night:started', ({ day }) => {
+      const spawner = createWaveSpawner(createRng(day * 1000));
+      const plan = spawner.planWave(day);
+      for (let i = 0; i < plan.enemyCount; i++) {
+        const pt = plan.spawnPoints[i % plan.spawnPoints.length];
+        if (!pt) continue;
+        const jitterX = (Math.random() - 0.5) * 40;
+        const jitterY = (Math.random() - 0.5) * 40;
+        spawnZombie(this.world, this, this.spriteMap, this.nextGid, pt.x + jitterX, pt.y + jitterY);
+      }
+      this.bus.emit('wave:started', {
+        day,
+        waveIndex: 0,
+        enemyCount: plan.enemyCount,
+      });
+    });
+
+    // 새벽 시작 시 Snowfield로
     this.bus.on('dawn:started', () => {
       this.scene.start('Snowfield', {
         world: this.world,
@@ -108,10 +133,23 @@ export class VillageScene extends Phaser.Scene {
   override update(_t: number, dtMs: number): void {
     const dt = dtMs / 1000;
     this.world.deltaTime = dt;
+
+    zombieAiSystem(this.world);
+    movementSystem(this.world);
+
+    const removed = cleanupSystem(this.world);
+    for (const eid of removed) {
+      const gid = SpriteRef.gid[eid];
+      if (gid !== undefined) {
+        this.spriteMap.get(gid)?.destroy();
+        this.spriteMap.delete(gid);
+      }
+      this.grid.remove(eid);
+    }
+
+    spriteSyncSystem(this.world, this.spriteMap);
     this.cycle.update(dt);
 
-    if (this.input2.justPressed('cancel')) {
-      this.placement.cancel();
-    }
+    if (this.input2.justPressed('cancel')) this.placement.cancel();
   }
 }
