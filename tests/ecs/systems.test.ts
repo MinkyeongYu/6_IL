@@ -40,7 +40,7 @@ describe('lifetimeSystem', () => {
     expect(Lifetime.remainingSec[e]).toBeCloseTo(0.75);
   });
 
-  it('marks health.dead when lifetime expires (without Health component, no-op)', () => {
+  it('expires without Health component is a no-op (only decrements)', () => {
     const w = createGameWorld();
     const e = addEntity(w);
     addComponent(w, Lifetime, e);
@@ -50,6 +50,22 @@ describe('lifetimeSystem', () => {
     lifetimeSystem(w);
 
     expect(Lifetime.remainingSec[e]).toBeLessThanOrEqual(0);
+  });
+
+  it('marks Health.dead = 1 when lifetime expires and entity has Health', () => {
+    const w = createGameWorld();
+    const e = addEntity(w);
+    addComponent(w, Lifetime, e);
+    addComponent(w, Health, e);
+    Lifetime.remainingSec[e] = 0.05;
+    Health.current[e] = 10;
+    Health.max[e] = 10;
+    Health.dead[e] = 0;
+    w.deltaTime = 0.1;
+
+    lifetimeSystem(w);
+
+    expect(Health.dead[e]).toBe(1);
   });
 });
 
