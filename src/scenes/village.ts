@@ -14,6 +14,8 @@ import { VisionMask } from '@/gameplay/vision/vision-mask';
 import { Position } from '@/ecs/components/position';
 import { SpriteRef } from '@/ecs/components/sprite-ref';
 import { PlayerTag } from '@/ecs/components/tags';
+import { Health } from '@/ecs/components/health';
+import { PLAYER } from '@/config/balance';
 import { createWaveSpawner } from '@/gameplay/enemies/wave-spawner';
 import { spawnZombie } from '@/gameplay/enemies/zombie-factory';
 import { zombieAiSystem } from '@/gameplay/enemies/zombie-ai';
@@ -38,6 +40,7 @@ export class VillageScene extends Phaser.Scene {
   private playerEid?: number;
   private rng: Rng = createRng(2026);
   private vision!: VisionMask;
+  private playerDied = false;
 
   constructor() {
     super({ key: 'Village' });
@@ -149,6 +152,24 @@ export class VillageScene extends Phaser.Scene {
   override update(_t: number, dtMs: number): void {
     const dt = dtMs / 1000;
     this.world.deltaTime = dt;
+
+    if (
+      this.playerEid !== undefined &&
+      (Health.current[this.playerEid] ?? 0) <= 0 &&
+      !this.playerDied
+    ) {
+      this.playerDied = true;
+      this.bus.emit('player:died', { day: this.cycle.day });
+      this.cameras.main.shake(300, 0.01);
+      const peid = this.playerEid;
+      this.time.delayedCall(2000, () => {
+        Health.current[peid] = PLAYER.maxHp;
+        Health.dead[peid] = 0;
+        Position.x[peid] = (VILLAGE_GRID_SIZE * TILE_SIZE) / 2;
+        Position.y[peid] = (VILLAGE_GRID_SIZE * TILE_SIZE) / 2;
+        this.playerDied = false;
+      });
+    }
 
     if (this.playerEid !== undefined) {
       playerAttackSystem(this.world, this.playerEid, this.rng);
