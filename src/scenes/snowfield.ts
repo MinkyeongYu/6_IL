@@ -22,6 +22,7 @@ import type { GameEvents } from '@/events/types';
 import { DAY_CYCLE, VISION } from '@/config/balance';
 import { GAME_WIDTH, GAME_HEIGHT, TILE_SIZE } from '@/config/constants';
 import { VisionMask } from '@/gameplay/vision/vision-mask';
+import { loadGame } from '@/gameplay/persistence/save-load';
 import { SpriteRef } from '@/ecs/components/sprite-ref';
 import { Position } from '@/ecs/components/position';
 import { PlayerTag, TreeTag, StoneTag, DeerTag } from '@/ecs/components/tags';
@@ -75,6 +76,16 @@ export class SnowfieldScene extends Phaser.Scene {
     this.resources = data.resources ?? createResourceStore();
     this.bus = data.bus ?? new EventBus<GameEvents>();
     this.cycle = data.cycle ?? createDayNightController(DAY_CYCLE, this.bus);
+
+    // 첫 진입 시(전환에서 cycle 전달 안 됨) 세이브 복원
+    if (!data.cycle) {
+      const save = loadGame();
+      if (save) {
+        this.resources.restore(save.resources);
+        this.cycle.restore({ day: save.currentDay, phase: 'day', elapsedInPhase: 0 });
+      }
+    }
+
     this.spriteMap = new Map();
   }
 

@@ -24,6 +24,7 @@ import { spriteSyncSystem } from '@/ecs/systems/sprite-sync';
 import { cleanupSystem } from '@/ecs/systems/cleanup';
 import { createRng, type Rng } from '@/util/rng';
 import { playerAttackSystem } from '@/gameplay/combat/attack-controller';
+import { saveGame } from '@/gameplay/persistence/save-load';
 
 const playerQuery = defineQuery([PlayerTag]);
 
@@ -128,8 +129,14 @@ export class VillageScene extends Phaser.Scene {
       });
     });
 
-    // 새벽 시작 시 Snowfield로
+    // 새벽 시작 시 자동 저장 + Snowfield로 복귀
     this.bus.on('dawn:started', () => {
+      saveGame({
+        version: 1,
+        currentDay: this.cycle.day,
+        resources: this.resources.snapshot(),
+        weatherRng: 42,
+      });
       this.scene.start('Snowfield', {
         world: this.world,
         resources: this.resources,
