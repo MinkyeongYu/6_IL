@@ -1,7 +1,7 @@
 import { hasComponent, type GameWorld } from '@/ecs/world';
 import { Position } from '@/ecs/components/position';
 import { Health } from '@/ecs/components/health';
-import { TreeTag, StoneTag, DeerTag } from '@/ecs/components/tags';
+import { TreeTag, DeerTag } from '@/ecs/components/tags';
 import { GATHER } from '@/config/balance';
 import { distance } from '@/util/math';
 import type { ResourceStore, ResourceKind } from '@/gameplay/resources/resource-store';
@@ -37,9 +37,7 @@ export class GatherController {
     for (const eid of candidates) {
       if (eid === playerEid) continue;
       const isGatherable =
-        hasComponent(this.world, TreeTag, eid) ||
-        hasComponent(this.world, StoneTag, eid) ||
-        hasComponent(this.world, DeerTag, eid);
+        hasComponent(this.world, TreeTag, eid) || hasComponent(this.world, DeerTag, eid);
       if (!isGatherable) continue;
       const d = distance(px, py, Position.x[eid] ?? 0, Position.y[eid] ?? 0);
       if (d <= INTERACT_RADIUS && (!nearest || d < nearest.dist)) {
@@ -55,10 +53,6 @@ export class GatherController {
       kind = 'wood';
       yield_ = GATHER.treeWoodYield;
       durationSec = GATHER.treeDurationSec;
-    } else if (hasComponent(this.world, StoneTag, nearest.eid)) {
-      kind = 'stone';
-      yield_ = GATHER.stoneYield;
-      durationSec = GATHER.stoneDurationSec;
     } else {
       kind = 'meat';
       yield_ = GATHER.deerMeatYield;

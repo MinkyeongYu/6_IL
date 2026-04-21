@@ -5,7 +5,6 @@ import { spawnPlayer } from '@/gameplay/player/player-factory';
 import { InputAdapter } from '@/gameplay/player/input-adapter';
 import { updatePlayerInput } from '@/gameplay/player/player-controller';
 import { spawnTree } from '@/gameplay/gather/tree-factory';
-import { spawnStone } from '@/gameplay/gather/stone-factory';
 import { spawnDeer } from '@/gameplay/animals/deer-factory';
 import { deerAiSystem } from '@/gameplay/animals/deer-ai';
 import { GatherController } from '@/gameplay/gather/gather-controller';
@@ -25,7 +24,7 @@ import { VisionMask } from '@/gameplay/vision/vision-mask';
 import { loadGame } from '@/gameplay/persistence/save-load';
 import { SpriteRef } from '@/ecs/components/sprite-ref';
 import { Position } from '@/ecs/components/position';
-import { PlayerTag, TreeTag, StoneTag, DeerTag } from '@/ecs/components/tags';
+import { PlayerTag, TreeTag, DeerTag } from '@/ecs/components/tags';
 
 const playerQuery = defineQuery([PlayerTag]);
 const allPositionedQuery = defineQuery([Position]);
@@ -51,11 +50,7 @@ export class SnowfieldScene extends Phaser.Scene {
   private clearSnowfieldContent(): void {
     const ents = allPositionedQuery(this.world);
     for (const eid of ents) {
-      if (
-        bitHas(this.world, TreeTag, eid) ||
-        bitHas(this.world, StoneTag, eid) ||
-        bitHas(this.world, DeerTag, eid)
-      ) {
+      if (bitHas(this.world, TreeTag, eid) || bitHas(this.world, DeerTag, eid)) {
         const gid = SpriteRef.gid[eid];
         if (gid !== undefined) {
           this.spriteMap.get(gid)?.destroy();
@@ -118,13 +113,10 @@ export class SnowfieldScene extends Phaser.Scene {
     // 씬 재진입 시 자원/동물 초기화
     this.clearSnowfieldContent();
 
-    // 근교 자원·동물 배치
+    // 근교 시작 배치 (홈 지역; 멀리 가면 청크가 자동 생성)
     for (let i = 0; i < 6; i++) {
       spawnTree(this.world, this, this.spriteMap, this.nextGid, 100 + i * 70, 100);
       spawnTree(this.world, this, this.spriteMap, this.nextGid, 120 + i * 70, 450);
-    }
-    for (let i = 0; i < 3; i++) {
-      spawnStone(this.world, this, this.spriteMap, this.nextGid, 150 + i * 120, 250);
     }
     for (let i = 0; i < 2; i++) {
       spawnDeer(this.world, this, this.spriteMap, this.nextGid, 700, 150 + i * 200);

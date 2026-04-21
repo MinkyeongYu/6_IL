@@ -17,8 +17,6 @@ export const VISION = {
 
 export const RESOURCES = {
   startingWood: 15,
-  startingStone: 5,
-  startingIron: 0,
   startingMeat: 0,
   startingFood: 5,
   startingFrostbloom: 0,
@@ -26,10 +24,8 @@ export const RESOURCES = {
 
 export const GATHER = {
   treeDurationSec: 4,
-  stoneDurationSec: 6,
   deerDurationSec: 2,
   treeWoodYield: 3,
-  stoneYield: 2,
   deerMeatYield: 2,
 } as const;
 

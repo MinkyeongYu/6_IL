@@ -1,4 +1,4 @@
-export type ResourceKind = 'wood' | 'stone' | 'iron' | 'meat' | 'food' | 'frostbloom';
+export type ResourceKind = 'wood' | 'meat' | 'food' | 'frostbloom';
 
 export type ResourceSnapshot = Record<ResourceKind, number>;
 
@@ -20,8 +20,6 @@ export interface ResourceStore {
 export function createResourceStore(): ResourceStore {
   const totals: ResourceSnapshot = {
     wood: 0,
-    stone: 0,
-    iron: 0,
     meat: 0,
     food: 0,
     frostbloom: 0,

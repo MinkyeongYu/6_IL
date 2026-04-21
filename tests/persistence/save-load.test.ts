@@ -17,7 +17,7 @@ class MemoryStorage {
 const sample: SaveFileV1 = {
   version: 1,
   currentDay: 3,
-  resources: { wood: 12, stone: 5, iron: 0, meat: 2, food: 4, frostbloom: 0 },
+  resources: { wood: 12, meat: 2, food: 4, frostbloom: 0 },
   weatherRng: 42,
 };
 

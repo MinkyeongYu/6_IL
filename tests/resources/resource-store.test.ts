@@ -5,8 +5,8 @@ describe('ResourceStore', () => {
   it('initializes with zeros', () => {
     const store = createResourceStore();
     expect(store.get('wood')).toBe(0);
-    expect(store.get('stone')).toBe(0);
     expect(store.get('meat')).toBe(0);
+    expect(store.get('food')).toBe(0);
   });
 
   it('add/spend adjusts totals', () => {
@@ -29,17 +29,18 @@ describe('ResourceStore', () => {
   it('snapshot returns plain object', () => {
     const store = createResourceStore();
     store.add('wood', 3);
-    store.add('stone', 5);
+    store.add('meat', 5);
     const snap = store.snapshot();
     expect(snap.wood).toBe(3);
-    expect(snap.stone).toBe(5);
+    expect(snap.meat).toBe(5);
   });
 
   it('restore loads from snapshot', () => {
     const store = createResourceStore();
-    store.restore({ wood: 7, stone: 2, iron: 0, meat: 1, food: 0, frostbloom: 0 });
+    store.restore({ wood: 7, meat: 1, food: 2, frostbloom: 0 });
     expect(store.get('wood')).toBe(7);
     expect(store.get('meat')).toBe(1);
+    expect(store.get('food')).toBe(2);
   });
 
   it('emits resource:changed event on add', () => {

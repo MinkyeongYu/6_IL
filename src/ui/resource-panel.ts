@@ -23,7 +23,7 @@ export class ResourcePanel {
   private refresh(): void {
     const s = this.store.snapshot();
     this.text.setText(
-      `Wood ${s.wood}  Stone ${s.stone}  Iron ${s.iron}  Meat ${s.meat}  Food ${s.food}`,
+      `🪵 ${s.wood}  🥩 ${s.meat}  🌾 ${s.food}  ❄ ${s.frostbloom}`,
     );
   }
 

@@ -55,7 +55,7 @@ export function spawnBuilding(
   return eid;
 }
 
-export const BUILDING_COSTS: Record<BuildingKind, { kind: 'wood' | 'stone'; amount: number }> = {
+export const BUILDING_COSTS: Record<BuildingKind, { kind: 'wood'; amount: number }> = {
   campfire: { kind: 'wood', amount: 5 },
   barricade: { kind: 'wood', amount: 5 },
 };
