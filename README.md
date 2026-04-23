@@ -25,7 +25,8 @@
 ### Art Assets
 
 - **LPC (Liberated Pixel Cup)** — characters, props, tiles
-  - Licensed under CC-BY-SA 3.0 and GPL 3.0
+  - Licensed under CC-BY-SA 3.0 or GPL 3.0 (dual-licensed, choose either)
+  - License text: https://creativecommons.org/licenses/by-sa/3.0/ or https://www.gnu.org/licenses/gpl-3.0.html
   - Contributor list: https://opengameart.org/content/lpc-collection
 - **Kenney — UI Pack RPG Expansion** — HUD panels and icons (CC0)
   - https://kenney.nl/assets/ui-pack-rpg-expansion
