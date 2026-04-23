@@ -79,13 +79,19 @@ Expected: Console 에러 0개. `using UnityEngine.UI` 관련 에러 나오면 Pa
 
 씬과 prefab 들이 없으면 SETUP.md 따라 만들고 Play 로 플레이어가 움직이는지 검증.
 
-- [ ] **Step 4: Commit**
+- [ ] **Step 4: Commit (반드시 모든 `.meta` 파일 포함)**
+
+Unity 가 처음 열리면 `unity/Assets/Scripts/` 의 모든 `.cs` 파일, `IL6.asmdef` (Task 2 에서 미리 작성됨), 그리고 향후 추가될 에셋에 대한 `.meta` 파일을 자동 생성한다. **이 `.meta` 파일들은 반드시 커밋되어야 한다** — Unity 가 GUID 기반으로 에셋을 참조하기 때문에, `.meta` 가 없으면 매번 새 GUID 가 생성되어 asmdef references, prefab 참조 등이 깨진다.
+
+특히 `unity/Assets/Scripts/IL6.asmdef.meta` 는 Task 11 의 `IL6.Tests.asmdef` 가 참조해야 하므로 필수.
 
 ```bash
 cd c:/Users/bada/6_IL
 git add unity/
-git commit -m "chore(unity): bootstrap 2D Core project via SETUP.md"
+git commit -m "chore(unity): bootstrap 2D Core project + generated .meta files"
 ```
+
+`.gitignore` 에 `*.meta` 가 들어있으면 제거. Unity 프로젝트의 `.meta` 는 반드시 버전 관리 대상.
 
 만약 Unity 가 자동 생성한 파일만 있고 실제 변경이 없으면 이 커밋은 스킵.
 
