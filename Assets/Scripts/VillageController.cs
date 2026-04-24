@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using IL6.Events;
 
 namespace IL6
 {
