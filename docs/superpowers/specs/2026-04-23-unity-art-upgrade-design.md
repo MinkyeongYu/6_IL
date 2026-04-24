@@ -1,7 +1,15 @@
 # Unity 아트 업그레이드 설계 — Snowfield 버티컬 슬라이스
 
+> **⚠ 상태 (2026-04-25):** 이 스펙은 집필 시점의 결정을 기록한 스냅샷. 구현 중 다음 사항이 달라짐:
+> - 리포 구조가 `unity/` 서브폴더 → 리포 루트로 평탄화 (이 문서의 `unity/Assets/...` 경로는 모두 `Assets/...` 로 읽어야 함)
+> - URP 패키지 설치만 완료, **Renderer/PipelineAsset 미생성**. 따라서 2D Light 기반 라이팅 작업(Global Light/모닥불/블룸) 은 시작 전
+> - LPC/Kenney 에셋 임포트 미이행 — 임시로 `ColorFallback.cs` 런타임 단색 스프라이트 사용
+> - HUD 는 Canvas/TMP 대신 OnGUI `SimpleHud` 로 임시 대체
+>
+> 전체 진행 현황: [../specs/2026-04-25-implementation-status.md](./2026-04-25-implementation-status.md)
+
 - 작성일: 2026-04-23
-- 대상: `unity/` (Unity 2022 LTS, 2D Core)
+- 대상: `unity/` (Unity 2022 LTS, 2D Core) — **현재는 리포 루트로 평탄화됨**
 - 관련 기존 문서: [2026-04-21-6il-game-design.md](./2026-04-21-6il-game-design.md)
 
 ## 목표
