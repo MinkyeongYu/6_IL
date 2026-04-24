@@ -11,6 +11,7 @@ namespace IL6
         public PlayerController Player;
         public GatherController Gather;
         public PlayerAttackController Attacker;
+        public NightController Night;
 
         private GUIStyle _labelStyle;
         private GUIStyle _titleStyle;
@@ -110,9 +111,9 @@ namespace IL6
 
         private void DrawRightPanel()
         {
-            const int W = 220;
+            const int W = 240;
             int rx = Screen.width - W - 10;
-            GUI.Box(new Rect(rx, 10, W, 180), "");
+            GUI.Box(new Rect(rx, 10, W, 240), "");
             int y = 18;
             GUI.Label(new Rect(rx + 10, y, W - 20, 24), "=== Resources ===", _titleStyle); y += 26;
 
@@ -125,6 +126,17 @@ namespace IL6
                 GUI.Label(new Rect(rx + 10, y, W - 20, 22), $"Food       {session.Resources.Get(ResourceKind.Food)}", _resStyle); y += 20;
                 GUI.Label(new Rect(rx + 10, y, W - 20, 22), $"Frostbloom {session.Resources.Get(ResourceKind.Frostbloom)}", _resStyle); y += 22;
                 GUI.Label(new Rect(rx + 10, y, W - 20, 22), $"Day {session.Cycle.Day}  {session.Cycle.Phase}", _labelStyle); y += 22;
+
+                if (Night != null)
+                {
+                    GUI.Label(new Rect(rx + 10, y, W - 20, 22), $"Zombies: {Night.ActiveZombies}  Pending: {Night.WavePending}", _labelStyle); y += 22;
+                }
+
+                // Phase skip debug button
+                if (GUI.Button(new Rect(rx + 10, y, W - 20, 26), "▶ Skip Phase (debug)"))
+                {
+                    session.Cycle.Update(session.Cycle.PhaseDurationSec + 0.1f);
+                }
             }
             else
             {
@@ -154,6 +166,11 @@ namespace IL6
             cf.PixelSize = 64;
             cf.OutlineWidth = 2;
             cf.OutlineColor = new Color(0.3f, 0.1f, 0f, 1f);
+
+            var aura = go.AddComponent<CampfireAura>();
+            aura.Radius = 2.5f;
+            aura.DamagePerSecond = 6f;
+            aura.TickInterval = 0.5f;
         }
     }
 }

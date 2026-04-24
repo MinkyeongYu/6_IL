@@ -170,6 +170,7 @@ MonoBehaviour:
   Player: {fileID: 30000006}
   Gather: {fileID: 30000007}
   Attacker: {fileID: 30000010}
+  Night: {fileID: A0000002}
 --- !u!1 &10000000
 GameObject:
   m_ObjectHideFlags: 0
@@ -3364,3 +3365,59 @@ MonoBehaviour:
   PixelSize: 64
   OutlineWidth: 2
   OutlineColor: {r: 0.1, g: 0.15, b: 0.1, a: 1}
+--- !u!1 &A0000000
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: A0000001}
+  - component: {fileID: A0000002}
+  m_Layer: 0
+  m_Name: NightController
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &A0000001
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: A0000000}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_RootOrder: 22
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &A0000002
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: A0000000}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c2d3e4f5a6b7c8d9e0f1a2b3c4d5e60b, type: 3}
+  m_Name:
+  m_EditorClassIdentifier:
+  Player: {fileID: 30000001}
+  MainCamera: {fileID: 20000002}
+  BaseWaveCount: 6
+  PerDayIncrement: 3
+  MaxActive: 40
+  SpawnDistance: 6
+  SpawnJitter: 2
+  BetweenSpawnsSec: 0.6
+  DayColor: {r: 0.88, g: 0.93, b: 0.98, a: 1}
+  NightColor: {r: 0.1, g: 0.15, b: 0.28, a: 1}
+  EveningColor: {r: 0.55, g: 0.4, b: 0.35, a: 1}
+  DawnColor: {r: 0.75, g: 0.7, b: 0.65, a: 1}
