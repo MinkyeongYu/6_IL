@@ -717,7 +717,6 @@ git commit -m "feat(unity): add DayNightLightCalc pure logic with tests"
 ```csharp
 using UnityEngine;
 using UnityEngine.Rendering.Universal;
-using IL6.Events;
 
 namespace IL6
 {
@@ -746,10 +745,10 @@ namespace IL6
             GlobalLight.intensity = t.intensity;
             GlobalLight.color = t.color;
 
-            EventBus.Instance.On<EveningStartedPayload>(_ => BeginTransition(Phase.Day, Phase.Evening));
-            EventBus.Instance.On<NightStartedPayload>(_ => BeginTransition(Phase.Evening, Phase.Night));
-            EventBus.Instance.On<DawnStartedPayload>(_ => BeginTransition(Phase.Night, Phase.Dawn));
-            EventBus.Instance.On<DayStartedPayload>(_ => BeginTransition(Phase.Dawn, Phase.Day));
+            EventBus.Instance.Subscribe<EveningStartedPayload>(_ => BeginTransition(Phase.Day, Phase.Evening));
+            EventBus.Instance.Subscribe<NightStartedPayload>(_ => BeginTransition(Phase.Evening, Phase.Night));
+            EventBus.Instance.Subscribe<DawnStartedPayload>(_ => BeginTransition(Phase.Night, Phase.Dawn));
+            EventBus.Instance.Subscribe<DayStartedPayload>(_ => BeginTransition(Phase.Dawn, Phase.Day));
         }
 
         private void BeginTransition(Phase from, Phase to)
@@ -776,7 +775,7 @@ namespace IL6
 
 - [ ] **Step 2: 컴파일 확인**
 
-Expected: 에러 0개. (참고: `EventBus.Instance.On<T>(Action<T>)` 시그니처가 프로젝트와 일치하는지 확인 — 다르면 어댑트.)
+Expected: 에러 0개. (참고: `EventBus.Instance.Subscribe<T>(Action<T>)` 가 실제 API. `Phase` 페이로드 구조체들 (`DayStartedPayload`, `EveningStartedPayload` 등) 은 `namespace IL6` 안에 정의돼 있어 별도 using 불필요.)
 
 - [ ] **Step 3: Commit**
 
