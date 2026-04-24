@@ -27,7 +27,7 @@ namespace IL6
 
         private void DrawLeftPanel()
         {
-            GUI.Box(new Rect(10, 10, 280, 260), "");
+            GUI.Box(new Rect(10, 10, 280, 340), "");
             int y = 18;
             GUI.Label(new Rect(20, y, 260, 24), "=== Player ===", _titleStyle); y += 26;
 
@@ -74,6 +74,26 @@ namespace IL6
             GUI.enabled = true;
             y += 34;
 
+            GUI.enabled = session != null && Player != null && session.Resources.Get(ResourceKind.Wood) >= 5;
+            if (GUI.Button(new Rect(20, y, 220, 30), "Build Barricade (5 Wood)"))
+            {
+                if (session.Resources.Spend(ResourceKind.Wood, 5))
+                {
+                    SpawnBarricade(Player.transform.position);
+                }
+            }
+            GUI.enabled = true;
+            y += 34;
+
+            // 영입 힌트: 가까운 Recruitable NPC 표시
+            var nearest = FindNearestRecruitable(Player != null ? Player.transform.position : Vector3.zero, 2f);
+            if (nearest != null)
+            {
+                GUI.Label(new Rect(20, y, 260, 24),
+                    $"Press F to recruit: {nearest.DisplayNamePublic}", _weaponStyle);
+                y += 24;
+            }
+
             // 채굴 버튼: 근처 나무가 있고 동료가 있을 때만 활성화
             if (Player != null)
             {
@@ -107,6 +127,44 @@ namespace IL6
                 if (d < bestDist) { best = g; bestDist = d; }
             }
             return best;
+        }
+
+        private static RecruitableNpc FindNearestRecruitable(Vector3 center, float range)
+        {
+            var all = Object.FindObjectsByType<RecruitableNpc>(FindObjectsSortMode.None);
+            RecruitableNpc best = null;
+            float bestDist = range;
+            foreach (var n in all)
+            {
+                if (n == null) continue;
+                float d = Vector2.Distance(center, n.transform.position);
+                if (d < bestDist) { best = n; bestDist = d; }
+            }
+            return best;
+        }
+
+        private void SpawnBarricade(Vector3 playerPos)
+        {
+            var go = new GameObject("Barricade");
+            go.transform.position = playerPos + new Vector3(0f, 1.2f, 0f);
+            go.transform.localScale = new Vector3(1.2f, 0.4f, 1f);
+
+            var sr = go.AddComponent<SpriteRenderer>();
+            sr.sortingOrder = 3;
+
+            var col = go.AddComponent<BoxCollider2D>();
+            col.size = Vector2.one;
+
+            var cf = go.AddComponent<ColorFallback>();
+            cf.Tint = new Color(0.45f, 0.28f, 0.15f);
+            cf.Shape = FallbackShape.Square;
+            cf.Circle = false;
+            cf.PixelSize = 32;
+            cf.OutlineWidth = 2;
+            cf.OutlineColor = new Color(0.2f, 0.1f, 0.05f, 1f);
+
+            var b = go.AddComponent<Building>();
+            b.Kind = BuildingKind.Barricade;
         }
 
         private void DrawRightPanel()
