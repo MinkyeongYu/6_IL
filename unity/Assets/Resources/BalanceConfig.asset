@@ -1,0 +1,46 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5c78b8e13613a79428404c7c9dd3eb4c, type: 3}
+  m_Name: BalanceConfig
+  m_EditorClassIdentifier:
+  DayDurationSec: 180
+  NightDurationSec: 180
+  EveningTransitionSec: 5
+  DawnTransitionSec: 5
+  DayRadiusTiles: 10
+  NightRadiusTiles: 6
+  MegaBlizzardRadiusTiles: 3
+  StartingWood: 15
+  StartingMeat: 0
+  StartingFood: 5
+  StartingFrostbloom: 0
+  TreeDurationSec: 4
+  DeerDurationSec: 2
+  TreeWoodYield: 3
+  DeerMeatYield: 2
+  PlayerMaxHp: 100
+  PlayerMoveSpeed: 5
+  PlayerRespawnSec: 3
+  PlayerArmor: 0
+  ZombieMaxHp: 20
+  ZombieMoveSpeed: 2
+  ZombieAttackDamage: 8
+  ZombieAttackCooldownSec: 1
+  ZombieAttackRange: 1.2
+  ZombieArmor: 0
+  WaveBaseCount: 8
+  WavePerDay: 4
+  WaveMaxCount: 300
+  CampfireHp: 400
+  BarricadeHp: 200
+  CampfireCost: 5
+  BarricadeCost: 5
