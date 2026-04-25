@@ -137,12 +137,13 @@ namespace IL6
                 };
             }
             float a = Mathf.Clamp01(_phaseBannerLeft / 1.5f);
-            UiTheme.Rect(new Rect(0, 100, Screen.width, 56), new Color(0.05f, 0.07f, 0.12f, 0.7f * a));
-            UiTheme.Rect(new Rect(0, 100, Screen.width, 1), new Color(0.78f, 0.62f, 0.30f, a));
-            UiTheme.Rect(new Rect(0, 155, Screen.width, 1), new Color(0.78f, 0.62f, 0.30f, a));
+            int y = Screen.height / 2 - 100;
+            UiTheme.Rect(new Rect(0, y, Screen.width, 56), new Color(0.05f, 0.07f, 0.12f, 0.7f * a));
+            UiTheme.Rect(new Rect(0, y, Screen.width, 1), new Color(0.78f, 0.62f, 0.30f, a));
+            UiTheme.Rect(new Rect(0, y + 55, Screen.width, 1), new Color(0.78f, 0.62f, 0.30f, a));
             var oldC = GUI.contentColor;
             GUI.contentColor = new Color(1f, 0.86f, 0.45f, a);
-            GUI.Label(new Rect(0, 108, Screen.width, 44), _phaseBanner, _bannerStyle);
+            GUI.Label(new Rect(0, y + 8, Screen.width, 44), _phaseBanner, _bannerStyle);
             GUI.contentColor = oldC;
         }
 
@@ -402,7 +403,7 @@ namespace IL6
         // ====================================================================
         private void DrawLeftPanel()
         {
-            var panel = new Rect(12, 12, 290, 548);
+            var panel = new Rect(12, 90, 290, 580);
             UiTheme.Panel(panel);
             UiTheme.TitleBar(panel, "  플레이어  ", _title);
 
@@ -553,7 +554,7 @@ namespace IL6
         private void DrawRightPanel()
         {
             const int W = 270;
-            var panel = new Rect(Screen.width - W - 12, 12, W, 440);
+            var panel = new Rect(Screen.width - W - 12, 90, W, 440);
             UiTheme.Panel(panel);
             UiTheme.TitleBar(panel, "  자원  ", _title);
 
@@ -570,16 +571,16 @@ namespace IL6
 
             void DrawRes(ResourceKind k, string name)
             {
-                UiTheme.Icon(new Rect(innerX, y + 2, 14, 14), UiTheme.ResColor(k));
-                GUI.Label(new Rect(innerX + 22, y, 100, 18), name, _label);
+                UiTheme.Icon(new Rect(innerX, y + 4, 16, 16), UiTheme.ResColor(k));
+                GUI.Label(new Rect(innerX + 24, y, 110, 22), name, _label);
                 int cur = session.Resources.Get(k);
                 int cap = session.Resources.GetCap(k);
                 var color = cur >= cap ? UiTheme.TextDanger : UiTheme.TextCream;
                 var oldC = GUI.contentColor;
                 GUI.contentColor = color;
-                GUI.Label(new Rect(innerX + 130, y, innerW - 130, 18), $"{cur} / {cap}", _label);
+                GUI.Label(new Rect(innerX + 134, y, innerW - 134, 22), $"{cur} / {cap}", _label);
                 GUI.contentColor = oldC;
-                y += 18;
+                y += 22;
             }
 
             DrawRes(ResourceKind.Wood, "Wood");
@@ -591,35 +592,14 @@ namespace IL6
             UiTheme.Separator(new Rect(innerX, y + 4, innerW, 1));
             y += 10;
 
-            // Day/Phase 라인
-            string phaseIcon = session.Cycle.Phase switch
-            {
-                Phase.Day => "☀",
-                Phase.Evening => "🌅",
-                Phase.Night => "🌙",
-                Phase.Dawn => "🌄",
-                _ => "·",
-            };
-            GUI.Label(new Rect(innerX, y, innerW, 22),
-                $"{phaseIcon}  Day {session.Cycle.Day}  ·  {session.Cycle.Phase}", _section);
-            y += 22;
-
-            // 페이즈 진행 바
-            float dur = session.Cycle.PhaseDurationSec;
-            float rem = Mathf.Max(0f, dur - session.Cycle.ElapsedInPhase);
-            float progress = dur > 0 ? 1f - (rem / dur) : 0f;
-            UiTheme.Bar(new Rect(innerX, y, innerW - 50, 8), progress, UiTheme.TextGold);
-            GUI.Label(new Rect(innerX + innerW - 46, y - 5, 46, 18), $"{rem:F0}s", _labelSubtle);
-            y += 16;
-
-            // 라이브 점수 / 처치
+            // 라이브 점수 / 처치 (페이즈 정보는 상단 시계 위젯에서 표시)
             var scoreOldC = GUI.contentColor;
             GUI.contentColor = UiTheme.TextGold;
-            GUI.Label(new Rect(innerX, y, 90, 20), $"점수 {session.Score}", _section);
+            GUI.Label(new Rect(innerX, y, 110, 22), $"점수 {session.Score}", _section);
             GUI.contentColor = UiTheme.TextSubtle;
-            GUI.Label(new Rect(innerX + 100, y, innerW - 100, 20), $"킬 {session.TotalKills}  ·  손실 {session.CompanionsLost}", _labelSubtle);
+            GUI.Label(new Rect(innerX + 120, y + 2, innerW - 120, 20), $"킬 {session.TotalKills}  ·  손실 {session.CompanionsLost}", _labelSubtle);
             GUI.contentColor = scoreOldC;
-            y += 22;
+            y += 26;
 
             if (session.LastFoodShortage > 0)
             {
@@ -964,14 +944,14 @@ namespace IL6
         private void EnsureStyles()
         {
             if (_label != null) return;
-            _label = new GUIStyle(GUI.skin.label) { fontSize = 14, normal = { textColor = UiTheme.TextCream } };
-            _labelSubtle = new GUIStyle(GUI.skin.label) { fontSize = 13, normal = { textColor = UiTheme.TextSubtle } };
-            _section = new GUIStyle(GUI.skin.label) { fontSize = 15, fontStyle = FontStyle.Bold, normal = { textColor = UiTheme.TextCream } };
-            _title = new GUIStyle(GUI.skin.label) { fontSize = 16, fontStyle = FontStyle.Bold, alignment = TextAnchor.MiddleCenter, normal = { textColor = UiTheme.TextGold } };
-            _weapon = new GUIStyle(GUI.skin.label) { fontSize = 16, fontStyle = FontStyle.Bold, normal = { textColor = new Color(0.7f, 0.95f, 1f) } };
-            _bigDeath = new GUIStyle(GUI.skin.label) { fontSize = 72, fontStyle = FontStyle.Bold, alignment = TextAnchor.MiddleCenter, normal = { textColor = UiTheme.TextDanger } };
-            _btn = new GUIStyle(GUI.skin.button) { fontSize = 14, fontStyle = FontStyle.Bold };
-            _smallBtn = new GUIStyle(GUI.skin.button) { fontSize = 13 };
+            _label = new GUIStyle(GUI.skin.label) { fontSize = 16, normal = { textColor = UiTheme.TextCream } };
+            _labelSubtle = new GUIStyle(GUI.skin.label) { fontSize = 14, normal = { textColor = UiTheme.TextSubtle } };
+            _section = new GUIStyle(GUI.skin.label) { fontSize = 17, fontStyle = FontStyle.Bold, normal = { textColor = UiTheme.TextCream } };
+            _title = new GUIStyle(GUI.skin.label) { fontSize = 19, fontStyle = FontStyle.Bold, alignment = TextAnchor.MiddleCenter, normal = { textColor = UiTheme.TextGold } };
+            _weapon = new GUIStyle(GUI.skin.label) { fontSize = 18, fontStyle = FontStyle.Bold, normal = { textColor = new Color(0.7f, 0.95f, 1f) } };
+            _bigDeath = new GUIStyle(GUI.skin.label) { fontSize = 80, fontStyle = FontStyle.Bold, alignment = TextAnchor.MiddleCenter, normal = { textColor = UiTheme.TextDanger } };
+            _btn = new GUIStyle(GUI.skin.button) { fontSize = 16, fontStyle = FontStyle.Bold };
+            _smallBtn = new GUIStyle(GUI.skin.button) { fontSize = 15 };
         }
 
         private static Companion FindNearestFreeCompanion(Vector3 center)
