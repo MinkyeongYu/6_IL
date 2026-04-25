@@ -34,6 +34,7 @@ namespace IL6
             DrawHomeCompass();
             DrawControlsHint();
             DrawTutorialOverlay();
+            DrawPauseMenu();
             DrawDeathOverlay();
             DrawDamageFlash();
         }
@@ -231,8 +232,8 @@ namespace IL6
 
         private void DrawControlsHint()
         {
-            const string hint = "WASD/방향키 이동 · E 채집 · F 영입 · 자동 공격";
-            const int W = 420, H = 24;
+            const string hint = "WASD/방향키 이동 · E 채집 · F 영입 · ESC 일시정지 · 자동 공격";
+            const int W = 480, H = 24;
             var r = new Rect(Screen.width / 2 - W / 2, Screen.height - H - 8, W, H);
             UiTheme.Rect(r, new Color(0.05f, 0.07f, 0.12f, 0.55f));
             UiTheme.Rect(new Rect(r.x, r.y, r.width, 1), new Color(0.78f, 0.62f, 0.30f, 0.4f));
@@ -756,6 +757,77 @@ namespace IL6
                     $"진행 {curStacks}/{PlayerProgression.MaxStacks} → {next}/{PlayerProgression.MaxStacks}", _labelSubtle);
                 UiTheme.Separator(new Rect(rect.x + 10, rect.y + 56, rect.width - 20, 1));
                 GUI.Label(new Rect(rect.x + 10, rect.y + 64, rect.width - 20, 90), PlayerProgression.DescribeAt(rune, next), _label);
+            }
+        }
+
+        private bool _paused;
+        private float _preTimeScale = 1f;
+        private GUIStyle _pauseTitle;
+
+        private void DrawPauseMenu()
+        {
+            // 사망/룬모달/튜토리얼이 떠 있을 때는 ESC 무시
+            bool blockedByModal = (Player != null && Player.IsDead)
+                || (Progression != null && Progression.LevelUpPending)
+                || (!_tutorialDismissed && PlayerPrefs.GetInt(TutorialPrefKey, 0) == 0);
+
+            if (Event.current != null && Event.current.type == EventType.KeyDown
+                && Event.current.keyCode == KeyCode.Escape && !blockedByModal)
+            {
+                if (!_paused)
+                {
+                    _paused = true;
+                    _preTimeScale = Time.timeScale;
+                    Time.timeScale = 0f;
+                }
+                else
+                {
+                    _paused = false;
+                    Time.timeScale = _preTimeScale > 0f ? _preTimeScale : 1f;
+                }
+                Event.current.Use();
+            }
+
+            if (!_paused) return;
+
+            UiTheme.Rect(new Rect(0, 0, Screen.width, Screen.height), new Color(0, 0, 0, 0.7f));
+
+            int W = 360, H = 260;
+            var modal = new Rect(Screen.width / 2 - W / 2, Screen.height / 2 - H / 2, W, H);
+            UiTheme.Panel(modal);
+            UiTheme.TitleBar(modal, "  일시정지  ", _title);
+
+            if (_pauseTitle == null)
+            {
+                _pauseTitle = new GUIStyle(GUI.skin.label) {
+                    fontSize = 22, fontStyle = FontStyle.Bold,
+                    alignment = TextAnchor.MiddleCenter,
+                    normal = { textColor = UiTheme.TextGold } };
+            }
+
+            int bx = (int)modal.x + 60;
+            int by = (int)modal.y + 60;
+            int bw = W - 120;
+
+            if (UiTheme.Button(new Rect(bx, by, bw, 38), "▶ 계속하기", _btn))
+            {
+                _paused = false;
+                Time.timeScale = _preTimeScale > 0f ? _preTimeScale : 1f;
+                Sfx.Click();
+            }
+            by += 46;
+            if (UiTheme.Button(new Rect(bx, by, bw, 38), "💾 즉시 저장", _btn))
+            {
+                if (GameSession.Instance != null) GameSession.Instance.SaveNow();
+                Sfx.Click();
+            }
+            by += 46;
+            if (UiTheme.Button(new Rect(bx, by, bw, 38), "🔄 처음부터 (저장 삭제)", _btn))
+            {
+                Sfx.Click();
+                _paused = false;
+                Time.timeScale = 1f;
+                if (GameSession.Instance != null) GameSession.Instance.HardReset();
             }
         }
 
