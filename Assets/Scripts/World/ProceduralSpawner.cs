@@ -106,7 +106,7 @@ namespace IL6
                 float cumNpc = cumDeer + NpcChance;
                 if (roll < cumTree) data.Spawned.Add(CreateTree(x, y));
                 else if (roll < cumRock) data.Spawned.Add(CreateRock(x, y));
-                else if (roll < cumDeer) data.Spawned.Add(CreateDeer(x, y));
+                else if (roll < cumDeer) data.Spawned.Add(CreateAnimal(x, y, rng));
                 else if (roll < cumNpc) data.Spawned.Add(CreateNpc(x, y, rng));
             }
         }
@@ -171,10 +171,93 @@ namespace IL6
             return go;
         }
 
-        private static GameObject CreateDeer(float x, float y)
+        private struct AnimalArchetype
         {
-            var go = new GameObject("Deer_proc");
+            public string Name;
+            public int MeatYield;
+            public float DurationSec;
+            public float FleeRadius;
+            public float FleeSpeed;
+            public float Scale;
+            public float ColliderRadius;
+            public Color Tint;
+            public FallbackShape Shape;
+            public Color Outline;
+            public float Weight;
+        }
+
+        // 가중치 기반 동물 풀 — Weight 합 = 1.0 (대략).
+        private static readonly AnimalArchetype[] _animals =
+        {
+            // 토끼: 작고 매우 빠름, 1 고기. 흔함.
+            new AnimalArchetype {
+                Name = "Rabbit_proc", MeatYield = 1, DurationSec = 1.5f,
+                FleeRadius = 5.5f, FleeSpeed = 5.5f,
+                Scale = 0.5f, ColliderRadius = 0.25f,
+                Tint = new Color(0.92f, 0.88f, 0.82f),
+                Shape = FallbackShape.Circle,
+                Outline = new Color(0.4f, 0.3f, 0.2f, 1f),
+                Weight = 0.36f,
+            },
+            // 사슴: 중형, 2 고기. 기본.
+            new AnimalArchetype {
+                Name = "Deer_proc", MeatYield = 2, DurationSec = 3f,
+                FleeRadius = 3.5f, FleeSpeed = 3f,
+                Scale = 1f, ColliderRadius = 0.4f,
+                Tint = new Color(0.55f, 0.4f, 0.25f),
+                Shape = FallbackShape.Circle,
+                Outline = new Color(0.2f, 0.12f, 0.05f, 1f),
+                Weight = 0.30f,
+            },
+            // 여우: 영리, 적당히 빠름, 2 고기.
+            new AnimalArchetype {
+                Name = "Fox_proc", MeatYield = 2, DurationSec = 2.5f,
+                FleeRadius = 4.5f, FleeSpeed = 4.5f,
+                Scale = 0.7f, ColliderRadius = 0.3f,
+                Tint = new Color(0.85f, 0.45f, 0.18f),
+                Shape = FallbackShape.Triangle,
+                Outline = new Color(0.4f, 0.18f, 0.05f, 1f),
+                Weight = 0.18f,
+            },
+            // 멧돼지: 크고 굼뜸, 4 고기. 살짝 도망감.
+            new AnimalArchetype {
+                Name = "Boar_proc", MeatYield = 4, DurationSec = 4.5f,
+                FleeRadius = 2.5f, FleeSpeed = 2.2f,
+                Scale = 1.25f, ColliderRadius = 0.5f,
+                Tint = new Color(0.35f, 0.25f, 0.18f),
+                Shape = FallbackShape.Rounded,
+                Outline = new Color(0.1f, 0.05f, 0.02f, 1f),
+                Weight = 0.10f,
+            },
+            // 흰토끼 (희귀): 1 고기 + Frostbloom 1, 매우 빠름.
+            new AnimalArchetype {
+                Name = "SnowHare_proc", MeatYield = 1, DurationSec = 1.8f,
+                FleeRadius = 6f, FleeSpeed = 6.5f,
+                Scale = 0.45f, ColliderRadius = 0.25f,
+                Tint = new Color(0.95f, 0.97f, 1f),
+                Shape = FallbackShape.Circle,
+                Outline = new Color(0.45f, 0.6f, 0.85f, 1f),
+                Weight = 0.06f,
+            },
+        };
+
+        private static GameObject CreateAnimal(float x, float y, SeededRng rng)
+        {
+            // 가중치 추첨
+            float total = 0f;
+            for (int i = 0; i < _animals.Length; i++) total += _animals[i].Weight;
+            float roll = rng.Next() * total;
+            AnimalArchetype a = _animals[0];
+            float acc = 0f;
+            for (int i = 0; i < _animals.Length; i++)
+            {
+                acc += _animals[i].Weight;
+                if (roll <= acc) { a = _animals[i]; break; }
+            }
+
+            var go = new GameObject(a.Name);
             go.transform.position = new Vector3(x, y, 0);
+            go.transform.localScale = Vector3.one * a.Scale;
             go.tag = "Untagged";
 
             var sr = go.AddComponent<SpriteRenderer>();
@@ -185,25 +268,33 @@ namespace IL6
             rb.freezeRotation = true;
 
             var col = go.AddComponent<CircleCollider2D>();
-            col.radius = 0.4f;
+            col.radius = a.ColliderRadius;
 
             var gat = go.AddComponent<Gatherable>();
             gat.YieldKind = ResourceKind.Meat;
-            gat.YieldAmount = 2;
-            gat.DurationSec = 2f;
+            gat.YieldAmount = a.MeatYield;
+            gat.DurationSec = a.DurationSec;
             gat.DestroyOnGather = true;
 
             var ai = go.AddComponent<DeerAi>();
-            ai.FleeRadius = 3.5f;
-            ai.FleeSpeed = 3f;
+            ai.FleeRadius = a.FleeRadius;
+            ai.FleeSpeed = a.FleeSpeed;
 
             var cf = go.AddComponent<ColorFallback>();
-            cf.Tint = new Color(0.55f, 0.4f, 0.25f);
-            cf.Shape = FallbackShape.Circle;
-            cf.Circle = true;
+            cf.Tint = a.Tint;
+            cf.Shape = a.Shape;
+            cf.Circle = a.Shape == FallbackShape.Circle;
             cf.PixelSize = 64;
             cf.OutlineWidth = 2;
-            cf.OutlineColor = new Color(0.2f, 0.12f, 0.05f, 1f);
+            cf.OutlineColor = a.Outline;
+
+            // 흰토끼는 추가로 Frostbloom 1 도 떨어뜨림 — Gatherable 두 번 부착 대신 동반 컴포넌트로 처리
+            if (a.Name == "SnowHare_proc")
+            {
+                var bonus = go.AddComponent<BonusYieldOnGather>();
+                bonus.Kind = ResourceKind.Frostbloom;
+                bonus.Amount = 1;
+            }
             return go;
         }
 

@@ -19,6 +19,16 @@ namespace IL6
             Color tint = ResourceTint(YieldKind);
             GameFeel.FloatText(transform.position, $"+{YieldAmount} {YieldKind}", tint);
             Sfx.Pickup();
+
+            // 보너스 자원 (예: 눈토끼는 Frostbloom 도 같이)
+            var bonus = GetComponent<BonusYieldOnGather>();
+            if (bonus != null && bonus.Amount > 0)
+            {
+                store.Add(bonus.Kind, bonus.Amount);
+                GameFeel.FloatText(transform.position + new Vector3(0f, 0.3f, 0f),
+                    $"+{bonus.Amount} {bonus.Kind}", ResourceTint(bonus.Kind));
+            }
+
             if (DestroyOnGather)
             {
                 GameFeel.DeathPoof(transform.position, tint, 0.5f);
