@@ -171,6 +171,7 @@ MonoBehaviour:
   Gather: {fileID: 30000007}
   Attacker: {fileID: 30000010}
   Night: {fileID: 100000002}
+  Progression: {fileID: 30000013}
 --- !u!1 &10000000
 GameObject:
   m_ObjectHideFlags: 0
@@ -449,6 +450,7 @@ GameObject:
   - component: {fileID: 30000010}
   - component: {fileID: 30000011}
   - component: {fileID: 30000012}
+  - component: {fileID: 30000013}
   m_Layer: 0
   m_Name: Player
   m_TagString: Player
@@ -654,6 +656,7 @@ MonoBehaviour:
   m_EditorClassIdentifier:
   Speed: 5
   LogInput: 0
+  Progression: {fileID: 30000013}
 --- !u!114 &30000010
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -668,6 +671,7 @@ MonoBehaviour:
   m_EditorClassIdentifier:
   Weapon: {fileID: 0}
   RngSeed: 2026
+  Progression: {fileID: 30000013}
 --- !u!114 &30000011
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -702,6 +706,18 @@ MonoBehaviour:
   Size: {x: 0.9, y: 0.12}
   BgColor: {r: 0.05, g: 0.05, b: 0.08, a: 0.9}
   FillColor: {r: 0.85, g: 0.25, b: 0.25, a: 1}
+--- !u!114 &30000013
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 30000000}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e4f5a6b7c8d9e0f1a2b3c4d5e6f7a80d, type: 3}
+  m_Name:
+  m_EditorClassIdentifier:
 --- !u!1 &40000000
 GameObject:
   m_ObjectHideFlags: 0

@@ -16,17 +16,38 @@ namespace IL6
         private Rigidbody2D _rb;
         private InputReader _input;
         private BalanceConfig _balance;
+        private PlayerProgression _progression;
 
         private void Awake()
         {
             _rb = GetComponent<Rigidbody2D>();
             _input = GetComponent<InputReader>();
             _balance = BalanceConfig.Instance;
+            _progression = GetComponent<PlayerProgression>();
             MaxHp = _balance.PlayerMaxHp;
             CurrentHp = MaxHp;
             _rb.gravityScale = 0f;
             _rb.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
             _rb.freezeRotation = true;
+
+            if (_progression != null)
+            {
+                _progression.OnRuneApplied += OnRuneApplied;
+            }
+        }
+
+        private void OnDestroy()
+        {
+            if (_progression != null) _progression.OnRuneApplied -= OnRuneApplied;
+        }
+
+        private void OnRuneApplied(RuneKind kind)
+        {
+            if (kind == RuneKind.HpUp)
+            {
+                MaxHp = _balance.PlayerMaxHp + _progression.BonusMaxHp;
+                CurrentHp = Mathf.Min(MaxHp, CurrentHp + 25);
+            }
         }
 
         private void FixedUpdate()

@@ -11,6 +11,7 @@ namespace IL6
     {
         public WeaponDefinition Weapon;
         public uint RngSeed = 2026u;
+        public PlayerProgression Progression;
 
         private float _cooldown;
         private SeededRng _rng;
@@ -20,6 +21,7 @@ namespace IL6
         {
             _self = transform;
             _rng = new SeededRng(RngSeed);
+            if (Progression == null) Progression = GetComponent<PlayerProgression>();
             if (Weapon == null)
             {
                 Weapon = ScriptableObject.CreateInstance<WeaponDefinition>();
@@ -41,12 +43,15 @@ namespace IL6
             _cooldown -= Time.deltaTime;
             if (_cooldown > 0f) return;
 
-            MonoBehaviour nearest = FindNearestTarget(Weapon.Range);
+            float effectiveRange = Weapon.Range + (Progression != null ? Progression.BonusRange : 0f);
+            MonoBehaviour nearest = FindNearestTarget(effectiveRange);
             if (nearest == null) return;
 
+            float dmgMul = Progression != null ? Progression.DamageMultiplier : 1f;
+            int baseDmg = Mathf.RoundToInt(Weapon.BaseDamage * dmgMul);
             int dmg = DamageCalc.Compute(new DamageCalc.Input
             {
-                Base = Weapon.BaseDamage,
+                Base = baseDmg,
                 Armor = 0,
                 CritRoll = _rng.Next(),
                 CritChance = Weapon.CritChance,
@@ -61,7 +66,8 @@ namespace IL6
             {
                 DealImmediate(nearest, dmg);
             }
-            _cooldown = Weapon.CooldownSec;
+            float cdMul = Progression != null ? Progression.CooldownMultiplier : 1f;
+            _cooldown = Weapon.CooldownSec * cdMul;
         }
 
         private MonoBehaviour FindNearestTarget(float range)
@@ -106,8 +112,9 @@ namespace IL6
             cf.OutlineWidth = 2;
             cf.OutlineColor = new Color(0.8f, 0.5f, 0.1f, 1f);
 
+            float speedMul = Progression != null ? Progression.ProjectileSpeedMultiplier : 1f;
             var proj = go.AddComponent<Projectile>();
-            proj.Speed = Weapon.ProjectileSpeed;
+            proj.Speed = Weapon.ProjectileSpeed * speedMul;
             proj.Damage = dmg;
             proj.HitRadius = 0.4f;
             proj.Aim(target, _self.position);

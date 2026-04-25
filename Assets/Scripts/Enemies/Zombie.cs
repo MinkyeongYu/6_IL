@@ -82,7 +82,12 @@ namespace IL6
         {
             if (IsDead) return;
             CurrentHp = Mathf.Max(0, CurrentHp - amount);
-            if (CurrentHp <= 0) Destroy(gameObject);
+            if (CurrentHp <= 0)
+            {
+                var prog = Object.FindFirstObjectByType<PlayerProgression>();
+                if (prog != null) prog.GrantXp(1);
+                Destroy(gameObject);
+            }
         }
     }
 }

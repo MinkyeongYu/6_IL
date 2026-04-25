@@ -12,6 +12,9 @@ namespace IL6
         public GatherController Gather;
         public PlayerAttackController Attacker;
         public NightController Night;
+        public PlayerProgression Progression;
+
+        private System.Collections.Generic.List<RuneKind> _runeOffer;
 
         private GUIStyle _labelStyle;
         private GUIStyle _titleStyle;
@@ -25,6 +28,7 @@ namespace IL6
             DrawRightPanel();
             DrawWorldChopButton();
             DrawRecruitDialog();
+            DrawRuneModal();
         }
 
         private void DrawLeftPanel()
@@ -47,6 +51,15 @@ namespace IL6
             if (Gather != null && Gather.IsActive)
             {
                 GUI.Label(new Rect(20, y, 260, 22), $"Gathering: {(Gather.Progress * 100):F0}%", _labelStyle); y += 22;
+            }
+
+            if (Progression != null)
+            {
+                GUI.Label(new Rect(20, y, 260, 22), $"Lv {Progression.Level}    XP {Progression.Xp}/{Progression.XpToNext}", _weaponStyle); y += 20;
+                float pct = Progression.XpToNext > 0 ? (float)Progression.Xp / Progression.XpToNext : 0f;
+                GUI.Box(new Rect(20, y, 200, 10), "");
+                GUI.DrawTexture(new Rect(22, y + 2, 196 * pct, 6), Texture2D.whiteTexture);
+                y += 16;
             }
 
             if (Attacker != null && Attacker.Weapon != null)
@@ -163,6 +176,57 @@ namespace IL6
         {
             n = Mathf.Clamp(n, 0, 5);
             return new string('★', n) + new string('☆', 5 - n);
+        }
+
+        // 레벨업 시 화면 가운데 모달: 3개 룬 중 선택
+        private void DrawRuneModal()
+        {
+            if (Progression == null || !Progression.LevelUpPending)
+            {
+                _runeOffer = null;
+                Time.timeScale = 1f;
+                return;
+            }
+
+            if (_runeOffer == null)
+            {
+                _runeOffer = Progression.PickThreeOffer((uint)(Time.frameCount + Progression.Level * 113));
+            }
+            Time.timeScale = 0f;
+
+            // 어두운 배경
+            var dim = new Rect(0, 0, Screen.width, Screen.height);
+            var oldC = GUI.color;
+            GUI.color = new Color(0, 0, 0, 0.6f);
+            GUI.DrawTexture(dim, Texture2D.whiteTexture);
+            GUI.color = oldC;
+
+            const int W = 600;
+            const int H = 240;
+            int x = Screen.width / 2 - W / 2;
+            int y = Screen.height / 2 - H / 2;
+            GUI.Box(new Rect(x, y, W, H), "");
+            GUI.Label(new Rect(x, y + 12, W, 28), $"LEVEL {Progression.Level} — 룬 선택", _titleStyle);
+
+            int btnW = 180;
+            int btnH = 140;
+            int gap = 12;
+            int total = btnW * 3 + gap * 2;
+            int bx = x + (W - total) / 2;
+            int by = y + 60;
+            for (int i = 0; i < _runeOffer.Count; i++)
+            {
+                var rune = _runeOffer[i];
+                var rect = new Rect(bx + i * (btnW + gap), by, btnW, btnH);
+                if (GUI.Button(rect, ""))
+                {
+                    Progression.ApplyRune(rune);
+                    _runeOffer = null;
+                    return;
+                }
+                GUI.Label(new Rect(rect.x + 8, rect.y + 12, rect.width - 16, 24), rune.ToString(), _weaponStyle);
+                GUI.Label(new Rect(rect.x + 8, rect.y + 44, rect.width - 16, 80), PlayerProgression.Describe(rune), _labelStyle);
+            }
         }
 
         private static Gatherable FindNearestTreeInRange(Vector3 center, float range)

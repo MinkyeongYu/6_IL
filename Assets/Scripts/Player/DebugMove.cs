@@ -11,6 +11,7 @@ namespace IL6
     {
         public float Speed = 5f;
         public bool LogInput = false;
+        public PlayerProgression Progression;
 
         public Vector2 LastInput { get; private set; }
         public float CurrentSpeed => LastInput.magnitude * Speed;
@@ -22,6 +23,7 @@ namespace IL6
             _rb = GetComponent<Rigidbody2D>();
             _rb.gravityScale = 0f;
             _rb.freezeRotation = true;
+            if (Progression == null) Progression = GetComponent<PlayerProgression>();
         }
 
         private void Update()
@@ -40,7 +42,8 @@ namespace IL6
 
         private void FixedUpdate()
         {
-            _rb.velocity = LastInput * Speed;
+            float mul = Progression != null ? Progression.MoveSpeedMultiplier : 1f;
+            _rb.velocity = LastInput * Speed * mul;
         }
     }
 }
