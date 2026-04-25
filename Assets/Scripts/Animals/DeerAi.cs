@@ -54,6 +54,20 @@ namespace IL6
             }
         }
 
+        private float _regenTimer;
+        public float RegenIntervalSec = 6f;
+
+        private void Update()
+        {
+            if (CurrentHp <= 0 || CurrentHp >= MaxHp) return;
+            _regenTimer += Time.deltaTime;
+            if (_regenTimer >= RegenIntervalSec)
+            {
+                _regenTimer = 0f;
+                CurrentHp = Mathf.Min(MaxHp, CurrentHp + 1);
+            }
+        }
+
         private void FixedUpdate()
         {
             if (_player == null) { _rb.velocity = Vector2.zero; return; }

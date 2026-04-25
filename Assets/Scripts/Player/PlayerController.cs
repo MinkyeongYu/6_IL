@@ -51,6 +51,19 @@ namespace IL6
         }
 
         private float _snowTimer;
+        private float _regenTimer;
+        public float RegenIntervalSec = 4f; // 매 4초마다 +1 HP
+
+        private void Update()
+        {
+            if (IsDead) return;
+            _regenTimer += Time.deltaTime;
+            if (_regenTimer >= RegenIntervalSec)
+            {
+                _regenTimer = 0f;
+                if (CurrentHp < MaxHp) Heal(1);
+            }
+        }
 
         private void FixedUpdate()
         {

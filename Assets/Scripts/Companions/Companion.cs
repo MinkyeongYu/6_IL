@@ -203,10 +203,23 @@ namespace IL6
             if (CurrentMode == Mode.Fleeing) CurrentMode = Mode.Follow;
         }
 
+        private float _regenTimer;
+        public float RegenIntervalSec = 4f;
+
         private void Update()
         {
             _attackCd -= Time.deltaTime;
             if (IsCombat && CurrentMode != Mode.Hiding) TryAttack();
+
+            if (!IsDead)
+            {
+                _regenTimer += Time.deltaTime;
+                if (_regenTimer >= RegenIntervalSec)
+                {
+                    _regenTimer = 0f;
+                    if (CurrentHp < MaxHp) Heal(1);
+                }
+            }
         }
 
         private void FixedUpdate()
