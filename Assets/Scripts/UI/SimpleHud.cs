@@ -310,7 +310,7 @@ namespace IL6
         // ====================================================================
         private void DrawLeftPanel()
         {
-            var panel = new Rect(12, 12, 290, 510);
+            var panel = new Rect(12, 12, 290, 548);
             UiTheme.Panel(panel);
             UiTheme.TitleBar(panel, "  플레이어  ", _title);
 
@@ -454,7 +454,7 @@ namespace IL6
         private void DrawRightPanel()
         {
             const int W = 270;
-            var panel = new Rect(Screen.width - W - 12, 12, W, 380);
+            var panel = new Rect(Screen.width - W - 12, 12, W, 410);
             UiTheme.Panel(panel);
             UiTheme.TitleBar(panel, "  자원  ", _title);
 
@@ -512,6 +512,15 @@ namespace IL6
             UiTheme.Bar(new Rect(innerX, y, innerW - 50, 8), progress, UiTheme.TextGold);
             GUI.Label(new Rect(innerX + innerW - 46, y - 5, 46, 18), $"{rem:F0}s", _labelSubtle);
             y += 16;
+
+            // 라이브 점수 / 처치
+            var scoreOldC = GUI.contentColor;
+            GUI.contentColor = UiTheme.TextGold;
+            GUI.Label(new Rect(innerX, y, 90, 20), $"점수 {session.Score}", _section);
+            GUI.contentColor = UiTheme.TextSubtle;
+            GUI.Label(new Rect(innerX + 100, y, innerW - 100, 20), $"킬 {session.TotalKills}  ·  손실 {session.CompanionsLost}", _labelSubtle);
+            GUI.contentColor = scoreOldC;
+            y += 22;
 
             if (session.LastFoodShortage > 0)
             {
