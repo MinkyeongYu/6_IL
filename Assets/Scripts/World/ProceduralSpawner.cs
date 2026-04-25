@@ -106,7 +106,7 @@ namespace IL6
                 float cumNpc = cumDeer + NpcChance;
                 if (roll < cumTree) data.Spawned.Add(CreateTree(x, y));
                 else if (roll < cumRock) data.Spawned.Add(CreateRock(x, y));
-                else if (roll < cumDeer) data.Spawned.Add(CreateAnimal(x, y, rng));
+                else if (roll < cumDeer) SpawnAnimalAt(x, y, rng, data.Spawned);
                 else if (roll < cumNpc) data.Spawned.Add(CreateNpc(x, y, rng));
             }
         }
@@ -176,6 +176,7 @@ namespace IL6
             public string Name;
             public int MeatYield;
             public float DurationSec;
+            public int Hp;
             public float FleeRadius;
             public float FleeSpeed;
             public float Scale;
@@ -184,64 +185,89 @@ namespace IL6
             public FallbackShape Shape;
             public Color Outline;
             public float Weight;
+            public bool IsPredator;       // true → WolfAi, false → DeerAi
+            public int PredatorDamage;    // IsPredator 인 경우만
+            public int PackMin, PackMax;  // 무리 사이즈 (1=단독)
+            public bool DropsFrostbloom;
         }
 
-        // 가중치 기반 동물 풀 — Weight 합 = 1.0 (대략).
+        // 가중치 기반 동물 풀.
         private static readonly AnimalArchetype[] _animals =
         {
-            // 토끼: 작고 매우 빠름, 1 고기. 흔함.
+            // 토끼 (가장 흔함)
             new AnimalArchetype {
-                Name = "Rabbit_proc", MeatYield = 1, DurationSec = 1.5f,
+                Name = "Rabbit_proc", MeatYield = 1, DurationSec = 1.5f, Hp = 1,
                 FleeRadius = 5.5f, FleeSpeed = 5.5f,
                 Scale = 0.5f, ColliderRadius = 0.25f,
                 Tint = new Color(0.92f, 0.88f, 0.82f),
                 Shape = FallbackShape.Circle,
                 Outline = new Color(0.4f, 0.3f, 0.2f, 1f),
-                Weight = 0.36f,
+                Weight = 0.34f, PackMin = 1, PackMax = 1,
             },
-            // 사슴: 중형, 2 고기. 기본.
+            // 여우
             new AnimalArchetype {
-                Name = "Deer_proc", MeatYield = 2, DurationSec = 3f,
-                FleeRadius = 3.5f, FleeSpeed = 3f,
-                Scale = 1f, ColliderRadius = 0.4f,
-                Tint = new Color(0.55f, 0.4f, 0.25f),
-                Shape = FallbackShape.Circle,
-                Outline = new Color(0.2f, 0.12f, 0.05f, 1f),
-                Weight = 0.30f,
-            },
-            // 여우: 영리, 적당히 빠름, 2 고기.
-            new AnimalArchetype {
-                Name = "Fox_proc", MeatYield = 2, DurationSec = 2.5f,
+                Name = "Fox_proc", MeatYield = 2, DurationSec = 2.5f, Hp = 2,
                 FleeRadius = 4.5f, FleeSpeed = 4.5f,
                 Scale = 0.7f, ColliderRadius = 0.3f,
                 Tint = new Color(0.85f, 0.45f, 0.18f),
                 Shape = FallbackShape.Triangle,
                 Outline = new Color(0.4f, 0.18f, 0.05f, 1f),
-                Weight = 0.18f,
+                Weight = 0.20f, PackMin = 1, PackMax = 1,
             },
-            // 멧돼지: 크고 굼뜸, 4 고기. 살짝 도망감.
+            // 멧돼지
             new AnimalArchetype {
-                Name = "Boar_proc", MeatYield = 4, DurationSec = 4.5f,
+                Name = "Boar_proc", MeatYield = 4, DurationSec = 4.5f, Hp = 8,
                 FleeRadius = 2.5f, FleeSpeed = 2.2f,
                 Scale = 1.25f, ColliderRadius = 0.5f,
                 Tint = new Color(0.35f, 0.25f, 0.18f),
                 Shape = FallbackShape.Rounded,
                 Outline = new Color(0.1f, 0.05f, 0.02f, 1f),
-                Weight = 0.10f,
+                Weight = 0.13f, PackMin = 1, PackMax = 1,
             },
-            // 흰토끼 (희귀): 1 고기 + Frostbloom 1, 매우 빠름.
+            // 늑대 (포식자, 무리)
             new AnimalArchetype {
-                Name = "SnowHare_proc", MeatYield = 1, DurationSec = 1.8f,
+                Name = "Wolf_proc", MeatYield = 1, DurationSec = 1.5f, Hp = 5,
+                FleeRadius = 0f, FleeSpeed = 0f, // 안 도망감
+                Scale = 0.85f, ColliderRadius = 0.35f,
+                Tint = new Color(0.45f, 0.45f, 0.5f),
+                Shape = FallbackShape.Triangle,
+                Outline = new Color(0.15f, 0.15f, 0.18f, 1f),
+                Weight = 0.13f, IsPredator = true, PredatorDamage = 6,
+                PackMin = 2, PackMax = 4,
+            },
+            // 사슴 (낮춘 빈도)
+            new AnimalArchetype {
+                Name = "Deer_proc", MeatYield = 2, DurationSec = 3f, Hp = 3,
+                FleeRadius = 3.5f, FleeSpeed = 3f,
+                Scale = 1f, ColliderRadius = 0.4f,
+                Tint = new Color(0.55f, 0.4f, 0.25f),
+                Shape = FallbackShape.Circle,
+                Outline = new Color(0.2f, 0.12f, 0.05f, 1f),
+                Weight = 0.10f, PackMin = 1, PackMax = 1,
+            },
+            // 흰토끼 (희귀, Frostbloom 보너스)
+            new AnimalArchetype {
+                Name = "SnowHare_proc", MeatYield = 1, DurationSec = 1.8f, Hp = 1,
                 FleeRadius = 6f, FleeSpeed = 6.5f,
                 Scale = 0.45f, ColliderRadius = 0.25f,
                 Tint = new Color(0.95f, 0.97f, 1f),
                 Shape = FallbackShape.Circle,
                 Outline = new Color(0.45f, 0.6f, 0.85f, 1f),
-                Weight = 0.06f,
+                Weight = 0.06f, PackMin = 1, PackMax = 1, DropsFrostbloom = true,
+            },
+            // 맘모스 (희귀, 매우 단단함, 고기 많음)
+            new AnimalArchetype {
+                Name = "Mammoth_proc", MeatYield = 12, DurationSec = 8f, Hp = 30,
+                FleeRadius = 1.5f, FleeSpeed = 1.0f,
+                Scale = 2.2f, ColliderRadius = 0.85f,
+                Tint = new Color(0.45f, 0.32f, 0.22f),
+                Shape = FallbackShape.Rounded,
+                Outline = new Color(0.15f, 0.08f, 0.02f, 1f),
+                Weight = 0.04f, PackMin = 1, PackMax = 1,
             },
         };
 
-        private static GameObject CreateAnimal(float x, float y, SeededRng rng)
+        private static void SpawnAnimalAt(float x, float y, SeededRng rng, System.Collections.Generic.List<GameObject> sink)
         {
             // 가중치 추첨
             float total = 0f;
@@ -255,6 +281,17 @@ namespace IL6
                 if (roll <= acc) { a = _animals[i]; break; }
             }
 
+            int packSize = rng.IntRange(a.PackMin, Mathf.Max(a.PackMin, a.PackMax));
+            for (int p = 0; p < packSize; p++)
+            {
+                float ox = p == 0 ? 0f : (rng.Next() - 0.5f) * 2f;
+                float oy = p == 0 ? 0f : (rng.Next() - 0.5f) * 2f;
+                sink.Add(CreateOneAnimal(a, x + ox, y + oy));
+            }
+        }
+
+        private static GameObject CreateOneAnimal(AnimalArchetype a, float x, float y)
+        {
             var go = new GameObject(a.Name);
             go.transform.position = new Vector3(x, y, 0);
             go.transform.localScale = Vector3.one * a.Scale;
@@ -262,6 +299,7 @@ namespace IL6
 
             var sr = go.AddComponent<SpriteRenderer>();
             sr.sortingOrder = 8;
+            sr.color = a.Tint;
 
             var rb = go.AddComponent<Rigidbody2D>();
             rb.gravityScale = 0f;
@@ -276,9 +314,20 @@ namespace IL6
             gat.DurationSec = a.DurationSec;
             gat.DestroyOnGather = true;
 
-            var ai = go.AddComponent<DeerAi>();
-            ai.FleeRadius = a.FleeRadius;
-            ai.FleeSpeed = a.FleeSpeed;
+            if (a.IsPredator)
+            {
+                var ai = go.AddComponent<WolfAi>();
+                ai.MaxHp = a.Hp;
+                ai.InitHp(a.Hp);
+                ai.Damage = a.PredatorDamage;
+            }
+            else
+            {
+                var ai = go.AddComponent<DeerAi>();
+                ai.FleeRadius = a.FleeRadius;
+                ai.FleeSpeed = a.FleeSpeed;
+                ai.InitHp(a.Hp);
+            }
 
             var cf = go.AddComponent<ColorFallback>();
             cf.Tint = a.Tint;
@@ -288,12 +337,23 @@ namespace IL6
             cf.OutlineWidth = 2;
             cf.OutlineColor = a.Outline;
 
-            // 흰토끼는 추가로 Frostbloom 1 도 떨어뜨림 — Gatherable 두 번 부착 대신 동반 컴포넌트로 처리
-            if (a.Name == "SnowHare_proc")
+            if (a.DropsFrostbloom)
             {
                 var bonus = go.AddComponent<BonusYieldOnGather>();
                 bonus.Kind = ResourceKind.Frostbloom;
                 bonus.Amount = 1;
+            }
+
+            // 큰 동물 (맘모스 등) 은 HP 바도 띄움
+            if (a.Hp >= 8)
+            {
+                var hpBar = go.AddComponent<HpBarUi>();
+                if (a.IsPredator) hpBar.WolfRef = go.GetComponent<WolfAi>();
+                else hpBar.DeerRef = go.GetComponent<DeerAi>();
+                hpBar.Offset = new Vector2(0f, 0.55f);
+                hpBar.Size = new Vector2(0.9f, 0.1f);
+                hpBar.BgColor = new Color(0.05f, 0.05f, 0.08f, 0.9f);
+                hpBar.FillColor = new Color(0.85f, 0.4f, 0.4f);
             }
             return go;
         }

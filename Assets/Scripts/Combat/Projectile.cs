@@ -120,7 +120,8 @@ namespace IL6
         {
             if (target == null) return false;
             if (target is Zombie z) return !z.IsDead;
-            if (target is DeerAi) return true;
+            if (target is DeerAi d) return d.CurrentHp > 0;
+            if (target is WolfAi w) return w.CurrentHp > 0;
             return false;
         }
 
@@ -134,10 +135,11 @@ namespace IL6
             }
             if (target is DeerAi deer)
             {
-                var g = deer.GetComponent<Gatherable>();
-                var session = GameSession.Instance;
-                if (g != null && session != null) g.OnGathered(session.Resources);
-                else if (deer != null && deer.gameObject != null) Destroy(deer.gameObject);
+                deer.TakeDamage(Damage);
+            }
+            if (target is WolfAi wolf)
+            {
+                wolf.TakeDamage(Damage);
             }
         }
 

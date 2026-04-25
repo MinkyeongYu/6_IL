@@ -118,14 +118,16 @@ namespace IL6
             {
                 MonoBehaviour candidate = null;
                 var z = h.GetComponent<Zombie>();
-                if (z != null && !z.IsDead)
+                if (z != null && !z.IsDead) candidate = z;
+                if (candidate == null)
                 {
-                    candidate = z;
+                    var w = h.GetComponent<WolfAi>();
+                    if (w != null && w.CurrentHp > 0) candidate = w;
                 }
-                else
+                if (candidate == null)
                 {
                     var d = h.GetComponent<DeerAi>();
-                    if (d != null) candidate = d;
+                    if (d != null && d.CurrentHp > 0) candidate = d;
                 }
                 if (candidate == null) continue;
                 float dist = Vector2.Distance(_self.position, candidate.transform.position);
@@ -184,8 +186,11 @@ namespace IL6
             }
             else if (target is DeerAi deer)
             {
-                var g = deer.GetComponent<Gatherable>();
-                if (g != null && GameSession.Instance != null) g.OnGathered(GameSession.Instance.Resources);
+                deer.TakeDamage(dmg);
+            }
+            else if (target is WolfAi wolf)
+            {
+                wolf.TakeDamage(dmg);
             }
         }
 

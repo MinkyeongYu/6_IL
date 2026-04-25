@@ -12,6 +12,8 @@ namespace IL6
         public Zombie Zombie;
         public Building Building;
         public Companion CompanionRef;
+        public DeerAi DeerRef;
+        public WolfAi WolfRef;
         public Vector2 Offset = new Vector2(0f, 0.7f);
         public Vector2 Size = new Vector2(0.9f, 0.12f);
         public Color BgColor = new Color(0.05f, 0.05f, 0.08f, 0.9f);
@@ -73,6 +75,8 @@ namespace IL6
             if (Zombie != null) return (float)Zombie.CurrentHp / Mathf.Max(1, Zombie.MaxHp);
             if (Building != null) return (float)Building.CurrentHp / Mathf.Max(1, Building.MaxHp);
             if (CompanionRef != null) return (float)CompanionRef.CurrentHp / Mathf.Max(1, CompanionRef.MaxHp);
+            if (DeerRef != null) return (float)DeerRef.CurrentHp / Mathf.Max(1, DeerRef.MaxHp);
+            if (WolfRef != null) return (float)WolfRef.CurrentHp / Mathf.Max(1, WolfRef.MaxHp);
             return 1f;
         }
     }
