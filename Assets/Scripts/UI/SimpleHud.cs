@@ -98,13 +98,12 @@ namespace IL6
 
         private bool _initialBannerShown;
 
-        private void Start()
+        private void TryShowInitialBanner()
         {
-            // 게임 시작 시 (또는 씬 재진입 시) 현재 페이즈에 맞춰 배너 1회 표시 — 낮부터 시작 흐름.
             if (_initialBannerShown) return;
-            _initialBannerShown = true;
             var s = GameSession.Instance;
-            if (s == null || s.Cycle == null) return;
+            if (s == null || s.Cycle == null) return; // 다음 프레임에 다시 시도
+            _initialBannerShown = true;
             string txt = s.Cycle.Phase switch
             {
                 Phase.Day => $"Day {s.Cycle.Day}  ☀  새 날",
@@ -379,6 +378,7 @@ namespace IL6
 
         private void Update()
         {
+            TryShowInitialBanner();
             if (Player == null) return;
             if (_lastPlayerHp == -1) _lastPlayerHp = Player.CurrentHp;
             if (Player.CurrentHp < _lastPlayerHp) _damageFlashAmount = 0.55f;
