@@ -401,7 +401,8 @@ namespace IL6
                     _runeOffer = null;
                     return;
                 }
-                GUI.Label(new Rect(rect.x + 10, rect.y + 14, rect.width - 20, 24), rune.ToString(), _weapon);
+                GUI.Label(new Rect(rect.x + 10, rect.y + 14, rect.width - 20, 24), PlayerProgression.Title(rune), _weapon);
+                UiTheme.Separator(new Rect(rect.x + 10, rect.y + 42, rect.width - 20, 1));
                 GUI.Label(new Rect(rect.x + 10, rect.y + 50, rect.width - 20, 100), PlayerProgression.Describe(rune), _label);
             }
         }

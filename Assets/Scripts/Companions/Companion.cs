@@ -33,6 +33,21 @@ namespace IL6
         [Header("Morale")]
         public int Morale = 100;
 
+        [Header("Health")]
+        public int MaxHp = 50;
+        public int CurrentHp { get; private set; }
+        public bool IsDead => CurrentHp <= 0;
+
+        public void TakeDamage(int amount)
+        {
+            if (IsDead) return;
+            CurrentHp = Mathf.Max(0, CurrentHp - amount);
+            if (CurrentHp <= 0)
+            {
+                Destroy(gameObject);
+            }
+        }
+
         public enum Mode { Follow, Working, Farming, Hiding, Fleeing }
         public Mode CurrentMode { get; private set; } = Mode.Follow;
         public Gatherable Target { get; private set; }
@@ -107,6 +122,19 @@ namespace IL6
             }
 
             _sr = GetComponent<SpriteRenderer>();
+
+            if (CurrentHp <= 0) CurrentHp = MaxHp;
+
+            // 자동 HP 바 부착 (씬에서 미리 설정 안 했을 때만)
+            if (GetComponent<HpBarUi>() == null)
+            {
+                var hp = gameObject.AddComponent<HpBarUi>();
+                hp.CompanionRef = this;
+                hp.Offset = new Vector2(0f, 0.55f);
+                hp.Size = new Vector2(0.7f, 0.10f);
+                hp.BgColor = new Color(0.05f, 0.05f, 0.08f, 0.9f);
+                hp.FillColor = new Color(0.45f, 0.85f, 0.55f);
+            }
         }
 
         private void Start()

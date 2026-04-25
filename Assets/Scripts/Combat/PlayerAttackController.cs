@@ -68,14 +68,45 @@ namespace IL6
 
             if (Weapon.ProjectileSpeed > 0f)
             {
-                SpawnProjectile(nearest, dmg);
+                int extra = Progression != null ? Progression.MultiShotStacks : 0;
+                SpawnProjectileSpread(nearest, dmg, 1 + extra);
             }
             else
             {
                 DealImmediate(nearest, dmg);
+                int extraHits = Progression != null ? Progression.MultiShotStacks : 0;
+                if (extraHits > 0) HitExtraNearby(nearest, dmg, extraHits, effectiveRange);
             }
             float cdMul = Progression != null ? Progression.CooldownMultiplier : 1f;
             _cooldown = Weapon.CooldownSec * cdMul;
+        }
+
+        private void SpawnProjectileSpread(MonoBehaviour target, int dmg, int count)
+        {
+            Vector2 baseDir = ((Vector2)target.transform.position - (Vector2)_self.position).normalized;
+            for (int i = 0; i < count; i++)
+            {
+                float angleOffset = count > 1 ? (i - (count - 1) * 0.5f) * 14f : 0f;
+                Vector2 dir = Quaternion.Euler(0, 0, angleOffset) * baseDir;
+                var proj = SpawnProjectile(target, dmg);
+                if (i > 0) proj.AimDirection(dir);
+            }
+        }
+
+        private void HitExtraNearby(MonoBehaviour primary, int dmg, int extra, float range)
+        {
+            var hits = Physics2D.OverlapCircleAll(_self.position, range);
+            int remaining = extra;
+            foreach (var h in hits)
+            {
+                if (remaining <= 0) break;
+                var z = h.GetComponent<Zombie>();
+                if (z != null && !z.IsDead && (object)z != primary)
+                {
+                    DealImmediate(z, dmg);
+                    remaining--;
+                }
+            }
         }
 
         private MonoBehaviour FindNearestTarget(float range)
@@ -103,7 +134,7 @@ namespace IL6
             return best;
         }
 
-        private void SpawnProjectile(MonoBehaviour target, int dmg)
+        private Projectile SpawnProjectile(MonoBehaviour target, int dmg)
         {
             var go = new GameObject("Projectile");
             go.transform.position = _self.position;
@@ -125,12 +156,24 @@ namespace IL6
             proj.Speed = Weapon.ProjectileSpeed * speedMul;
             proj.Damage = dmg;
             proj.HitRadius = 0.4f;
+            proj.OwnerProgression = Progression;
             proj.Aim(target, _self.position);
+            return proj;
         }
 
         private void DealImmediate(MonoBehaviour target, int dmg)
         {
-            if (target is Zombie z && !z.IsDead) z.TakeDamage(dmg);
+            if (target is Zombie z && !z.IsDead)
+            {
+                z.TakeDamage(dmg);
+                if (Progression != null)
+                {
+                    if (Progression.PoisonStacks > 0) z.ApplyPoison(3f, Progression.PoisonStacks * 5);
+                    if (Progression.IceStacks > 0) z.ApplySlow(2f + Progression.IceStacks);
+                    if (z.IsDead && Progression.DetonatorStacks > 0)
+                        Projectile.Detonate(z.transform.position, Progression.DetonatorStacks * 8);
+                }
+            }
             else if (target is DeerAi deer)
             {
                 var g = deer.GetComponent<Gatherable>();
