@@ -168,6 +168,7 @@ namespace IL6
             {
                 var prog = Object.FindFirstObjectByType<PlayerProgression>();
                 if (prog != null) prog.GrantXp(1);
+                if (GameSession.Instance != null) GameSession.Instance.OnZombieKilled();
                 Destroy(gameObject);
             }
         }

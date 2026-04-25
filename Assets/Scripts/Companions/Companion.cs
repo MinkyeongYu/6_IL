@@ -42,10 +42,19 @@ namespace IL6
         {
             if (IsDead) return;
             CurrentHp = Mathf.Max(0, CurrentHp - amount);
+            GameFeel.HitFlash(this, GetComponent<SpriteRenderer>());
             if (CurrentHp <= 0)
             {
+                var s = GameSession.Instance;
+                if (s != null) s.OnCompanionLost();
                 Destroy(gameObject);
             }
+        }
+
+        public void Heal(int amount)
+        {
+            if (IsDead) return;
+            CurrentHp = Mathf.Min(MaxHp, CurrentHp + amount);
         }
 
         public enum Mode { Follow, Working, Farming, Hiding, Fleeing }

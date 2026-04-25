@@ -28,6 +28,31 @@ namespace IL6
             DrawRecruitDialog();
             DrawRuneModal();
             DrawDeathOverlay();
+            DrawDamageFlash();
+        }
+
+        private int _lastPlayerHp = -1;
+        private float _damageFlashAmount;
+
+        private void Update()
+        {
+            if (Player == null) return;
+            if (_lastPlayerHp == -1) _lastPlayerHp = Player.CurrentHp;
+            if (Player.CurrentHp < _lastPlayerHp) _damageFlashAmount = 0.55f;
+            _lastPlayerHp = Player.CurrentHp;
+            if (_damageFlashAmount > 0f) _damageFlashAmount -= Time.unscaledDeltaTime;
+        }
+
+        private void DrawDamageFlash()
+        {
+            if (_damageFlashAmount <= 0f) return;
+            float a = Mathf.Clamp01(_damageFlashAmount) * 0.55f;
+            // 외곽 빨간 비네트 (4개 직사각형)
+            int t = 60;
+            UiTheme.Rect(new Rect(0, 0, Screen.width, t), new Color(0.9f, 0.05f, 0.05f, a));
+            UiTheme.Rect(new Rect(0, Screen.height - t, Screen.width, t), new Color(0.9f, 0.05f, 0.05f, a));
+            UiTheme.Rect(new Rect(0, 0, t, Screen.height), new Color(0.9f, 0.05f, 0.05f, a));
+            UiTheme.Rect(new Rect(Screen.width - t, 0, t, Screen.height), new Color(0.9f, 0.05f, 0.05f, a));
         }
 
         // ====================================================================
@@ -417,10 +442,31 @@ namespace IL6
         {
             if (Player == null || !Player.IsDead) return;
             Time.timeScale = 0f;
-            UiTheme.Rect(new Rect(0, 0, Screen.width, Screen.height), new Color(0, 0, 0, 0.88f));
-            GUI.Label(new Rect(0, Screen.height / 2 - 80, Screen.width, 100), "YOU DIED", _bigDeath);
+            UiTheme.Rect(new Rect(0, 0, Screen.width, Screen.height), new Color(0, 0, 0, 0.92f));
+            GUI.Label(new Rect(0, Screen.height / 2 - 150, Screen.width, 100), "YOU DIED", _bigDeath);
+
+            var s = GameSession.Instance;
+            if (s != null)
+            {
+                const int W = 360;
+                int sx = Screen.width / 2 - W / 2;
+                int sy = Screen.height / 2 - 30;
+                var statPanel = new Rect(sx, sy, W, 130);
+                UiTheme.Panel(statPanel);
+
+                int row = sy + 12;
+                int lineH = 22;
+                GUI.Label(new Rect(sx + 24, row, W - 48, lineH), $"생존 일수      Day {s.Cycle.Day}", _section); row += lineH;
+                GUI.Label(new Rect(sx + 24, row, W - 48, lineH), $"좀비 처치      {s.TotalKills}", _section); row += lineH;
+                GUI.Label(new Rect(sx + 24, row, W - 48, lineH), $"동료 최대      {s.MaxCompanionsAtOnce}", _section); row += lineH;
+                GUI.Label(new Rect(sx + 24, row, W - 48, lineH), $"동료 손실      {s.CompanionsLost}", _section); row += lineH + 4;
+
+                var titleStyle = new GUIStyle(_title) { fontSize = 22, normal = { textColor = UiTheme.TextGold } };
+                GUI.Label(new Rect(sx, row, W, 28), $"점수  {s.Score}", titleStyle);
+            }
+
             int bx = Screen.width / 2 - 90;
-            int by = Screen.height / 2 + 40;
+            int by = Screen.height / 2 + 130;
             if (UiTheme.Button(new Rect(bx, by, 180, 46), "다시 시작", _btn))
             {
                 Time.timeScale = 1f;

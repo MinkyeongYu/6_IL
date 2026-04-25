@@ -60,6 +60,7 @@ namespace IL6
         {
             if (IsDead) return;
             CurrentHp = Mathf.Max(0, CurrentHp - amount);
+            GameFeel.HitFlash(this, GetComponent<SpriteRenderer>());
         }
 
         public void Heal(int amount)

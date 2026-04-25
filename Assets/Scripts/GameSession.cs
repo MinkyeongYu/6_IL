@@ -46,6 +46,19 @@ namespace IL6
 
         public int LastFoodEaten { get; private set; }
         public int LastFoodShortage { get; private set; }
+        public int TotalKills { get; private set; }
+        public int CompanionsLost { get; private set; }
+        public int MaxCompanionsAtOnce { get; private set; }
+
+        public int Score => Mathf.Max(0,
+            (Cycle != null ? (Cycle.Day - 1) * 10 : 0)
+            + TotalKills * 3
+            + MaxCompanionsAtOnce * 5
+            - CompanionsLost * 4);
+
+        public void OnZombieKilled() { TotalKills++; }
+        public void OnCompanionLost() { CompanionsLost++; }
+
         private System.Action _unsubDay;
 
         private void Start()
@@ -59,6 +72,13 @@ namespace IL6
             if (Instance == this) Instance = null;
         }
 
+        private void Update()
+        {
+            // 동시 동료 최대치 추적
+            int n = Object.FindObjectsByType<Companion>(FindObjectsSortMode.None).Length;
+            if (n > MaxCompanionsAtOnce) MaxCompanionsAtOnce = n;
+        }
+
         private void OnDayStarted(int day)
         {
             var comps = Object.FindObjectsByType<Companion>(FindObjectsSortMode.None);
@@ -69,15 +89,33 @@ namespace IL6
             int hungry = needed - eat;
             LastFoodEaten = eat;
             LastFoodShortage = hungry;
-            if (hungry <= 0 || comps == null) return;
-            for (int i = 0; i < hungry && i < comps.Length; i++)
+            if (hungry > 0 && comps != null)
             {
-                var c = comps[i];
-                if (c == null) continue;
-                c.Morale -= 15;
-                if (c.Morale <= 0)
+                for (int i = 0; i < hungry && i < comps.Length; i++)
                 {
-                    Destroy(c.gameObject);
+                    var c = comps[i];
+                    if (c == null) continue;
+                    c.Morale -= 15;
+                    if (c.Morale <= 0)
+                    {
+                        OnCompanionLost();
+                        Destroy(c.gameObject);
+                    }
+                }
+            }
+
+            // 새벽 회복: Player + 모든 살아있는 동료 풀 HP
+            var player = GameObject.FindWithTag("Player");
+            if (player != null)
+            {
+                var pc = player.GetComponent<PlayerController>();
+                if (pc != null) pc.Heal(pc.MaxHp);
+            }
+            if (comps != null)
+            {
+                foreach (var c in comps)
+                {
+                    if (c != null) c.Heal(c.MaxHp);
                 }
             }
         }

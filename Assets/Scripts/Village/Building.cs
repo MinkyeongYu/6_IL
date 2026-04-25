@@ -29,6 +29,7 @@ namespace IL6
         public void TakeDamage(int amount)
         {
             CurrentHp = Mathf.Max(0, CurrentHp - amount);
+            GameFeel.HitFlash(this, GetComponent<SpriteRenderer>());
             if (CurrentHp <= 0)
             {
                 Grid?.Remove(Eid);
