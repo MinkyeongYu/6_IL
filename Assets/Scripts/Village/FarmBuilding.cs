@@ -56,6 +56,7 @@ namespace IL6
             int yield = BaseYield + Workers.Count * PerWorkerBonus;
             var session = GameSession.Instance;
             if (session != null) session.Resources.Add(ResourceKind.Food, yield);
+            GameFeel.FloatText(transform.position, $"+{yield} Food", new Color(0.7f, 0.95f, 0.5f));
             foreach (var w in Workers) if (w != null) w.ReleaseFarm();
             Workers.Clear();
             NightsPassed = 0;

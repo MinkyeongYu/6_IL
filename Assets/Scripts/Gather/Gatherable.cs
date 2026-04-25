@@ -16,9 +16,10 @@ namespace IL6
         public void OnGathered(ResourceStore store)
         {
             store.Add(YieldKind, YieldAmount);
+            Color tint = ResourceTint(YieldKind);
+            GameFeel.FloatText(transform.position, $"+{YieldAmount} {YieldKind}", tint);
             if (DestroyOnGather)
             {
-                Color tint = ResourceTint(YieldKind);
                 GameFeel.DeathPoof(transform.position, tint, 0.5f);
                 Destroy(gameObject);
             }

@@ -168,6 +168,8 @@ namespace IL6
             if (IsDead) return;
             CurrentHp = Mathf.Max(0, CurrentHp - amount);
             GameFeel.HitFlash(this, _sr);
+            GameFeel.FloatText(transform.position, $"-{amount}",
+                new Color(1f, 0.85f, 0.4f));
             if (CurrentHp <= 0)
             {
                 var prog = Object.FindFirstObjectByType<PlayerProgression>();

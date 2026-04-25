@@ -80,6 +80,76 @@ namespace IL6
             if (go != null) Object.Destroy(go);
         }
 
+        public static void FloatText(Vector3 worldPos, string text, Color color)
+        {
+            var ft = Runner().gameObject.GetComponent<FloatTextRoot>();
+            if (ft == null) ft = Runner().gameObject.AddComponent<FloatTextRoot>();
+            ft.Spawn(worldPos, text, color);
+        }
+
         private sealed class GameFeelRunner : MonoBehaviour { }
+
+        public sealed class FloatTextRoot : MonoBehaviour
+        {
+            private struct Item
+            {
+                public Vector3 World;
+                public string Text;
+                public Color Color;
+                public float Age;
+            }
+            private readonly System.Collections.Generic.List<Item> _items = new();
+            private GUIStyle _style;
+            private const float LifeSec = 0.9f;
+
+            public void Spawn(Vector3 w, string t, Color c)
+            {
+                _items.Add(new Item { World = w, Text = t, Color = c, Age = 0f });
+                if (_items.Count > 64) _items.RemoveAt(0);
+            }
+
+            private void Update()
+            {
+                for (int i = _items.Count - 1; i >= 0; i--)
+                {
+                    var it = _items[i];
+                    it.Age += Time.deltaTime;
+                    _items[i] = it;
+                    if (it.Age >= LifeSec) _items.RemoveAt(i);
+                }
+            }
+
+            private void OnGUI()
+            {
+                if (_items.Count == 0) return;
+                if (_style == null)
+                {
+                    _style = new GUIStyle(GUI.skin.label) {
+                        fontSize = 16, fontStyle = FontStyle.Bold,
+                        alignment = TextAnchor.MiddleCenter };
+                }
+                var cam = Camera.main;
+                if (cam == null) return;
+                var oldC = GUI.color;
+                foreach (var it in _items)
+                {
+                    float k = it.Age / LifeSec;
+                    Vector3 pos = it.World + Vector3.up * (0.6f + k * 1.0f);
+                    Vector3 sp = cam.WorldToScreenPoint(pos);
+                    if (sp.z < 0) continue;
+                    float a = 1f - k;
+                    var c = it.Color;
+                    c.a = a;
+                    GUI.color = c;
+                    var r = new Rect(sp.x - 60, Screen.height - sp.y - 12, 120, 24);
+                    // 살짝 그림자
+                    GUI.color = new Color(0, 0, 0, 0.6f * a);
+                    GUI.Label(new Rect(r.x + 1, r.y + 1, r.width, r.height), it.Text, _style);
+                    GUI.color = c;
+                    GUI.Label(r, it.Text, _style);
+                }
+                GUI.color = oldC;
+            }
+        }
     }
 }
