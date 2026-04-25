@@ -58,10 +58,19 @@ namespace IL6
         }
 
         public enum Mode { Follow, Working, Farming, Hiding, Fleeing }
+        public enum Stance { Follow, Hold, Aggressive }
         public Mode CurrentMode { get; private set; } = Mode.Follow;
+        public Stance CurrentStance = Stance.Follow;
         public Gatherable Target { get; private set; }
         public Transform FarmStation { get; private set; }
         public Building Shelter { get; private set; }
+        private Vector3 _holdAnchor;
+
+        public void SetStance(Stance s)
+        {
+            CurrentStance = s;
+            if (s == Stance.Hold) _holdAnchor = transform.position;
+        }
 
         private float _attackCd;
         private Rigidbody2D _rb;
@@ -215,6 +224,25 @@ namespace IL6
 
         private Vector2 ComputeFollowVelocity()
         {
+            if (CurrentStance == Stance.Hold)
+            {
+                Vector2 toAnchor = (Vector2)_holdAnchor - (Vector2)transform.position;
+                Vector2 sep = SeparationFromOthers();
+                if (toAnchor.magnitude > 0.3f) return toAnchor.normalized * MoveSpeed * 0.7f + sep;
+                return sep;
+            }
+            if (CurrentStance == Stance.Aggressive)
+            {
+                var z = FindNearestZombie(9f);
+                if (z != null)
+                {
+                    Vector2 toZ = (Vector2)z.transform.position - (Vector2)transform.position;
+                    float dz = toZ.magnitude;
+                    Vector2 sep = SeparationFromOthers();
+                    if (dz > AttackRange * 0.7f) return toZ.normalized * MoveSpeed + sep;
+                    return sep;
+                }
+            }
             if (Player == null) return Vector2.zero;
             Vector2 slot = GetFormationSlot();
             Vector2 toSlot = slot - (Vector2)transform.position;

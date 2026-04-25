@@ -163,7 +163,7 @@ namespace IL6
         // ====================================================================
         private void DrawLeftPanel()
         {
-            var panel = new Rect(12, 12, 290, 460);
+            var panel = new Rect(12, 12, 290, 510);
             UiTheme.Panel(panel);
             UiTheme.TitleBar(panel, "  플레이어  ", _title);
 
@@ -251,6 +251,35 @@ namespace IL6
             y += 32;
             DrawBuildButton(new Rect(innerX, y, innerW, 28), "🌾 농장", 6, wood, ResourceKind.Wood,
                 () => SpawnFarm(Player.transform.position));
+            y += 36;
+
+            // 동료 스탠스 토글 (모든 동료 일괄)
+            var allComps = Object.FindObjectsByType<Companion>(FindObjectsSortMode.None);
+            int liveCount = 0;
+            Companion.Stance majorityStance = Companion.Stance.Follow;
+            foreach (var c in allComps)
+            {
+                if (c == null || c.IsDead || c.CurrentMode == Companion.Mode.Hiding) continue;
+                liveCount++;
+                majorityStance = c.CurrentStance;
+            }
+            string sLabel = majorityStance switch
+            {
+                Companion.Stance.Follow => "👣 따르기",
+                Companion.Stance.Hold => "🛡 사수",
+                Companion.Stance.Aggressive => "⚔ 공세",
+                _ => ""
+            };
+            if (UiTheme.Button(new Rect(innerX, y, innerW, 28), $"동료 스탠스: {sLabel} ({liveCount})", _btn, liveCount > 0))
+            {
+                var next = majorityStance switch
+                {
+                    Companion.Stance.Follow => Companion.Stance.Hold,
+                    Companion.Stance.Hold => Companion.Stance.Aggressive,
+                    _ => Companion.Stance.Follow
+                };
+                foreach (var c in allComps) if (c != null) c.SetStance(next);
+            }
         }
 
         private void DrawBuildButton(Rect r, string label, int cost, int have, ResourceKind kind, System.Action onClick)
