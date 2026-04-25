@@ -3,8 +3,8 @@ using UnityEngine;
 namespace IL6
 {
     /// <summary>
-    /// IMGUI 기반 HUD. 좌측: 플레이어 상태/무기/빌드. 우측 상단: 자원/사이클.
-    /// Canvas/TMP 셋업 없이 즉시 작동.
+    /// IMGUI 기반 HUD. UiTheme 헬퍼로 패널/바/아이콘/버튼 일관 스타일 적용.
+    /// 좌측: 플레이어 + 무기 + 빌드. 우측: 자원 + 사이클. 월드: 채집/수확/배치/영입.
     /// </summary>
     public sealed class SimpleHud : MonoBehaviour
     {
@@ -16,10 +16,7 @@ namespace IL6
 
         private System.Collections.Generic.List<RuneKind> _runeOffer;
 
-        private GUIStyle _labelStyle;
-        private GUIStyle _titleStyle;
-        private GUIStyle _weaponStyle;
-        private GUIStyle _resStyle;
+        private GUIStyle _label, _labelSubtle, _title, _section, _weapon, _bigDeath, _btn, _smallBtn;
 
         private void OnGUI()
         {
@@ -31,6 +28,248 @@ namespace IL6
             DrawRecruitDialog();
             DrawRuneModal();
             DrawDeathOverlay();
+        }
+
+        // ====================================================================
+        // 좌측: 플레이어 / 무기 / 빌드
+        // ====================================================================
+        private void DrawLeftPanel()
+        {
+            var panel = new Rect(12, 12, 290, 460);
+            UiTheme.Panel(panel);
+            UiTheme.TitleBar(panel, "  플레이어  ", _title);
+
+            int y = (int)panel.y + 36;
+            int innerX = (int)panel.x + 14;
+            int innerW = (int)panel.width - 28;
+
+            if (Player != null)
+            {
+                // HP 바
+                GUI.Label(new Rect(innerX, y, 80, 20), "HP", _label);
+                GUI.Label(new Rect(innerX + 200, y, 80, 20), $"{Player.CurrentHp} / {Player.MaxHp}", _labelSubtle);
+                y += 18;
+                float hpPct = Player.MaxHp > 0 ? (float)Player.CurrentHp / Player.MaxHp : 0f;
+                UiTheme.Bar(new Rect(innerX, y, innerW, 12), hpPct,
+                    Color.Lerp(Color.red, Color.green, hpPct));
+                y += 18;
+
+                var p = Player.transform.position;
+                GUI.Label(new Rect(innerX, y, innerW, 18), $"위치 ({p.x:F1}, {p.y:F1})", _labelSubtle);
+                y += 20;
+            }
+            else
+            {
+                GUI.Label(new Rect(innerX, y, innerW, 22), "Player NULL", _label);
+                y += 22;
+            }
+
+            if (Gather != null && Gather.IsActive)
+            {
+                GUI.Label(new Rect(innerX, y, innerW, 18), $"채집중 {(Gather.Progress * 100):F0}%", _labelSubtle);
+                y += 18;
+                UiTheme.Bar(new Rect(innerX, y, innerW, 8), Gather.Progress, new Color(0.6f, 0.85f, 0.4f));
+                y += 14;
+            }
+
+            if (Progression != null)
+            {
+                UiTheme.Separator(new Rect(innerX, y + 2, innerW, 1));
+                y += 10;
+                GUI.Label(new Rect(innerX, y, 80, 20), $"Lv {Progression.Level}", _section);
+                GUI.Label(new Rect(innerX + 80, y, innerW - 80, 20), $"XP {Progression.Xp}/{Progression.XpToNext}", _labelSubtle);
+                y += 18;
+                float xpPct = Progression.XpToNext > 0 ? (float)Progression.Xp / Progression.XpToNext : 0f;
+                UiTheme.Bar(new Rect(innerX, y, innerW, 8), xpPct, UiTheme.BarXpFill);
+                y += 14;
+            }
+
+            if (Attacker != null && Attacker.Weapon != null)
+            {
+                UiTheme.Separator(new Rect(innerX, y + 2, innerW, 1));
+                y += 10;
+                var w = Attacker.Weapon;
+                if (UiTheme.Button(new Rect(innerX, y, 28, 24), "<", _smallBtn)) Attacker.CycleWeapon(-1);
+                GUI.Label(new Rect(innerX + 32, y + 2, innerW - 64, 22), w.DisplayName, _weapon);
+                if (UiTheme.Button(new Rect(innerX + innerW - 28, y, 28, 24), ">", _smallBtn)) Attacker.CycleWeapon(+1);
+                y += 28;
+
+                GUI.Label(new Rect(innerX, y, innerW, 18),
+                    $"DMG {w.BaseDamage}   RNG {w.Range:F1}u   CD {w.CooldownSec:F2}s", _labelSubtle);
+                y += 18;
+
+                float cd = Attacker.CurrentCooldown;
+                float ready = 1f - Mathf.Clamp01(cd / Mathf.Max(0.01f, w.CooldownSec));
+                UiTheme.Bar(new Rect(innerX, y, innerW - 60, 10), ready, UiTheme.BarCdFill);
+                GUI.Label(new Rect(innerX + innerW - 56, y - 4, 56, 18),
+                    ready >= 1f ? "READY" : $"{cd:F1}s", _labelSubtle);
+                y += 16;
+            }
+
+            UiTheme.Separator(new Rect(innerX, y + 2, innerW, 1));
+            y += 8;
+
+            var session = GameSession.Instance;
+            int wood = session != null ? session.Resources.Get(ResourceKind.Wood) : 0;
+
+            DrawBuildButton(new Rect(innerX, y, innerW, 28), "🔥 모닥불", 5, wood, ResourceKind.Wood,
+                () => SpawnCampfire(Player.transform.position));
+            y += 32;
+            DrawBuildButton(new Rect(innerX, y, innerW, 28), "🪵 바리게이트", 5, wood, ResourceKind.Wood,
+                () => SpawnBarricade(Player.transform.position));
+            y += 32;
+            DrawBuildButton(new Rect(innerX, y, innerW, 28), "📦 창고 (+50 cap)", 8, wood, ResourceKind.Wood,
+                () => { SpawnStorage(Player.transform.position); session.Resources.IncreaseCap(50); });
+            y += 32;
+            DrawBuildButton(new Rect(innerX, y, innerW, 28), "🌾 농장", 6, wood, ResourceKind.Wood,
+                () => SpawnFarm(Player.transform.position));
+        }
+
+        private void DrawBuildButton(Rect r, string label, int cost, int have, ResourceKind kind, System.Action onClick)
+        {
+            bool enabled = have >= cost && Player != null && GameSession.Instance != null;
+            string txt = $"{label}     {cost} {kind}";
+            if (UiTheme.Button(r, txt, _btn, enabled))
+            {
+                if (GameSession.Instance.Resources.Spend(kind, cost)) onClick();
+            }
+        }
+
+        // ====================================================================
+        // 우측: 자원 / 사이클 / 디버그
+        // ====================================================================
+        private void DrawRightPanel()
+        {
+            const int W = 270;
+            var panel = new Rect(Screen.width - W - 12, 12, W, 380);
+            UiTheme.Panel(panel);
+            UiTheme.TitleBar(panel, "  자원  ", _title);
+
+            int y = (int)panel.y + 36;
+            int innerX = (int)panel.x + 14;
+            int innerW = (int)panel.width - 28;
+
+            var session = GameSession.Instance;
+            if (session == null)
+            {
+                GUI.Label(new Rect(innerX, y, innerW, 22), "GameSession NOT FOUND", _label);
+                return;
+            }
+
+            void DrawRes(ResourceKind k, string name)
+            {
+                UiTheme.Icon(new Rect(innerX, y + 2, 14, 14), UiTheme.ResColor(k));
+                GUI.Label(new Rect(innerX + 22, y, 100, 18), name, _label);
+                int cur = session.Resources.Get(k);
+                int cap = session.Resources.GetCap(k);
+                var color = cur >= cap ? UiTheme.TextDanger : UiTheme.TextCream;
+                var oldC = GUI.contentColor;
+                GUI.contentColor = color;
+                GUI.Label(new Rect(innerX + 130, y, innerW - 130, 18), $"{cur} / {cap}", _label);
+                GUI.contentColor = oldC;
+                y += 18;
+            }
+
+            DrawRes(ResourceKind.Wood, "Wood");
+            DrawRes(ResourceKind.Stone, "Stone");
+            DrawRes(ResourceKind.Meat, "Meat");
+            DrawRes(ResourceKind.Food, "Food");
+            DrawRes(ResourceKind.Frostbloom, "Frostbloom");
+
+            UiTheme.Separator(new Rect(innerX, y + 4, innerW, 1));
+            y += 10;
+
+            // Day/Phase 라인
+            string phaseIcon = session.Cycle.Phase switch
+            {
+                Phase.Day => "☀",
+                Phase.Evening => "🌅",
+                Phase.Night => "🌙",
+                Phase.Dawn => "🌄",
+                _ => "·",
+            };
+            GUI.Label(new Rect(innerX, y, innerW, 22),
+                $"{phaseIcon}  Day {session.Cycle.Day}  ·  {session.Cycle.Phase}", _section);
+            y += 22;
+
+            if (session.LastFoodShortage > 0)
+            {
+                var oldC = GUI.contentColor;
+                GUI.contentColor = UiTheme.TextDanger;
+                GUI.Label(new Rect(innerX, y, innerW, 20), $"⚠ 식량 부족 {session.LastFoodShortage}", _section);
+                GUI.contentColor = oldC;
+                y += 22;
+            }
+
+            if (Night != null)
+            {
+                GUI.Label(new Rect(innerX, y, innerW, 18),
+                    $"좀비 {Night.ActiveZombies}  대기 {Night.WavePending}", _labelSubtle);
+                y += 20;
+                if (Night.IsBlizzard)
+                {
+                    var oldC = GUI.contentColor;
+                    GUI.contentColor = new Color(0.55f, 0.85f, 1f);
+                    GUI.Label(new Rect(innerX, y, innerW, 20), "❄ BLIZZARD", _section);
+                    GUI.contentColor = oldC;
+                    y += 22;
+                }
+            }
+
+            // ──── 디버그 버튼 ────
+            UiTheme.Separator(new Rect(innerX, y + 4, innerW, 1));
+            y += 10;
+            GUI.Label(new Rect(innerX, y, innerW, 18), "디버그", _labelSubtle);
+            y += 18;
+
+            int half = (innerW - 8) / 2;
+            if (UiTheme.Button(new Rect(innerX, y, half, 26), "▶ 페이즈 +1", _smallBtn))
+            {
+                session.Cycle.Update(session.Cycle.PhaseDurationSec + 0.1f);
+            }
+            if (UiTheme.Button(new Rect(innerX + half + 8, y, half, 26), "🌙 강제 밤", _smallBtn))
+            {
+                if (Night != null) Night.StartNight(session.Cycle.Day);
+            }
+            y += 30;
+
+            if (UiTheme.Button(new Rect(innerX, y, half, 26), "🧟 좀비 +1", _smallBtn))
+            {
+                if (Night != null) Night.SpawnDebugZombie();
+            }
+            if (UiTheme.Button(new Rect(innerX + half + 8, y, half, 26), "☀ 낮으로", _smallBtn))
+            {
+                for (int i = 0; i < 4 && session.Cycle.Phase != Phase.Day; i++)
+                {
+                    session.Cycle.Update(session.Cycle.PhaseDurationSec + 0.1f);
+                }
+            }
+        }
+
+        // ====================================================================
+        // 월드 공간 버튼들
+        // ====================================================================
+        private void DrawWorldChopButton()
+        {
+            if (Player == null) return;
+            var tree = FindNearestTreeInRange(Player.transform.position, 3.5f);
+            if (tree == null) return;
+            var cam = Camera.main;
+            if (cam == null) return;
+            Vector3 sp = cam.WorldToScreenPoint(tree.transform.position + new Vector3(0f, 0.8f, 0f));
+            if (sp.z < 0) return;
+            float guiY = Screen.height - sp.y;
+
+            var companions = Object.FindObjectsByType<Companion>(FindObjectsSortMode.None);
+            int workers = 0;
+            foreach (var c in companions) if (c != null && c.CurrentMode != Companion.Mode.Hiding && c.CurrentMode != Companion.Mode.Farming) workers++;
+
+            string label = workers > 0 ? $"🪓 벌목 ({workers})" : "벌목 불가";
+            var rect = new Rect(sp.x - 75, guiY - 16, 150, 30);
+            if (UiTheme.Button(rect, label, _smallBtn, workers > 0))
+            {
+                foreach (var c in companions) if (c != null && c.CurrentMode != Companion.Mode.Hiding && c.CurrentMode != Companion.Mode.Farming) c.AssignGather(tree);
+            }
         }
 
         private void DrawWorldFarmButtons()
@@ -49,25 +288,21 @@ namespace IL6
                 if (farm.HarvestReady)
                 {
                     int yield = farm.BaseYield + farm.Workers.Count * farm.PerWorkerBonus;
-                    var rect = new Rect(guiX - 70, guiY - 36, 140, 28);
-                    if (GUI.Button(rect, $"수확 (+{yield} Food)"))
-                    {
-                        farm.Harvest();
-                    }
+                    var rect = new Rect(guiX - 75, guiY - 36, 150, 28);
+                    if (UiTheme.Button(rect, $"🌾 수확 +{yield}", _smallBtn)) farm.Harvest();
                 }
                 else
                 {
-                    GUI.Label(new Rect(guiX - 70, guiY - 36, 140, 22),
-                        $"성장중 {farm.NightsPassed}/{farm.NightsToRipe}", _labelStyle);
+                    GUI.Label(new Rect(guiX - 75, guiY - 36, 150, 22),
+                        $"성장중 {farm.NightsPassed}/{farm.NightsToRipe}", _labelSubtle);
                 }
 
-                // 작업자 배치 (수확 전이고 자리 남았을 때)
                 if (!farm.HarvestReady && farm.Workers.Count < farm.MaxWorkers && Player != null)
                 {
                     if (Vector2.Distance(Player.transform.position, farm.transform.position) < 3f)
                     {
-                        var rect2 = new Rect(guiX - 70, guiY - 8, 140, 26);
-                        if (GUI.Button(rect2, $"동료 배치 {farm.Workers.Count}/{farm.MaxWorkers}"))
+                        var rect2 = new Rect(guiX - 75, guiY - 8, 150, 26);
+                        if (UiTheme.Button(rect2, $"동료 배치 {farm.Workers.Count}/{farm.MaxWorkers}", _smallBtn))
                         {
                             var c = FindNearestFreeCompanion(farm.transform.position);
                             if (c != null) farm.TryAssignWorker(c);
@@ -75,6 +310,131 @@ namespace IL6
                     }
                 }
             }
+        }
+
+        // ====================================================================
+        // 영입 다이얼로그 (하단 중앙)
+        // ====================================================================
+        private void DrawRecruitDialog()
+        {
+            if (Player == null) return;
+            var npc = FindNearestRecruitable(Player.transform.position, 2.2f);
+            if (npc == null) return;
+
+            const int W = 540;
+            const int H = 160;
+            var panel = new Rect(Screen.width / 2 - W / 2, Screen.height - H - 20, W, H);
+            UiTheme.Panel(panel);
+
+            // 초상 (스프라이트 색 사각형 + 굵은 골드 보더)
+            var sr = npc.GetComponent<SpriteRenderer>();
+            var col = sr != null ? sr.color : Color.white;
+            var portrait = new Rect(panel.x + 14, panel.y + 14, 132, 132);
+            UiTheme.Rect(new Rect(portrait.x - 2, portrait.y - 2, portrait.width + 4, portrait.height + 4), UiTheme.PanelBorder);
+            UiTheme.Rect(portrait, col);
+            // 안쪽 인셋 하이라이트
+            UiTheme.Rect(new Rect(portrait.x + 2, portrait.y + 2, portrait.width - 4, 2), new Color(1f, 1f, 1f, 0.25f));
+
+            int tx = (int)panel.x + 160;
+            int tw = (int)panel.width - 174;
+
+            GUI.Label(new Rect(tx, panel.y + 14, tw, 24), $"{npc.DisplayNamePublic}", _title);
+            GUI.Label(new Rect(tx, panel.y + 38, tw, 20), $"({npc.Role}{(npc.IsCombat ? "" : " · 비전투")})", _labelSubtle);
+
+            GUI.Label(new Rect(tx, panel.y + 60, tw, 40), $"\"{npc.DialogText}\"", _label);
+
+            GUI.Label(new Rect(tx, panel.y + 100, 60, 18), "전투", _labelSubtle);
+            GUI.Label(new Rect(tx + 60, panel.y + 100, 120, 18), Stars(npc.CombatRating), _label);
+            GUI.Label(new Rect(tx, panel.y + 120, 60, 18), "농사", _labelSubtle);
+            GUI.Label(new Rect(tx + 60, panel.y + 120, 120, 18), Stars(npc.FarmRating), _label);
+
+            if (UiTheme.Button(new Rect(tx + 200, panel.y + panel.height - 38, 110, 28), "영입 (F)", _btn))
+            {
+                npc.Recruit();
+            }
+            if (UiTheme.Button(new Rect(tx + 318, panel.y + panel.height - 38, 90, 28), "거절", _smallBtn))
+            {
+                // 범위 벗어나면 자동 닫힘
+            }
+        }
+
+        private static string Stars(int n)
+        {
+            n = Mathf.Clamp(n, 0, 5);
+            return new string('★', n) + new string('☆', 5 - n);
+        }
+
+        // ====================================================================
+        // 룬 모달 / 사망 오버레이
+        // ====================================================================
+        private void DrawRuneModal()
+        {
+            if (Progression == null || !Progression.LevelUpPending)
+            {
+                _runeOffer = null;
+                if (Time.timeScale == 0f && (Player == null || !Player.IsDead)) Time.timeScale = 1f;
+                return;
+            }
+            if (_runeOffer == null)
+                _runeOffer = Progression.PickThreeOffer((uint)(Time.frameCount + Progression.Level * 113));
+            Time.timeScale = 0f;
+
+            UiTheme.Rect(new Rect(0, 0, Screen.width, Screen.height), new Color(0, 0, 0, 0.65f));
+
+            const int W = 640;
+            const int H = 260;
+            var modal = new Rect(Screen.width / 2 - W / 2, Screen.height / 2 - H / 2, W, H);
+            UiTheme.Panel(modal);
+            UiTheme.TitleBar(modal, $"  LEVEL {Progression.Level} — 룬 선택  ", _title);
+
+            int btnW = 188, btnH = 160, gap = 14;
+            int total = btnW * 3 + gap * 2;
+            int bx = (int)modal.x + (W - total) / 2;
+            int by = (int)modal.y + 50;
+            for (int i = 0; i < _runeOffer.Count; i++)
+            {
+                var rune = _runeOffer[i];
+                var rect = new Rect(bx + i * (btnW + gap), by, btnW, btnH);
+                if (UiTheme.Button(rect, "", _btn))
+                {
+                    Progression.ApplyRune(rune);
+                    _runeOffer = null;
+                    return;
+                }
+                GUI.Label(new Rect(rect.x + 10, rect.y + 14, rect.width - 20, 24), rune.ToString(), _weapon);
+                GUI.Label(new Rect(rect.x + 10, rect.y + 50, rect.width - 20, 100), PlayerProgression.Describe(rune), _label);
+            }
+        }
+
+        private void DrawDeathOverlay()
+        {
+            if (Player == null || !Player.IsDead) return;
+            Time.timeScale = 0f;
+            UiTheme.Rect(new Rect(0, 0, Screen.width, Screen.height), new Color(0, 0, 0, 0.88f));
+            GUI.Label(new Rect(0, Screen.height / 2 - 80, Screen.width, 100), "YOU DIED", _bigDeath);
+            int bx = Screen.width / 2 - 90;
+            int by = Screen.height / 2 + 40;
+            if (UiTheme.Button(new Rect(bx, by, 180, 46), "다시 시작", _btn))
+            {
+                Time.timeScale = 1f;
+                if (GameSession.Instance != null) GameSession.Instance.HardReset();
+            }
+        }
+
+        // ====================================================================
+        // 헬퍼
+        // ====================================================================
+        private void EnsureStyles()
+        {
+            if (_label != null) return;
+            _label = new GUIStyle(GUI.skin.label) { fontSize = 14, normal = { textColor = UiTheme.TextCream } };
+            _labelSubtle = new GUIStyle(GUI.skin.label) { fontSize = 13, normal = { textColor = UiTheme.TextSubtle } };
+            _section = new GUIStyle(GUI.skin.label) { fontSize = 15, fontStyle = FontStyle.Bold, normal = { textColor = UiTheme.TextCream } };
+            _title = new GUIStyle(GUI.skin.label) { fontSize = 16, fontStyle = FontStyle.Bold, alignment = TextAnchor.MiddleCenter, normal = { textColor = UiTheme.TextGold } };
+            _weapon = new GUIStyle(GUI.skin.label) { fontSize = 16, fontStyle = FontStyle.Bold, normal = { textColor = new Color(0.7f, 0.95f, 1f) } };
+            _bigDeath = new GUIStyle(GUI.skin.label) { fontSize = 72, fontStyle = FontStyle.Bold, alignment = TextAnchor.MiddleCenter, normal = { textColor = UiTheme.TextDanger } };
+            _btn = new GUIStyle(GUI.skin.button) { fontSize = 14, fontStyle = FontStyle.Bold };
+            _smallBtn = new GUIStyle(GUI.skin.button) { fontSize = 13 };
         }
 
         private static Companion FindNearestFreeCompanion(Vector3 center)
@@ -91,264 +451,6 @@ namespace IL6
                 if (d < bestDist) { best = c; bestDist = d; }
             }
             return best;
-        }
-
-        private void DrawLeftPanel()
-        {
-            GUI.Box(new Rect(10, 10, 280, 420), "");
-            int y = 18;
-            GUI.Label(new Rect(20, y, 260, 24), "=== Player ===", _titleStyle); y += 26;
-
-            if (Player != null)
-            {
-                GUI.Label(new Rect(20, y, 260, 22), $"HP: {Player.CurrentHp} / {Player.MaxHp}", _labelStyle); y += 20;
-                var p = Player.transform.position;
-                GUI.Label(new Rect(20, y, 260, 22), $"Pos: ({p.x:F1}, {p.y:F1})", _labelStyle); y += 22;
-            }
-            else
-            {
-                GUI.Label(new Rect(20, y, 260, 22), "Player: NULL", _labelStyle); y += 22;
-            }
-
-            if (Gather != null && Gather.IsActive)
-            {
-                GUI.Label(new Rect(20, y, 260, 22), $"Gathering: {(Gather.Progress * 100):F0}%", _labelStyle); y += 22;
-            }
-
-            if (Progression != null)
-            {
-                GUI.Label(new Rect(20, y, 260, 22), $"Lv {Progression.Level}    XP {Progression.Xp}/{Progression.XpToNext}", _weaponStyle); y += 20;
-                float pct = Progression.XpToNext > 0 ? (float)Progression.Xp / Progression.XpToNext : 0f;
-                GUI.Box(new Rect(20, y, 200, 10), "");
-                GUI.DrawTexture(new Rect(22, y + 2, 196 * pct, 6), Texture2D.whiteTexture);
-                y += 16;
-            }
-
-            if (Attacker != null && Attacker.Weapon != null)
-            {
-                var w = Attacker.Weapon;
-                if (GUI.Button(new Rect(20, y, 24, 22), "<")) Attacker.CycleWeapon(-1);
-                GUI.Label(new Rect(48, y, 200, 22), $"[Weapon] {w.DisplayName}", _weaponStyle);
-                if (GUI.Button(new Rect(248, y, 24, 22), ">")) Attacker.CycleWeapon(+1);
-                y += 22;
-                GUI.Label(new Rect(20, y, 260, 22), $"DMG {w.BaseDamage}  RNG {w.Range:F1}u  CD {w.CooldownSec:F2}s", _labelStyle); y += 20;
-                float cd = Attacker.CurrentCooldown;
-                float ready = 1f - Mathf.Clamp01(cd / Mathf.Max(0.01f, w.CooldownSec));
-                var barBg = new Rect(20, y, 200, 14); GUI.Box(barBg, "");
-                var fill = new Rect(22, y + 2, 196 * ready, 10);
-                GUI.DrawTexture(fill, Texture2D.whiteTexture);
-                GUI.Label(new Rect(230, y - 4, 50, 22), ready >= 1f ? "READY" : $"{(cd):F1}s", _labelStyle);
-                y += 18;
-            }
-
-            y += 6;
-            var session = GameSession.Instance;
-            GUI.enabled = session != null && Player != null && session.Resources.Get(ResourceKind.Wood) >= 5;
-            if (GUI.Button(new Rect(20, y, 220, 30), "Build Campfire (5 Wood)"))
-            {
-                if (session.Resources.Spend(ResourceKind.Wood, 5))
-                {
-                    SpawnCampfire(Player.transform.position);
-                }
-            }
-            GUI.enabled = true;
-            y += 34;
-
-            GUI.enabled = session != null && Player != null && session.Resources.Get(ResourceKind.Wood) >= 5;
-            if (GUI.Button(new Rect(20, y, 220, 30), "Build Barricade (5 Wood)"))
-            {
-                if (session.Resources.Spend(ResourceKind.Wood, 5))
-                {
-                    SpawnBarricade(Player.transform.position);
-                }
-            }
-            GUI.enabled = true;
-            y += 34;
-
-            GUI.enabled = session != null && Player != null && session.Resources.Get(ResourceKind.Wood) >= 8;
-            if (GUI.Button(new Rect(20, y, 220, 30), "Build Storage (8 Wood, +50 cap)"))
-            {
-                if (session.Resources.Spend(ResourceKind.Wood, 8))
-                {
-                    SpawnStorage(Player.transform.position);
-                    session.Resources.IncreaseCap(50);
-                }
-            }
-            GUI.enabled = true;
-            y += 34;
-
-            GUI.enabled = session != null && Player != null && session.Resources.Get(ResourceKind.Wood) >= 6;
-            if (GUI.Button(new Rect(20, y, 220, 30), "Build Farm (6 Wood, +1 Food/12s)"))
-            {
-                if (session.Resources.Spend(ResourceKind.Wood, 6))
-                {
-                    SpawnFarm(Player.transform.position);
-                }
-            }
-            GUI.enabled = true;
-        }
-
-        // 나무 위에 떠 있는 "Chop Tree" 월드 스페이스 버튼.
-        private void DrawWorldChopButton()
-        {
-            if (Player == null) return;
-            var tree = FindNearestTreeInRange(Player.transform.position, 3.5f);
-            if (tree == null) return;
-            var cam = Camera.main;
-            if (cam == null) return;
-
-            var worldAnchor = tree.transform.position + new Vector3(0f, 0.8f, 0f);
-            Vector3 sp = cam.WorldToScreenPoint(worldAnchor);
-            if (sp.z < 0) return;
-            float guiY = Screen.height - sp.y;
-
-            var companions = Object.FindObjectsByType<Companion>(FindObjectsSortMode.None);
-            int workers = companions.Length;
-            string label = workers > 0 ? $"Chop Tree ({workers})" : "Chop (no crew)";
-
-            var rect = new Rect(sp.x - 70, guiY - 16, 140, 30);
-            GUI.enabled = workers > 0;
-            if (GUI.Button(rect, label))
-            {
-                foreach (var c in companions) if (c != null) c.AssignGather(tree);
-            }
-            GUI.enabled = true;
-        }
-
-        // 하단 중앙 영입 다이얼로그: 초상 + 이름 + 대사 + 스탯 + Accept/Reject
-        private void DrawRecruitDialog()
-        {
-            if (Player == null) return;
-            var npc = FindNearestRecruitable(Player.transform.position, 2.2f);
-            if (npc == null) return;
-
-            const int W = 520;
-            const int H = 150;
-            int x = Screen.width / 2 - W / 2;
-            int y = Screen.height - H - 20;
-
-            GUI.Box(new Rect(x, y, W, H), "");
-
-            var sr = npc.GetComponent<SpriteRenderer>();
-            var col = sr != null ? sr.color : Color.white;
-            var portrait = new Rect(x + 12, y + 12, 126, 126);
-            var oldC = GUI.color;
-            GUI.color = col;
-            GUI.DrawTexture(portrait, Texture2D.whiteTexture);
-            GUI.color = Color.black;
-            GUI.DrawTexture(new Rect(portrait.x, portrait.y, portrait.width, 2), Texture2D.whiteTexture);
-            GUI.DrawTexture(new Rect(portrait.x, portrait.yMax - 2, portrait.width, 2), Texture2D.whiteTexture);
-            GUI.DrawTexture(new Rect(portrait.x, portrait.y, 2, portrait.height), Texture2D.whiteTexture);
-            GUI.DrawTexture(new Rect(portrait.xMax - 2, portrait.y, 2, portrait.height), Texture2D.whiteTexture);
-            GUI.color = oldC;
-
-            int tx = x + 152;
-            int tw = W - 164;
-
-            GUI.Label(new Rect(tx, y + 12, tw, 24), $"{npc.DisplayNamePublic} ({npc.Role})", _titleStyle);
-            GUI.Label(new Rect(tx, y + 40, tw, 44), $"\"{npc.DialogText}\"", _labelStyle);
-            GUI.Label(new Rect(tx, y + 84, tw, 20), $"전투 {Stars(npc.CombatRating)}", _labelStyle);
-            GUI.Label(new Rect(tx, y + 104, tw, 20), $"농사 {Stars(npc.FarmRating)}", _labelStyle);
-
-            if (GUI.Button(new Rect(tx, y + H - 34, 110, 26), "영입 (F)"))
-            {
-                npc.Recruit();
-            }
-            if (GUI.Button(new Rect(tx + 120, y + H - 34, 110, 26), "거절"))
-            {
-                // 대화 닫기는 범위 벗어나면 자동
-            }
-        }
-
-        private static string Stars(int n)
-        {
-            n = Mathf.Clamp(n, 0, 5);
-            return new string('★', n) + new string('☆', 5 - n);
-        }
-
-        private GUIStyle _bigStyle;
-        // 사망 시 풀스크린 검은 오버레이 + Restart 버튼
-        private void DrawDeathOverlay()
-        {
-            if (Player == null || !Player.IsDead) return;
-            Time.timeScale = 0f;
-
-            var dim = new Rect(0, 0, Screen.width, Screen.height);
-            var oldC = GUI.color;
-            GUI.color = new Color(0f, 0f, 0f, 0.85f);
-            GUI.DrawTexture(dim, Texture2D.whiteTexture);
-            GUI.color = oldC;
-
-            if (_bigStyle == null)
-            {
-                _bigStyle = new GUIStyle(GUI.skin.label)
-                {
-                    fontSize = 64,
-                    fontStyle = FontStyle.Bold,
-                    alignment = TextAnchor.MiddleCenter,
-                    normal = { textColor = new Color(0.95f, 0.25f, 0.25f) },
-                };
-            }
-            GUI.Label(new Rect(0, Screen.height / 2 - 80, Screen.width, 100), "YOU DIED", _bigStyle);
-
-            int bx = Screen.width / 2 - 80;
-            int by = Screen.height / 2 + 40;
-            if (GUI.Button(new Rect(bx, by, 160, 44), "Restart"))
-            {
-                Time.timeScale = 1f;
-                if (GameSession.Instance != null) GameSession.Instance.HardReset();
-            }
-        }
-
-        // 레벨업 시 화면 가운데 모달: 3개 룬 중 선택
-        private void DrawRuneModal()
-        {
-            if (Progression == null || !Progression.LevelUpPending)
-            {
-                _runeOffer = null;
-                Time.timeScale = 1f;
-                return;
-            }
-
-            if (_runeOffer == null)
-            {
-                _runeOffer = Progression.PickThreeOffer((uint)(Time.frameCount + Progression.Level * 113));
-            }
-            Time.timeScale = 0f;
-
-            // 어두운 배경
-            var dim = new Rect(0, 0, Screen.width, Screen.height);
-            var oldC = GUI.color;
-            GUI.color = new Color(0, 0, 0, 0.6f);
-            GUI.DrawTexture(dim, Texture2D.whiteTexture);
-            GUI.color = oldC;
-
-            const int W = 600;
-            const int H = 240;
-            int x = Screen.width / 2 - W / 2;
-            int y = Screen.height / 2 - H / 2;
-            GUI.Box(new Rect(x, y, W, H), "");
-            GUI.Label(new Rect(x, y + 12, W, 28), $"LEVEL {Progression.Level} — 룬 선택", _titleStyle);
-
-            int btnW = 180;
-            int btnH = 140;
-            int gap = 12;
-            int total = btnW * 3 + gap * 2;
-            int bx = x + (W - total) / 2;
-            int by = y + 60;
-            for (int i = 0; i < _runeOffer.Count; i++)
-            {
-                var rune = _runeOffer[i];
-                var rect = new Rect(bx + i * (btnW + gap), by, btnW, btnH);
-                if (GUI.Button(rect, ""))
-                {
-                    Progression.ApplyRune(rune);
-                    _runeOffer = null;
-                    return;
-                }
-                GUI.Label(new Rect(rect.x + 8, rect.y + 12, rect.width - 16, 24), rune.ToString(), _weaponStyle);
-                GUI.Label(new Rect(rect.x + 8, rect.y + 44, rect.width - 16, 80), PlayerProgression.Describe(rune), _labelStyle);
-            }
         }
 
         private static Gatherable FindNearestTreeInRange(Vector3 center, float range)
@@ -379,91 +481,26 @@ namespace IL6
             return best;
         }
 
+        // ====================================================================
+        // Spawn 헬퍼들
+        // ====================================================================
         private void SpawnBarricade(Vector3 playerPos)
         {
             var go = new GameObject("Barricade");
             go.transform.position = playerPos + new Vector3(0f, 1.2f, 0f);
             go.transform.localScale = new Vector3(1.2f, 0.4f, 1f);
-
             var sr = go.AddComponent<SpriteRenderer>();
             sr.sortingOrder = 3;
-
             var col = go.AddComponent<BoxCollider2D>();
             col.size = Vector2.one;
-
             var cf = go.AddComponent<ColorFallback>();
             cf.Tint = new Color(0.45f, 0.28f, 0.15f);
-            cf.Shape = FallbackShape.Square;
-            cf.Circle = false;
-            cf.PixelSize = 32;
-            cf.OutlineWidth = 2;
-            cf.OutlineColor = new Color(0.2f, 0.1f, 0.05f, 1f);
-
-            var b = go.AddComponent<Building>();
-            b.Kind = BuildingKind.Barricade;
-
-            var hp = go.AddComponent<HpBarUi>();
-            hp.Building = b;
-            hp.Offset = new Vector2(0f, 0.6f);
-            hp.Size = new Vector2(1.0f, 0.1f);
-            hp.BgColor = new Color(0.05f, 0.05f, 0.08f, 0.9f);
-            hp.FillColor = new Color(0.6f, 0.4f, 0.2f);
-        }
-
-        private void DrawRightPanel()
-        {
-            const int W = 240;
-            int rx = Screen.width - W - 10;
-            GUI.Box(new Rect(rx, 10, W, 290), "");
-            int y = 18;
-            GUI.Label(new Rect(rx + 10, y, W - 20, 24), "=== Resources ===", _titleStyle); y += 26;
-
-            var session = GameSession.Instance;
-            if (session != null)
-            {
-                GUI.Label(new Rect(rx + 10, y, W - 20, 22), $"Wood       {session.Resources.Get(ResourceKind.Wood)}/{session.Resources.GetCap(ResourceKind.Wood)}", _resStyle); y += 20;
-                GUI.Label(new Rect(rx + 10, y, W - 20, 22), $"Stone      {session.Resources.Get(ResourceKind.Stone)}/{session.Resources.GetCap(ResourceKind.Stone)}", _resStyle); y += 20;
-                GUI.Label(new Rect(rx + 10, y, W - 20, 22), $"Meat       {session.Resources.Get(ResourceKind.Meat)}/{session.Resources.GetCap(ResourceKind.Meat)}", _resStyle); y += 20;
-                GUI.Label(new Rect(rx + 10, y, W - 20, 22), $"Food       {session.Resources.Get(ResourceKind.Food)}/{session.Resources.GetCap(ResourceKind.Food)}", _resStyle); y += 20;
-                GUI.Label(new Rect(rx + 10, y, W - 20, 22), $"Frostbloom {session.Resources.Get(ResourceKind.Frostbloom)}/{session.Resources.GetCap(ResourceKind.Frostbloom)}", _resStyle); y += 22;
-                GUI.Label(new Rect(rx + 10, y, W - 20, 22), $"Day {session.Cycle.Day}  {session.Cycle.Phase}", _labelStyle); y += 22;
-                if (session.LastFoodShortage > 0)
-                {
-                    GUI.Label(new Rect(rx + 10, y, W - 20, 22), $"⚠ 식량 부족 {session.LastFoodShortage}!", _weaponStyle); y += 22;
-                }
-
-                if (Night != null)
-                {
-                    GUI.Label(new Rect(rx + 10, y, W - 20, 22), $"Zombies: {Night.ActiveZombies}  Pending: {Night.WavePending}", _labelStyle); y += 22;
-                    if (Night.IsBlizzard)
-                    {
-                        GUI.Label(new Rect(rx + 10, y, W - 20, 22), "❄ BLIZZARD — 모닥불 밖 위험", _weaponStyle); y += 22;
-                    }
-                }
-
-                // Phase skip debug
-                if (GUI.Button(new Rect(rx + 10, y, (W - 30) / 2, 26), "▶ Skip"))
-                {
-                    session.Cycle.Update(session.Cycle.PhaseDurationSec + 0.1f);
-                }
-                if (GUI.Button(new Rect(rx + 10 + (W - 30) / 2 + 10, y, (W - 30) / 2, 26), "Force Night"))
-                {
-                    if (Night != null) Night.StartNight(session.Cycle.Day);
-                }
-            }
-            else
-            {
-                GUI.Label(new Rect(rx + 10, y, W - 20, 22), "GameSession: NOT FOUND", _labelStyle);
-            }
-        }
-
-        private void EnsureStyles()
-        {
-            if (_labelStyle != null) return;
-            _labelStyle = new GUIStyle(GUI.skin.label) { fontSize = 15, normal = { textColor = Color.white } };
-            _titleStyle = new GUIStyle(GUI.skin.label) { fontSize = 18, fontStyle = FontStyle.Bold, normal = { textColor = Color.yellow } };
-            _weaponStyle = new GUIStyle(GUI.skin.label) { fontSize = 16, fontStyle = FontStyle.Bold, normal = { textColor = new Color(0.7f, 0.95f, 1f) } };
-            _resStyle = new GUIStyle(GUI.skin.label) { fontSize = 16, normal = { textColor = new Color(0.95f, 0.95f, 0.85f) } };
+            cf.Shape = FallbackShape.Square; cf.Circle = false; cf.PixelSize = 32;
+            cf.OutlineWidth = 2; cf.OutlineColor = new Color(0.2f, 0.1f, 0.05f, 1f);
+            var b = go.AddComponent<Building>(); b.Kind = BuildingKind.Barricade;
+            var hp = go.AddComponent<HpBarUi>(); hp.Building = b;
+            hp.Offset = new Vector2(0f, 0.6f); hp.Size = new Vector2(1.0f, 0.1f);
+            hp.BgColor = new Color(0.05f, 0.05f, 0.08f, 0.9f); hp.FillColor = new Color(0.6f, 0.4f, 0.2f);
         }
 
         private void SpawnStorage(Vector3 playerPos)
@@ -473,15 +510,12 @@ namespace IL6
             go.transform.localScale = new Vector3(1.0f, 0.9f, 1f);
             var sr = go.AddComponent<SpriteRenderer>();
             sr.sortingOrder = 3;
-            var col = go.AddComponent<BoxCollider2D>();
-            col.size = Vector2.one;
+            var col = go.AddComponent<BoxCollider2D>(); col.size = Vector2.one;
             var cf = go.AddComponent<ColorFallback>();
             cf.Tint = new Color(0.55f, 0.45f, 0.3f);
-            cf.Shape = FallbackShape.Square;
-            cf.Circle = false;
-            cf.PixelSize = 32;
-            cf.OutlineWidth = 2;
-            cf.OutlineColor = new Color(0.25f, 0.18f, 0.1f, 1f);
+            cf.Shape = FallbackShape.Square; cf.Circle = false; cf.PixelSize = 32;
+            cf.OutlineWidth = 2; cf.OutlineColor = new Color(0.25f, 0.18f, 0.1f, 1f);
+            var b = go.AddComponent<Building>(); b.Kind = BuildingKind.Campfire; // 비-바리게이트로 분류
         }
 
         private void SpawnFarm(Vector3 playerPos)
@@ -493,12 +527,10 @@ namespace IL6
             sr.sortingOrder = 2;
             var cf = go.AddComponent<ColorFallback>();
             cf.Tint = new Color(0.35f, 0.55f, 0.25f);
-            cf.Shape = FallbackShape.Square;
-            cf.Circle = false;
-            cf.PixelSize = 32;
-            cf.OutlineWidth = 2;
-            cf.OutlineColor = new Color(0.18f, 0.3f, 0.12f, 1f);
+            cf.Shape = FallbackShape.Square; cf.Circle = false; cf.PixelSize = 32;
+            cf.OutlineWidth = 2; cf.OutlineColor = new Color(0.18f, 0.3f, 0.12f, 1f);
             go.AddComponent<FarmBuilding>();
+            var b = go.AddComponent<Building>(); b.Kind = BuildingKind.Campfire; // 비-바리게이트
         }
 
         private void SpawnCampfire(Vector3 playerPos)
@@ -509,29 +541,15 @@ namespace IL6
             sr.sortingOrder = 3;
             var cf = go.AddComponent<ColorFallback>();
             cf.Tint = new Color(1f, 0.5f, 0.1f);
-            cf.Shape = FallbackShape.Rounded;
-            cf.Circle = false;
-            cf.PixelSize = 64;
-            cf.OutlineWidth = 2;
-            cf.OutlineColor = new Color(0.3f, 0.1f, 0f, 1f);
-
-            var col = go.AddComponent<CircleCollider2D>();
-            col.radius = 0.45f;
-
+            cf.Shape = FallbackShape.Rounded; cf.Circle = false; cf.PixelSize = 64;
+            cf.OutlineWidth = 2; cf.OutlineColor = new Color(0.3f, 0.1f, 0f, 1f);
+            var col = go.AddComponent<CircleCollider2D>(); col.radius = 0.45f;
             var aura = go.AddComponent<CampfireAura>();
-            aura.Radius = 2.5f;
-            aura.DamagePerSecond = 6f;
-            aura.TickInterval = 0.5f;
-
-            var b = go.AddComponent<Building>();
-            b.Kind = BuildingKind.Campfire;
-
-            var hp = go.AddComponent<HpBarUi>();
-            hp.Building = b;
-            hp.Offset = new Vector2(0f, 0.7f);
-            hp.Size = new Vector2(1.0f, 0.12f);
-            hp.BgColor = new Color(0.05f, 0.05f, 0.08f, 0.9f);
-            hp.FillColor = new Color(1f, 0.55f, 0.2f);
+            aura.Radius = 2.5f; aura.DamagePerSecond = 6f; aura.TickInterval = 0.5f;
+            var b = go.AddComponent<Building>(); b.Kind = BuildingKind.Campfire;
+            var hp = go.AddComponent<HpBarUi>(); hp.Building = b;
+            hp.Offset = new Vector2(0f, 0.7f); hp.Size = new Vector2(1.0f, 0.12f);
+            hp.BgColor = new Color(0.05f, 0.05f, 0.08f, 0.9f); hp.FillColor = new Color(1f, 0.55f, 0.2f);
         }
     }
 }

@@ -223,23 +223,7 @@ namespace IL6
 
         private Vector2 ComputeFleeVelocity()
         {
-            // 가장 가까운 좀비 반대 방향으로 도망
-            var zombies = Object.FindObjectsByType<Zombie>(FindObjectsSortMode.None);
-            Zombie nearest = null;
-            float bestDist = float.MaxValue;
-            foreach (var z in zombies)
-            {
-                if (z == null || z.IsDead) continue;
-                float d = Vector2.Distance(transform.position, z.transform.position);
-                if (d < bestDist) { nearest = z; bestDist = d; }
-            }
-            if (nearest != null && bestDist < 8f)
-            {
-                Vector2 away = ((Vector2)transform.position - (Vector2)nearest.transform.position).normalized;
-                return away * MoveSpeed * 1.4f;
-            }
-            // 좀비 없으면 Follow 로 복귀
-            CurrentMode = Mode.Follow;
+            // 노출된 비전투 동료는 공포로 제자리에서 떨고만 있음. 새벽에 Follow 복귀.
             return Vector2.zero;
         }
 

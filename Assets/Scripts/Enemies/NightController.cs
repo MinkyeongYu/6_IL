@@ -173,6 +173,13 @@ namespace IL6
             if (pc != null) pc.TakeDamage(dmg);
         }
 
+        /// <summary>디버그: 페이즈/카운트 무관하게 1마리 즉시 스폰.</summary>
+        public void SpawnDebugZombie()
+        {
+            if (Player == null) return;
+            SpawnOne();
+        }
+
         private void SpawnOne()
         {
             float angle = _rng.Next() * Mathf.PI * 2f;
