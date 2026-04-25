@@ -17,6 +17,31 @@ namespace IL6
         private MonoBehaviour _target;
         private Vector2 _direction = Vector2.right;
         private float _life;
+        private float _trailTimer;
+        private GameObject _glow;
+
+        private void Start()
+        {
+            // 본체 뒤에 1.6x 크기의 반투명 글로우 자식 — 같은 색상 그라데이션처럼 보이게.
+            var sr = GetComponent<SpriteRenderer>();
+            if (sr != null)
+            {
+                _glow = new GameObject("__glow");
+                _glow.transform.SetParent(transform, false);
+                _glow.transform.localScale = Vector3.one * 1.7f;
+                var gs = _glow.AddComponent<SpriteRenderer>();
+                gs.sortingOrder = sr.sortingOrder - 1;
+                var cf = _glow.AddComponent<ColorFallback>();
+                Color c = sr.color;
+                c.a = 0.35f;
+                cf.Tint = c;
+                cf.Shape = FallbackShape.Circle;
+                cf.Circle = true;
+                cf.PixelSize = 32;
+                cf.OutlineWidth = 0;
+                cf.OutlineColor = new Color(0, 0, 0, 0);
+            }
+        }
 
         public void Aim(MonoBehaviour target, Vector3 spawnPos)
         {
@@ -46,6 +71,14 @@ namespace IL6
             }
             transform.position += (Vector3)(_direction * Speed * Time.deltaTime);
 
+            // 트레일: 0.04초 간격으로 fading 복제본 1개
+            _trailTimer -= Time.deltaTime;
+            if (_trailTimer <= 0f)
+            {
+                _trailTimer = 0.04f;
+                SpawnTrailGhost();
+            }
+
             if (targetAlive)
             {
                 float d = Vector2.Distance(transform.position, _target.transform.position);
@@ -55,6 +88,27 @@ namespace IL6
                     Destroy(gameObject);
                 }
             }
+        }
+
+        private void SpawnTrailGhost()
+        {
+            var sr = GetComponent<SpriteRenderer>();
+            if (sr == null) return;
+            var go = new GameObject("__pjtrail");
+            go.transform.position = transform.position;
+            go.transform.localScale = transform.lossyScale * 0.7f;
+            var ts = go.AddComponent<SpriteRenderer>();
+            ts.sortingOrder = sr.sortingOrder - 2;
+            var cf = go.AddComponent<ColorFallback>();
+            Color c = sr.color;
+            c.a = 0.5f;
+            cf.Tint = c;
+            cf.Shape = FallbackShape.Circle;
+            cf.Circle = true;
+            cf.PixelSize = 16;
+            cf.OutlineWidth = 0;
+            cf.OutlineColor = new Color(0, 0, 0, 0);
+            Destroy(go, 0.22f);
         }
 
         private static bool IsTargetAlive(MonoBehaviour target)

@@ -38,23 +38,23 @@ namespace IL6
         {
             var go = new GameObject("WatchtowerArrow");
             go.transform.position = transform.position + Vector3.up * 0.3f;
-            go.transform.localScale = Vector3.one * 0.25f;
+            go.transform.localScale = Vector3.one * 0.45f;
 
             var sr = go.AddComponent<SpriteRenderer>();
-            sr.sortingOrder = 9;
+            sr.sortingOrder = 12;
 
             var cf = go.AddComponent<ColorFallback>();
-            cf.Tint = new Color(0.95f, 0.92f, 0.6f);
+            cf.Tint = new Color(1f, 0.95f, 0.55f);
             cf.Shape = FallbackShape.Triangle;
             cf.Circle = false;
             cf.PixelSize = 32;
-            cf.OutlineWidth = 1;
-            cf.OutlineColor = new Color(0.3f, 0.25f, 0f, 1f);
+            cf.OutlineWidth = 3;
+            cf.OutlineColor = new Color(0.3f, 0.2f, 0f, 1f);
 
             var p = go.AddComponent<Projectile>();
             p.Speed = 14f;
             p.Damage = Damage;
-            p.HitRadius = 0.4f;
+            p.HitRadius = 0.45f;
             p.Aim(z, transform.position);
         }
 
