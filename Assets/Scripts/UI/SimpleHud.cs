@@ -398,6 +398,15 @@ namespace IL6
             y += 32;
             DrawBuildButton(new Rect(innerX, y, innerW, 28), "🌾 농장", 6, wood, ResourceKind.Wood,
                 () => SpawnFarm(Player.transform.position));
+            y += 32;
+
+            int stone = session.Resources.Get(ResourceKind.Stone);
+            bool watchtowerOk = wood >= 8 && stone >= 4;
+            if (UiTheme.Button(new Rect(innerX, y, innerW, 28), $"🏹 망루     8 Wood + 4 Stone", _btn, watchtowerOk))
+            {
+                if (session.Resources.Spend(ResourceKind.Wood, 8) && session.Resources.Spend(ResourceKind.Stone, 4))
+                    SpawnWatchtower(Player.transform.position);
+            }
             y += 36;
 
             // 동료 스탠스 토글 (모든 동료 일괄)
@@ -871,6 +880,27 @@ namespace IL6
             cf.OutlineWidth = 2; cf.OutlineColor = new Color(0.18f, 0.3f, 0.12f, 1f);
             go.AddComponent<FarmBuilding>();
             var b = go.AddComponent<Building>(); b.Kind = BuildingKind.Campfire; // 비-바리게이트
+        }
+
+        private void SpawnWatchtower(Vector3 playerPos)
+        {
+            var go = new GameObject("Watchtower");
+            go.transform.position = playerPos + new Vector3(0f, 1.6f, 0f);
+            go.transform.localScale = new Vector3(0.7f, 1.4f, 1f);
+            var sr = go.AddComponent<SpriteRenderer>();
+            sr.sortingOrder = 4;
+            var col = go.AddComponent<BoxCollider2D>();
+            col.size = Vector2.one;
+            var cf = go.AddComponent<ColorFallback>();
+            cf.Tint = new Color(0.5f, 0.4f, 0.28f);
+            cf.Shape = FallbackShape.Square; cf.Circle = false; cf.PixelSize = 32;
+            cf.OutlineWidth = 2; cf.OutlineColor = new Color(0.2f, 0.15f, 0.08f, 1f);
+            var b = go.AddComponent<Building>(); b.Kind = BuildingKind.Campfire; // 비-바리게이트 분류 (호스팅 가능)
+            go.AddComponent<Watchtower>();
+            var hp = go.AddComponent<HpBarUi>(); hp.Building = b;
+            hp.Offset = new Vector2(0f, 0.85f); hp.Size = new Vector2(0.8f, 0.1f);
+            hp.BgColor = new Color(0.05f, 0.05f, 0.08f, 0.9f);
+            hp.FillColor = new Color(0.4f, 0.85f, 0.55f);
         }
 
         private void SpawnCampfire(Vector3 playerPos)
