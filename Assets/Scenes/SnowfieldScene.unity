@@ -3844,15 +3844,16 @@ MonoBehaviour:
   RecruitRange: 1.6
   RecruitKey: 102
   DisplayName: Woman
-  Role: Archer
-  DialogText: 활을 잘 쏩니다. 원거리는 맡겨주세요.
-  CombatRating: 3
-  FarmRating: 4
+  Role: Healer
+  DialogText: 전투는 못합니다. 위험할 때 건물에 숨을게요.
+  CombatRating: 1
+  FarmRating: 5
+  IsCombat: 0
   FollowStopDistance: 0.25
   MoveSpeed: 4
-  AttackRange: 7
-  AttackDamage: 5
-  AttackCooldown: 1.2
+  AttackRange: 0
+  AttackDamage: 0
+  AttackCooldown: 99
 --- !u!114 &140000004
 MonoBehaviour:
   m_ObjectHideFlags: 0

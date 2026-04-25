@@ -20,6 +20,7 @@ namespace IL6
         [Range(0, 5)] public int FarmRating = 3;
 
         [Header("Recruited Companion config")]
+        public bool IsCombat = true;
         public float FollowStopDistance = 0.25f;
         public float MoveSpeed = 4.5f;
         public float AttackRange = 5f;
@@ -79,6 +80,7 @@ namespace IL6
         {
             var comp = gameObject.AddComponent<Companion>();
             comp.Player = Player;
+            comp.IsCombat = IsCombat;
             comp.FollowStopDistance = FollowStopDistance;
             comp.MoveSpeed = MoveSpeed;
             comp.AttackRange = AttackRange;

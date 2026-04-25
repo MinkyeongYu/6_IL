@@ -27,9 +27,70 @@ namespace IL6
             DrawLeftPanel();
             DrawRightPanel();
             DrawWorldChopButton();
+            DrawWorldFarmButtons();
             DrawRecruitDialog();
             DrawRuneModal();
             DrawDeathOverlay();
+        }
+
+        private void DrawWorldFarmButtons()
+        {
+            var cam = Camera.main;
+            if (cam == null) return;
+            var farms = Object.FindObjectsByType<FarmBuilding>(FindObjectsSortMode.None);
+            foreach (var farm in farms)
+            {
+                if (farm == null) continue;
+                Vector3 sp = cam.WorldToScreenPoint(farm.transform.position + new Vector3(0f, 1.0f, 0f));
+                if (sp.z < 0) continue;
+                float guiX = sp.x;
+                float guiY = Screen.height - sp.y;
+
+                if (farm.HarvestReady)
+                {
+                    int yield = farm.BaseYield + farm.Workers.Count * farm.PerWorkerBonus;
+                    var rect = new Rect(guiX - 70, guiY - 36, 140, 28);
+                    if (GUI.Button(rect, $"수확 (+{yield} Food)"))
+                    {
+                        farm.Harvest();
+                    }
+                }
+                else
+                {
+                    GUI.Label(new Rect(guiX - 70, guiY - 36, 140, 22),
+                        $"성장중 {farm.NightsPassed}/{farm.NightsToRipe}", _labelStyle);
+                }
+
+                // 작업자 배치 (수확 전이고 자리 남았을 때)
+                if (!farm.HarvestReady && farm.Workers.Count < farm.MaxWorkers && Player != null)
+                {
+                    if (Vector2.Distance(Player.transform.position, farm.transform.position) < 3f)
+                    {
+                        var rect2 = new Rect(guiX - 70, guiY - 8, 140, 26);
+                        if (GUI.Button(rect2, $"동료 배치 {farm.Workers.Count}/{farm.MaxWorkers}"))
+                        {
+                            var c = FindNearestFreeCompanion(farm.transform.position);
+                            if (c != null) farm.TryAssignWorker(c);
+                        }
+                    }
+                }
+            }
+        }
+
+        private static Companion FindNearestFreeCompanion(Vector3 center)
+        {
+            var all = Object.FindObjectsByType<Companion>(FindObjectsSortMode.None);
+            Companion best = null;
+            float bestDist = float.MaxValue;
+            foreach (var c in all)
+            {
+                if (c == null) continue;
+                if (c.CurrentMode == Companion.Mode.Farming) continue;
+                if (c.CurrentMode == Companion.Mode.Hiding) continue;
+                float d = Vector2.Distance(center, c.transform.position);
+                if (d < bestDist) { best = c; bestDist = d; }
+            }
+            return best;
         }
 
         private void DrawLeftPanel()

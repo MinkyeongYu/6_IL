@@ -70,19 +70,53 @@ namespace IL6
             }
         }
 
+        public float SightRange = 7f;
+
         private Transform FindNearestTarget()
         {
-            Transform best = _player;
-            float bestDist = best == null ? float.MaxValue : Vector2.Distance(transform.position, best.position);
+            // 1단계: 시야 안 (살아있고 보이는) 유닛 — Player + Companion
+            Transform best = null;
+            float bestDist = SightRange;
 
-            // 가까운 건물도 후보
+            if (_player != null)
+            {
+                var pc = _player.GetComponent<PlayerController>();
+                if (pc != null && !pc.IsDead)
+                {
+                    float d = Vector2.Distance(transform.position, _player.position);
+                    if (d < bestDist) { best = _player; bestDist = d; }
+                }
+            }
+
+            var comps = Object.FindObjectsByType<Companion>(FindObjectsSortMode.None);
+            foreach (var c in comps)
+            {
+                if (c == null) continue;
+                if (c.CurrentMode == Companion.Mode.Hiding) continue; // 숨은 동료는 안 보임
+                var sr = c.GetComponent<SpriteRenderer>();
+                if (sr != null && !sr.enabled) continue;
+                float d = Vector2.Distance(transform.position, c.transform.position);
+                if (d < bestDist) { best = c.transform; bestDist = d; }
+            }
+
+            if (best != null) return best;
+
+            // 2단계: 시야 안에 살아있는 표적 없음 → 가까운 건물/바리게이트 공격
             var buildings = Object.FindObjectsByType<Building>(FindObjectsSortMode.None);
+            bestDist = float.MaxValue;
             foreach (var b in buildings)
             {
+                if (b == null) continue;
                 float d = Vector2.Distance(transform.position, b.transform.position);
                 if (d < bestDist) { best = b.transform; bestDist = d; }
             }
             return best;
+        }
+
+        public void TakeDamageByCompanion(int amount, Companion attacker)
+        {
+            // 동료가 때려도 동일 처리 (XP 는 PlayerProgression 으로 흐름)
+            TakeDamage(amount);
         }
 
         public void TakeDamage(int amount)
