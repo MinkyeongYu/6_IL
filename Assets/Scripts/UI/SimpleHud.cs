@@ -21,8 +21,12 @@ namespace IL6
         private void OnGUI()
         {
             EnsureStyles();
-            DrawLeftPanel();
-            DrawRightPanel();
+            // 새 레이아웃 — 모서리 카드 + 하단 자원/빌드 핫바 (Don't Starve / Vampire Survivors 참고)
+            DrawStatCard();        // 상단 좌측: HP/XP/무기
+            DrawInfoCard();        // 상단 우측: 점수/킬/스탠스/웨이브
+            DrawResourceBar();     // 하단 좌측: 자원 가로 핫바
+            DrawBuildHotbar();     // 하단 중앙: 빌드 아이콘 6개
+            DrawDebugCorner();     // 하단 우측: 디버그 + SFX
             DrawWorldChopButton();
             DrawWorldFarmButtons();
             DrawRecruitDialog();
@@ -32,7 +36,7 @@ namespace IL6
             DrawAutoSaveToast();
             DrawAchievementToast();
             DrawHomeCompass();
-            DrawPhaseClock();
+            DrawPhaseClock();      // 상단 중앙
             DrawControlsHint();
             DrawTutorialOverlay();
             DrawPauseMenu();
@@ -399,156 +403,338 @@ namespace IL6
         }
 
         // ====================================================================
-        // 좌측: 플레이어 / 무기 / 빌드
+        // STAT CARD (top-left): HP / XP / 무기 — 현대 RPG 풍 컴팩트 카드
         // ====================================================================
-        private void DrawLeftPanel()
+        private void DrawStatCard()
         {
-            var panel = new Rect(12, 90, 290, 612);
+            const int W = 320, H = 152;
+            var panel = new Rect(12, 12, W, H);
             UiTheme.Panel(panel);
-            UiTheme.TitleBar(panel, "  플레이어  ", _title);
-
-            int y = (int)panel.y + 36;
-            int innerX = (int)panel.x + 14;
-            int innerW = (int)panel.width - 28;
+            int innerX = (int)panel.x + 12;
+            int innerW = W - 24;
+            int y = (int)panel.y + 10;
 
             if (Player != null)
             {
-                // HP 바
-                GUI.Label(new Rect(innerX, y, 80, 20), "HP", _label);
-                GUI.Label(new Rect(innerX + 200, y, 80, 20), $"{Player.CurrentHp} / {Player.MaxHp}", _labelSubtle);
-                y += 18;
+                // HP 바 with text overlay
                 float hpPct = Player.MaxHp > 0 ? (float)Player.CurrentHp / Player.MaxHp : 0f;
-                UiTheme.Bar(new Rect(innerX, y, innerW, 12), hpPct,
-                    Color.Lerp(Color.red, Color.green, hpPct));
-                y += 18;
-
-                var p = Player.transform.position;
-                GUI.Label(new Rect(innerX, y, innerW, 18), $"위치 ({p.x:F1}, {p.y:F1})", _labelSubtle);
-                y += 20;
+                Color hpFill = Color.Lerp(new Color(0.85f, 0.2f, 0.18f), new Color(0.4f, 0.85f, 0.4f), hpPct);
+                UiTheme.Bar(new Rect(innerX, y, innerW, 22), hpPct, hpFill);
+                var hpStyle = new GUIStyle(_section) {
+                    alignment = TextAnchor.MiddleCenter,
+                    normal = { textColor = Color.white },
+                    fontSize = 14
+                };
+                GUI.Label(new Rect(innerX, y, innerW, 22), $"HP  {Player.CurrentHp} / {Player.MaxHp}", hpStyle);
+                y += 28;
             }
             else
             {
                 GUI.Label(new Rect(innerX, y, innerW, 22), "Player NULL", _label);
+                y += 28;
+            }
+
+            // XP 바 with text overlay
+            if (Progression != null)
+            {
+                float xpPct = Progression.XpToNext > 0 ? (float)Progression.Xp / Progression.XpToNext : 0f;
+                UiTheme.Bar(new Rect(innerX, y, innerW, 16), xpPct, UiTheme.BarXpFill);
+                var xpStyle = new GUIStyle(_label) {
+                    alignment = TextAnchor.MiddleCenter,
+                    normal = { textColor = new Color(0.05f, 0.1f, 0.18f) },
+                    fontSize = 12, fontStyle = FontStyle.Bold
+                };
+                GUI.Label(new Rect(innerX, y, innerW, 16),
+                    $"Lv {Progression.Level}    {Progression.Xp} / {Progression.XpToNext} XP", xpStyle);
                 y += 22;
             }
 
-            if (Gather != null && Gather.IsActive)
-            {
-                GUI.Label(new Rect(innerX, y, innerW, 18), $"채집중 {(Gather.Progress * 100):F0}%", _labelSubtle);
-                y += 18;
-                UiTheme.Bar(new Rect(innerX, y, innerW, 8), Gather.Progress, new Color(0.6f, 0.85f, 0.4f));
-                y += 14;
-            }
-
-            if (Progression != null)
-            {
-                UiTheme.Separator(new Rect(innerX, y + 2, innerW, 1));
-                y += 10;
-                GUI.Label(new Rect(innerX, y, 80, 20), $"Lv {Progression.Level}", _section);
-                GUI.Label(new Rect(innerX + 80, y, innerW - 80, 20), $"XP {Progression.Xp}/{Progression.XpToNext}", _labelSubtle);
-                y += 18;
-                float xpPct = Progression.XpToNext > 0 ? (float)Progression.Xp / Progression.XpToNext : 0f;
-                UiTheme.Bar(new Rect(innerX, y, innerW, 8), xpPct, UiTheme.BarXpFill);
-                y += 14;
-            }
-
+            // 무기 + 쿨다운
             if (Attacker != null && Attacker.Weapon != null)
             {
-                UiTheme.Separator(new Rect(innerX, y + 2, innerW, 1));
-                y += 10;
                 var w = Attacker.Weapon;
-                if (UiTheme.Button(new Rect(innerX, y, 28, 24), "<", _smallBtn)) Attacker.CycleWeapon(-1);
-                GUI.Label(new Rect(innerX + 32, y + 2, innerW - 64, 22), w.DisplayName, _weapon);
-                if (UiTheme.Button(new Rect(innerX + innerW - 28, y, 28, 24), ">", _smallBtn)) Attacker.CycleWeapon(+1);
-                y += 28;
-
-                GUI.Label(new Rect(innerX, y, innerW, 18),
-                    $"DMG {w.BaseDamage}   RNG {w.Range:F1}u   CD {w.CooldownSec:F2}s", _labelSubtle);
-                y += 18;
+                if (UiTheme.Button(new Rect(innerX, y, 26, 24), "<", _smallBtn)) Attacker.CycleWeapon(-1);
+                GUI.Label(new Rect(innerX + 32, y + 2, innerW - 70, 22), $"⚔ {w.DisplayName}", _weapon);
+                if (UiTheme.Button(new Rect(innerX + innerW - 26, y, 26, 24), ">", _smallBtn)) Attacker.CycleWeapon(+1);
+                y += 26;
 
                 float cd = Attacker.CurrentCooldown;
                 float ready = 1f - Mathf.Clamp01(cd / Mathf.Max(0.01f, w.CooldownSec));
-                UiTheme.Bar(new Rect(innerX, y, innerW - 60, 10), ready, UiTheme.BarCdFill);
-                GUI.Label(new Rect(innerX + innerW - 56, y - 4, 56, 18),
-                    ready >= 1f ? "READY" : $"{cd:F1}s", _labelSubtle);
+                UiTheme.Bar(new Rect(innerX, y, innerW, 10), ready, UiTheme.BarCdFill);
+                var cdStyle = new GUIStyle(_labelSubtle) {
+                    alignment = TextAnchor.MiddleCenter,
+                    fontSize = 11, fontStyle = FontStyle.Bold,
+                    normal = { textColor = ready >= 1f ? new Color(0.2f, 0.95f, 0.4f) : UiTheme.TextCream },
+                };
+                GUI.Label(new Rect(innerX, y - 3, innerW, 14),
+                    ready >= 1f ? "READY" : $"{cd:F1}s", cdStyle);
                 y += 16;
             }
 
-            UiTheme.Separator(new Rect(innerX, y + 2, innerW, 1));
-            y += 8;
+            // 채집 진행 (활성일 때만)
+            if (Gather != null && Gather.IsActive)
+            {
+                UiTheme.Bar(new Rect(innerX, y, innerW, 8), Gather.Progress, new Color(0.6f, 0.85f, 0.4f));
+                GUI.Label(new Rect(innerX, y - 16, innerW, 14),
+                    $"채집 {(Gather.Progress * 100):F0}%", _labelSubtle);
+            }
+        }
+
+        // ====================================================================
+        // INFO CARD (top-right): 점수 / 웨이브 / 스탠스
+        // ====================================================================
+        private void DrawInfoCard()
+        {
+            const int W = 280, H = 152;
+            var panel = new Rect(Screen.width - W - 12, 12, W, H);
+            UiTheme.Panel(panel);
 
             var session = GameSession.Instance;
-            int wood = session != null ? session.Resources.Get(ResourceKind.Wood) : 0;
+            if (session == null) return;
+            int innerX = (int)panel.x + 12;
+            int innerW = W - 24;
+            int y = (int)panel.y + 10;
 
-            DrawBuildButton(new Rect(innerX, y, innerW, 28), "🔥 모닥불", 5, wood, ResourceKind.Wood,
-                () => SpawnCampfire(Player.transform.position));
-            y += 32;
-            DrawBuildButton(new Rect(innerX, y, innerW, 28), "🪵 바리게이트", 5, wood, ResourceKind.Wood,
-                () => SpawnBarricade(Player.transform.position));
-            y += 32;
-            DrawBuildButton(new Rect(innerX, y, innerW, 28), "🥕 울타리 (약함)", 1, wood, ResourceKind.Wood,
-                () => VillageStarter.SpawnFence(Player.transform.position + new Vector3(0f, 1.0f, 0f), 0f));
-            y += 32;
-            DrawBuildButton(new Rect(innerX, y, innerW, 28), "📦 창고 (+50 cap)", 8, wood, ResourceKind.Wood,
-                () => { SpawnStorage(Player.transform.position); session.Resources.IncreaseCap(50); });
-            y += 32;
-            DrawBuildButton(new Rect(innerX, y, innerW, 28), "🌾 농장", 6, wood, ResourceKind.Wood,
-                () => SpawnFarm(Player.transform.position));
+            // 점수 (큰 골드)
+            var scoreStyle = new GUIStyle(_title) {
+                fontSize = 28, alignment = TextAnchor.MiddleLeft,
+                normal = { textColor = UiTheme.TextGold }
+            };
+            GUI.Label(new Rect(innerX, y, innerW, 32), $"점수  {session.Score}", scoreStyle);
             y += 32;
 
-            int stone = session.Resources.Get(ResourceKind.Stone);
-            bool watchtowerOk = wood >= 8 && stone >= 4;
-            if (UiTheme.Button(new Rect(innerX, y, innerW, 28), $"🏹 망루     8 Wood + 4 Stone", _btn, watchtowerOk))
+            // 킬 / 손실
+            GUI.Label(new Rect(innerX, y, innerW, 18),
+                $"킬 {session.TotalKills}  ·  동료 손실 {session.CompanionsLost}  ·  최대 {session.MaxCompanionsAtOnce}",
+                _labelSubtle);
+            y += 22;
+
+            // 웨이브 + 블리자드
+            if (Night != null && Night.CurrentPhase == Phase.Night)
             {
-                if (session.Resources.Spend(ResourceKind.Wood, 8) && session.Resources.Spend(ResourceKind.Stone, 4))
+                var nightOldC = GUI.contentColor;
+                GUI.contentColor = new Color(0.95f, 0.5f, 0.5f);
+                GUI.Label(new Rect(innerX, y, innerW, 20),
+                    $"🧟 활성 {Night.ActiveZombies}  ·  대기 {Night.WavePending}", _section);
+                GUI.contentColor = nightOldC;
+                y += 22;
+                if (Night.IsBlizzard)
                 {
-                    Sfx.Build();
-                    SpawnWatchtower(Player.transform.position);
+                    GUI.contentColor = new Color(0.55f, 0.85f, 1f);
+                    GUI.Label(new Rect(innerX, y, innerW, 20), "❄ 눈보라!", _section);
+                    GUI.contentColor = nightOldC;
+                    y += 22;
                 }
             }
-            y += 36;
+            else if (session.LastFoodShortage > 0)
+            {
+                var oldC = GUI.contentColor;
+                GUI.contentColor = UiTheme.TextDanger;
+                GUI.Label(new Rect(innerX, y, innerW, 20),
+                    $"⚠ 식량 부족 {session.LastFoodShortage}", _section);
+                GUI.contentColor = oldC;
+                y += 22;
+            }
 
-            // 동료 스탠스 토글 (모든 동료 일괄)
+            // 동료 스탠스 (밑쪽 줄, 컴팩트)
             var allComps = Object.FindObjectsByType<Companion>(FindObjectsSortMode.None);
             int liveCount = 0;
-            Companion.Stance majorityStance = Companion.Stance.Follow;
+            Companion.Stance majority = Companion.Stance.Follow;
             foreach (var c in allComps)
             {
                 if (c == null || c.IsDead || c.CurrentMode == Companion.Mode.Hiding) continue;
                 liveCount++;
-                majorityStance = c.CurrentStance;
+                majority = c.CurrentStance;
             }
-            string sLabel = majorityStance switch
+            string sLabel = majority switch
             {
                 Companion.Stance.Follow => "👣 따르기",
                 Companion.Stance.Hold => "🛡 사수",
                 Companion.Stance.Aggressive => "⚔ 공세",
-                _ => ""
+                _ => "",
             };
-            if (UiTheme.Button(new Rect(innerX, y, innerW, 28), $"동료 스탠스: {sLabel} ({liveCount})", _btn, liveCount > 0))
+            int btnY = (int)panel.yMax - 32;
+            if (UiTheme.Button(new Rect(innerX, btnY, innerW, 26), $"동료 {sLabel}  ({liveCount})", _smallBtn, liveCount > 0))
             {
-                var next = majorityStance switch
+                var next = majority switch
                 {
                     Companion.Stance.Follow => Companion.Stance.Hold,
                     Companion.Stance.Hold => Companion.Stance.Aggressive,
-                    _ => Companion.Stance.Follow
+                    _ => Companion.Stance.Follow,
                 };
                 foreach (var c in allComps) if (c != null) c.SetStance(next);
             }
         }
 
-        private void DrawBuildButton(Rect r, string label, int cost, int have, ResourceKind kind, System.Action onClick)
+        // ====================================================================
+        // RESOURCE BAR (bottom-left): 자원 가로 핫바 5칸
+        // ====================================================================
+        private void DrawResourceBar()
         {
-            bool enabled = have >= cost && Player != null && GameSession.Instance != null;
-            string txt = $"{label}     {cost} {kind}";
-            if (UiTheme.Button(r, txt, _btn, enabled))
+            var session = GameSession.Instance;
+            if (session == null) return;
+
+            ResourceKind[] kinds = { ResourceKind.Wood, ResourceKind.Stone, ResourceKind.Meat, ResourceKind.Food, ResourceKind.Frostbloom };
+            string[] names = { "Wood", "Stone", "Meat", "Food", "Frost" };
+
+            const int CellW = 116, CellH = 56, Gap = 4;
+            int totalW = CellW * kinds.Length + Gap * (kinds.Length - 1);
+            int startX = 12;
+            int y = Screen.height - CellH - 12;
+
+            for (int i = 0; i < kinds.Length; i++)
             {
-                if (GameSession.Instance.Resources.Spend(kind, cost))
+                var k = kinds[i];
+                int cx = startX + i * (CellW + Gap);
+                var r = new Rect(cx, y, CellW, CellH);
+                // 셀 배경
+                UiTheme.Rect(new Rect(r.x - 1, r.y - 1, r.width + 2, r.height + 2), UiTheme.PanelBorder);
+                UiTheme.Rect(r, UiTheme.PanelBg);
+
+                // 아이콘 (좌)
+                UiTheme.Icon(new Rect(r.x + 8, r.y + 16, 24, 24), UiTheme.ResColor(k));
+
+                // 이름 (위쪽 작게)
+                GUI.Label(new Rect(r.x + 38, r.y + 6, CellW - 44, 16), names[i], _labelSubtle);
+
+                // 수량 / 캡 (큰 글씨)
+                int cur = session.Resources.Get(k);
+                int cap = session.Resources.GetCap(k);
+                var oldC = GUI.contentColor;
+                GUI.contentColor = cur >= cap ? UiTheme.TextDanger : UiTheme.TextCream;
+                var amountStyle = new GUIStyle(_section) { fontSize = 18, fontStyle = FontStyle.Bold };
+                GUI.Label(new Rect(r.x + 38, r.y + 22, CellW - 44, 24), $"{cur}", amountStyle);
+                GUI.contentColor = UiTheme.TextSubtle;
+                GUI.Label(new Rect(r.x + 38, r.y + 38, CellW - 44, 14), $"/ {cap}", _labelSubtle);
+                GUI.contentColor = oldC;
+            }
+        }
+
+        // ====================================================================
+        // BUILD HOTBAR (bottom-center): 6개 빌드 아이콘 버튼
+        // ====================================================================
+        private struct BuildSlot
+        {
+            public string Icon, Name;
+            public int CostWood, CostStone;
+            public Color Color;
+            public System.Action OnBuild;
+        }
+
+        private void DrawBuildHotbar()
+        {
+            var session = GameSession.Instance;
+            if (session == null || Player == null) return;
+
+            int wood = session.Resources.Get(ResourceKind.Wood);
+            int stone = session.Resources.Get(ResourceKind.Stone);
+
+            BuildSlot[] slots = {
+                new BuildSlot { Icon = "🔥", Name = "모닥불",   CostWood = 5, Color = new Color(1f, 0.55f, 0.2f),
+                    OnBuild = () => SpawnCampfire(Player.transform.position) },
+                new BuildSlot { Icon = "🪵", Name = "바리게이트", CostWood = 5, Color = new Color(0.55f, 0.4f, 0.22f),
+                    OnBuild = () => SpawnBarricade(Player.transform.position) },
+                new BuildSlot { Icon = "🥕", Name = "울타리",    CostWood = 1, Color = new Color(0.78f, 0.62f, 0.30f),
+                    OnBuild = () => VillageStarter.SpawnFence(Player.transform.position + new Vector3(0f, 1.0f, 0f), 0f) },
+                new BuildSlot { Icon = "📦", Name = "창고",      CostWood = 8, Color = new Color(0.55f, 0.45f, 0.3f),
+                    OnBuild = () => { SpawnStorage(Player.transform.position); session.Resources.IncreaseCap(50); } },
+                new BuildSlot { Icon = "🌾", Name = "농장",      CostWood = 6, Color = new Color(0.5f, 0.85f, 0.35f),
+                    OnBuild = () => SpawnFarm(Player.transform.position) },
+                new BuildSlot { Icon = "🏹", Name = "망루",      CostWood = 8, CostStone = 4, Color = new Color(0.6f, 0.85f, 0.55f),
+                    OnBuild = () => SpawnWatchtower(Player.transform.position) },
+            };
+
+            const int CellW = 84, CellH = 84, Gap = 6;
+            int totalW = CellW * slots.Length + Gap * (slots.Length - 1);
+            int startX = Screen.width / 2 - totalW / 2;
+            int y = Screen.height - CellH - 12;
+
+            for (int i = 0; i < slots.Length; i++)
+            {
+                var s = slots[i];
+                int cx = startX + i * (CellW + Gap);
+                var r = new Rect(cx, y, CellW, CellH);
+                bool ok = wood >= s.CostWood && stone >= s.CostStone;
+
+                // 셀 배경 + 보더
+                UiTheme.Rect(new Rect(r.x - 1, r.y - 1, r.width + 2, r.height + 2), ok ? UiTheme.PanelBorder : UiTheme.PanelBorderDim);
+                UiTheme.Rect(r, ok ? UiTheme.PanelBg : new Color(0.08f, 0.08f, 0.1f, 0.95f));
+                // 컬러 띠 상단
+                UiTheme.Rect(new Rect(r.x, r.y, r.width, 4), s.Color);
+
+                // 아이콘 (큰 글자)
+                var iconStyle = new GUIStyle(_title) { fontSize = 28, alignment = TextAnchor.MiddleCenter };
+                var oldC = GUI.contentColor;
+                GUI.contentColor = ok ? Color.white : new Color(1f, 1f, 1f, 0.4f);
+                GUI.Label(new Rect(r.x, r.y + 8, r.width, 32), s.Icon, iconStyle);
+
+                // 이름
+                GUI.contentColor = ok ? UiTheme.TextCream : new Color(1f, 1f, 1f, 0.4f);
+                var nameStyle = new GUIStyle(_label) {
+                    fontSize = 12, fontStyle = FontStyle.Bold,
+                    alignment = TextAnchor.MiddleCenter,
+                };
+                GUI.Label(new Rect(r.x, r.y + 38, r.width, 16), s.Name, nameStyle);
+
+                // 비용
+                string cost = s.CostStone > 0 ? $"{s.CostWood}W + {s.CostStone}S" : $"{s.CostWood}W";
+                GUI.contentColor = ok ? UiTheme.TextSubtle : new Color(0.5f, 0.5f, 0.5f, 0.6f);
+                var costStyle = new GUIStyle(_labelSubtle) { fontSize = 11, alignment = TextAnchor.MiddleCenter };
+                GUI.Label(new Rect(r.x, r.y + 56, r.width, 14), cost, costStyle);
+                GUI.contentColor = oldC;
+
+                // 클릭 영역 (보더 안쪽)
+                if (ok && GUI.Button(r, "", GUIStyle.none))
                 {
-                    Sfx.Build();
-                    onClick();
+                    if (session.Resources.Spend(ResourceKind.Wood, s.CostWood)
+                        && (s.CostStone == 0 || session.Resources.Spend(ResourceKind.Stone, s.CostStone)))
+                    {
+                        Sfx.Build();
+                        s.OnBuild();
+                    }
                 }
             }
+        }
+
+        // ====================================================================
+        // DEBUG CORNER (bottom-right): 디버그 + SFX
+        // ====================================================================
+        private void DrawDebugCorner()
+        {
+            var session = GameSession.Instance;
+            if (session == null) return;
+
+            const int W = 240, H = 130;
+            var panel = new Rect(Screen.width - W - 12, Screen.height - H - 12, W, H);
+            UiTheme.Panel(panel);
+
+            int innerX = (int)panel.x + 10;
+            int innerW = W - 20;
+            int y = (int)panel.y + 10;
+
+            GUI.Label(new Rect(innerX, y, innerW, 16), "디버그", _labelSubtle);
+            y += 18;
+
+            int half = (innerW - 6) / 2;
+            if (UiTheme.Button(new Rect(innerX, y, half, 24), "▶ 페이즈+1", _smallBtn))
+                session.Cycle.Update(session.Cycle.PhaseDurationSec + 0.1f);
+            if (UiTheme.Button(new Rect(innerX + half + 6, y, half, 24), "🌙 강제 밤", _smallBtn))
+                if (Night != null) Night.StartNight(session.Cycle.Day);
+            y += 28;
+
+            if (UiTheme.Button(new Rect(innerX, y, half, 24), "🧟 좀비+1", _smallBtn))
+                if (Night != null) Night.SpawnDebugZombie();
+            if (UiTheme.Button(new Rect(innerX + half + 6, y, half, 24), "☀ 낮으로", _smallBtn))
+                for (int i = 0; i < 4 && session.Cycle.Phase != Phase.Day; i++)
+                    session.Cycle.Update(session.Cycle.PhaseDurationSec + 0.1f);
+            y += 28;
+
+            // SFX 슬라이더
+            GUI.Label(new Rect(innerX, y, 50, 18), "🔊", _label);
+            float vol = Sfx.Volume;
+            float newVol = GUI.HorizontalSlider(new Rect(innerX + 40, y + 5, innerW - 90, 12), vol, 0f, 1f);
+            if (Mathf.Abs(newVol - vol) > 0.005f) Sfx.Volume = newVol;
+            GUI.Label(new Rect(innerX + innerW - 40, y, 40, 18), $"{(newVol * 100):F0}%", _labelSubtle);
         }
 
         // ====================================================================
