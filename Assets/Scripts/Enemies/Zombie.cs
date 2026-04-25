@@ -98,8 +98,11 @@ namespace IL6
             Transform target = FindNearestTarget();
             if (target == null) { _rb.velocity = Vector2.zero; return; }
 
+            // 경로 차단 체크 — 좀비와 타겟 사이에 Building 이 있으면 그 건물을 우선 부숨
+            Transform pathTarget = ResolveBlockedTarget(target);
+
             float slowMul = SlowRemainingSec > 0f ? 0.5f : 1f;
-            float dist = Vector2.Distance(transform.position, target.position);
+            float dist = Vector2.Distance(transform.position, pathTarget.position);
             if (dist <= _balance.ZombieAttackRange)
             {
                 _rb.velocity = Vector2.zero;
@@ -107,21 +110,50 @@ namespace IL6
                 if (_attackCooldown <= 0f)
                 {
                     int dmg = _balance.ZombieAttackDamage + VariantDamageBonus;
-                    var pc = target.GetComponent<PlayerController>();
+                    var pc = pathTarget.GetComponent<PlayerController>();
                     if (pc != null) pc.TakeDamage(dmg);
-                    var c = target.GetComponent<Companion>();
+                    var c = pathTarget.GetComponent<Companion>();
                     if (c != null) c.TakeDamage(dmg);
-                    var b = target.GetComponent<Building>();
+                    var b = pathTarget.GetComponent<Building>();
                     if (b != null) b.TakeDamage(dmg);
                     _attackCooldown = _balance.ZombieAttackCooldownSec;
                 }
             }
             else
             {
-                Vector2 dir = ((Vector2)target.position - (Vector2)transform.position).normalized;
+                Vector2 dir = ((Vector2)pathTarget.position - (Vector2)transform.position).normalized;
                 _rb.velocity = dir * _balance.ZombieMoveSpeed * slowMul * MoveSpeedMul;
                 if (_attackCooldown > 0f) _attackCooldown -= Time.fixedDeltaTime;
             }
+        }
+
+        private static readonly RaycastHit2D[] _pathHits = new RaycastHit2D[8];
+
+        /// <summary>
+        /// 좀비 → 원래 타겟 사이에 Building 콜라이더가 있는지 검사. 있으면 그 건물 transform 반환.
+        /// 없으면 원래 타겟 그대로 반환. 자기 자신 콜라이더는 무시.
+        /// </summary>
+        private Transform ResolveBlockedTarget(Transform original)
+        {
+            // 타겟이 이미 Building 이면 차단 검사 의미 없음
+            if (original == null || original.GetComponent<Building>() != null) return original;
+
+            Vector2 from = transform.position;
+            Vector2 to = original.position;
+            int count = Physics2D.LinecastNonAlloc(from, to, _pathHits);
+            Building bestBlock = null;
+            float bestDist = float.MaxValue;
+            for (int i = 0; i < count; i++)
+            {
+                var h = _pathHits[i];
+                if (h.collider == null) continue;
+                if (h.collider.gameObject == gameObject) continue;
+                var b = h.collider.GetComponent<Building>();
+                if (b == null) continue;
+                float d = h.distance;
+                if (d < bestDist) { bestDist = d; bestBlock = b; }
+            }
+            return bestBlock != null ? bestBlock.transform : original;
         }
 
         private Transform FindNearestTarget()
