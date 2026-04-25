@@ -167,11 +167,14 @@ namespace IL6
         {
             if (IsDead) return;
             CurrentHp = Mathf.Max(0, CurrentHp - amount);
+            GameFeel.HitFlash(this, _sr);
             if (CurrentHp <= 0)
             {
                 var prog = Object.FindFirstObjectByType<PlayerProgression>();
                 if (prog != null) prog.GrantXp(1);
                 if (GameSession.Instance != null) GameSession.Instance.OnZombieKilled();
+                Color poofColor = _sr != null ? _sr.color : new Color(0.6f, 0.2f, 0.22f);
+                GameFeel.DeathPoof(transform.position, poofColor, 0.7f * transform.localScale.x);
                 Destroy(gameObject);
             }
         }
