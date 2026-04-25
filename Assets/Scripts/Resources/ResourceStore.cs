@@ -45,17 +45,30 @@ namespace IL6
     public sealed class ResourceStore
     {
         private readonly ResourceSnapshot _totals = new();
+        private readonly Dictionary<ResourceKind, int> _caps = new()
+        {
+            { ResourceKind.Wood, 100 },
+            { ResourceKind.Stone, 100 },
+            { ResourceKind.Meat, 100 },
+            { ResourceKind.Food, 100 },
+            { ResourceKind.Frostbloom, 50 },
+        };
         public event Action<ResourceKind, int, int> OnChanged; // kind, delta, total
 
         public int Get(ResourceKind k) => _totals.Get(k);
+        public int GetCap(ResourceKind k) => _caps.TryGetValue(k, out var v) ? v : 100;
+        public void IncreaseCap(int delta) { foreach (var k in new[] { ResourceKind.Wood, ResourceKind.Stone, ResourceKind.Meat, ResourceKind.Food }) _caps[k] += delta; }
 
         public void Add(ResourceKind k, int amount)
         {
             if (amount <= 0) return;
-            int newTotal = _totals.Get(k) + amount;
+            int cap = GetCap(k);
+            int newTotal = Mathf.Min(cap, _totals.Get(k) + amount);
+            int actualDelta = newTotal - _totals.Get(k);
+            if (actualDelta == 0) return;
             _totals.Set(k, newTotal);
-            OnChanged?.Invoke(k, amount, newTotal);
-            EventBus.Instance.Emit(new ResourceChangedPayload(k.ToString().ToLower(), amount, newTotal));
+            OnChanged?.Invoke(k, actualDelta, newTotal);
+            EventBus.Instance.Emit(new ResourceChangedPayload(k.ToString().ToLower(), actualDelta, newTotal));
         }
 
         public bool Spend(ResourceKind k, int amount)

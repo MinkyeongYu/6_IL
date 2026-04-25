@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using IL6.Events;
 
 namespace IL6
 {
@@ -40,6 +41,44 @@ namespace IL6
             {
                 Resources.Restore(save.resources);
                 Cycle.Restore(new DayNightSnapshot { day = save.currentDay, phase = Phase.Day, elapsedInPhase = 0 });
+            }
+        }
+
+        public int LastFoodEaten { get; private set; }
+        public int LastFoodShortage { get; private set; }
+        private System.Action _unsubDay;
+
+        private void Start()
+        {
+            _unsubDay = EventBus.Instance.Subscribe<DayStartedPayload>(p => OnDayStarted(p.Day));
+        }
+
+        private void OnDestroy()
+        {
+            _unsubDay?.Invoke();
+            if (Instance == this) Instance = null;
+        }
+
+        private void OnDayStarted(int day)
+        {
+            var comps = Object.FindObjectsByType<Companion>(FindObjectsSortMode.None);
+            int needed = comps != null ? comps.Length : 0;
+            int have = Resources.Get(ResourceKind.Food);
+            int eat = Mathf.Min(have, needed);
+            if (eat > 0) Resources.Spend(ResourceKind.Food, eat);
+            int hungry = needed - eat;
+            LastFoodEaten = eat;
+            LastFoodShortage = hungry;
+            if (hungry <= 0 || comps == null) return;
+            for (int i = 0; i < hungry && i < comps.Length; i++)
+            {
+                var c = comps[i];
+                if (c == null) continue;
+                c.Morale -= 15;
+                if (c.Morale <= 0)
+                {
+                    Destroy(c.gameObject);
+                }
             }
         }
 

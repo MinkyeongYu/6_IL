@@ -13,6 +13,23 @@ namespace IL6
         public uint RngSeed = 2026u;
         public PlayerProgression Progression;
 
+        public int WeaponIndex { get; private set; } = -1;
+        public Color CurrentProjectileColor { get; private set; } = new Color(1f, 0.92f, 0.3f);
+
+        public void SwitchToWeapon(int idx)
+        {
+            WeaponIndex = idx;
+            Weapon = WeaponCatalog.Get(idx);
+            CurrentProjectileColor = WeaponCatalog.ProjectileColor(WeaponIndex);
+        }
+
+        public void CycleWeapon(int delta)
+        {
+            int n = WeaponCatalog.All.Count;
+            int next = WeaponIndex < 0 ? 0 : ((WeaponIndex + delta) % n + n) % n;
+            SwitchToWeapon(next);
+        }
+
         private float _cooldown;
         private SeededRng _rng;
         private Transform _self;
@@ -24,16 +41,7 @@ namespace IL6
             if (Progression == null) Progression = GetComponent<PlayerProgression>();
             if (Weapon == null)
             {
-                Weapon = ScriptableObject.CreateInstance<WeaponDefinition>();
-                Weapon.Id = "magic-bolt";
-                Weapon.DisplayName = "Magic Bolt";
-                Weapon.BaseDamage = 12;
-                Weapon.Range = 6f;
-                Weapon.CooldownSec = 1.1f;
-                Weapon.CritChance = 0.12f;
-                Weapon.CritMultiplier = 2f;
-                Weapon.HitRadius = 0.4f;
-                Weapon.ProjectileSpeed = 8f;
+                SwitchToWeapon(0); // Longsword 기본
             }
         }
 
@@ -105,12 +113,12 @@ namespace IL6
             sr.sortingOrder = 9;
 
             var cf = go.AddComponent<ColorFallback>();
-            cf.Tint = new Color(1f, 0.92f, 0.3f);
+            cf.Tint = CurrentProjectileColor;
             cf.Shape = FallbackShape.Circle;
             cf.Circle = true;
             cf.PixelSize = 32;
             cf.OutlineWidth = 2;
-            cf.OutlineColor = new Color(0.8f, 0.5f, 0.1f, 1f);
+            cf.OutlineColor = new Color(0.2f, 0.2f, 0.2f, 1f);
 
             float speedMul = Progression != null ? Progression.ProjectileSpeedMultiplier : 1f;
             var proj = go.AddComponent<Projectile>();

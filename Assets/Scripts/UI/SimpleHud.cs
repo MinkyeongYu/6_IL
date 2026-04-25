@@ -34,7 +34,7 @@ namespace IL6
 
         private void DrawLeftPanel()
         {
-            GUI.Box(new Rect(10, 10, 280, 340), "");
+            GUI.Box(new Rect(10, 10, 280, 420), "");
             int y = 18;
             GUI.Label(new Rect(20, y, 260, 24), "=== Player ===", _titleStyle); y += 26;
 
@@ -66,7 +66,10 @@ namespace IL6
             if (Attacker != null && Attacker.Weapon != null)
             {
                 var w = Attacker.Weapon;
-                GUI.Label(new Rect(20, y, 260, 22), $"[Weapon] {w.DisplayName}", _weaponStyle); y += 22;
+                if (GUI.Button(new Rect(20, y, 24, 22), "<")) Attacker.CycleWeapon(-1);
+                GUI.Label(new Rect(48, y, 200, 22), $"[Weapon] {w.DisplayName}", _weaponStyle);
+                if (GUI.Button(new Rect(248, y, 24, 22), ">")) Attacker.CycleWeapon(+1);
+                y += 22;
                 GUI.Label(new Rect(20, y, 260, 22), $"DMG {w.BaseDamage}  RNG {w.Range:F1}u  CD {w.CooldownSec:F2}s", _labelStyle); y += 20;
                 float cd = Attacker.CurrentCooldown;
                 float ready = 1f - Mathf.Clamp01(cd / Mathf.Max(0.01f, w.CooldownSec));
@@ -96,6 +99,29 @@ namespace IL6
                 if (session.Resources.Spend(ResourceKind.Wood, 5))
                 {
                     SpawnBarricade(Player.transform.position);
+                }
+            }
+            GUI.enabled = true;
+            y += 34;
+
+            GUI.enabled = session != null && Player != null && session.Resources.Get(ResourceKind.Wood) >= 8;
+            if (GUI.Button(new Rect(20, y, 220, 30), "Build Storage (8 Wood, +50 cap)"))
+            {
+                if (session.Resources.Spend(ResourceKind.Wood, 8))
+                {
+                    SpawnStorage(Player.transform.position);
+                    session.Resources.IncreaseCap(50);
+                }
+            }
+            GUI.enabled = true;
+            y += 34;
+
+            GUI.enabled = session != null && Player != null && session.Resources.Get(ResourceKind.Wood) >= 6;
+            if (GUI.Button(new Rect(20, y, 220, 30), "Build Farm (6 Wood, +1 Food/12s)"))
+            {
+                if (session.Resources.Spend(ResourceKind.Wood, 6))
+                {
+                    SpawnFarm(Player.transform.position);
                 }
             }
             GUI.enabled = true;
@@ -327,23 +353,31 @@ namespace IL6
         {
             const int W = 240;
             int rx = Screen.width - W - 10;
-            GUI.Box(new Rect(rx, 10, W, 240), "");
+            GUI.Box(new Rect(rx, 10, W, 290), "");
             int y = 18;
             GUI.Label(new Rect(rx + 10, y, W - 20, 24), "=== Resources ===", _titleStyle); y += 26;
 
             var session = GameSession.Instance;
             if (session != null)
             {
-                GUI.Label(new Rect(rx + 10, y, W - 20, 22), $"Wood       {session.Resources.Get(ResourceKind.Wood)}", _resStyle); y += 20;
-                GUI.Label(new Rect(rx + 10, y, W - 20, 22), $"Stone      {session.Resources.Get(ResourceKind.Stone)}", _resStyle); y += 20;
-                GUI.Label(new Rect(rx + 10, y, W - 20, 22), $"Meat       {session.Resources.Get(ResourceKind.Meat)}", _resStyle); y += 20;
-                GUI.Label(new Rect(rx + 10, y, W - 20, 22), $"Food       {session.Resources.Get(ResourceKind.Food)}", _resStyle); y += 20;
-                GUI.Label(new Rect(rx + 10, y, W - 20, 22), $"Frostbloom {session.Resources.Get(ResourceKind.Frostbloom)}", _resStyle); y += 22;
+                GUI.Label(new Rect(rx + 10, y, W - 20, 22), $"Wood       {session.Resources.Get(ResourceKind.Wood)}/{session.Resources.GetCap(ResourceKind.Wood)}", _resStyle); y += 20;
+                GUI.Label(new Rect(rx + 10, y, W - 20, 22), $"Stone      {session.Resources.Get(ResourceKind.Stone)}/{session.Resources.GetCap(ResourceKind.Stone)}", _resStyle); y += 20;
+                GUI.Label(new Rect(rx + 10, y, W - 20, 22), $"Meat       {session.Resources.Get(ResourceKind.Meat)}/{session.Resources.GetCap(ResourceKind.Meat)}", _resStyle); y += 20;
+                GUI.Label(new Rect(rx + 10, y, W - 20, 22), $"Food       {session.Resources.Get(ResourceKind.Food)}/{session.Resources.GetCap(ResourceKind.Food)}", _resStyle); y += 20;
+                GUI.Label(new Rect(rx + 10, y, W - 20, 22), $"Frostbloom {session.Resources.Get(ResourceKind.Frostbloom)}/{session.Resources.GetCap(ResourceKind.Frostbloom)}", _resStyle); y += 22;
                 GUI.Label(new Rect(rx + 10, y, W - 20, 22), $"Day {session.Cycle.Day}  {session.Cycle.Phase}", _labelStyle); y += 22;
+                if (session.LastFoodShortage > 0)
+                {
+                    GUI.Label(new Rect(rx + 10, y, W - 20, 22), $"⚠ 식량 부족 {session.LastFoodShortage}!", _weaponStyle); y += 22;
+                }
 
                 if (Night != null)
                 {
                     GUI.Label(new Rect(rx + 10, y, W - 20, 22), $"Zombies: {Night.ActiveZombies}  Pending: {Night.WavePending}", _labelStyle); y += 22;
+                    if (Night.IsBlizzard)
+                    {
+                        GUI.Label(new Rect(rx + 10, y, W - 20, 22), "❄ BLIZZARD — 모닥불 밖 위험", _weaponStyle); y += 22;
+                    }
                 }
 
                 // Phase skip debug
@@ -369,6 +403,41 @@ namespace IL6
             _titleStyle = new GUIStyle(GUI.skin.label) { fontSize = 18, fontStyle = FontStyle.Bold, normal = { textColor = Color.yellow } };
             _weaponStyle = new GUIStyle(GUI.skin.label) { fontSize = 16, fontStyle = FontStyle.Bold, normal = { textColor = new Color(0.7f, 0.95f, 1f) } };
             _resStyle = new GUIStyle(GUI.skin.label) { fontSize = 16, normal = { textColor = new Color(0.95f, 0.95f, 0.85f) } };
+        }
+
+        private void SpawnStorage(Vector3 playerPos)
+        {
+            var go = new GameObject("Storage");
+            go.transform.position = playerPos + new Vector3(-1.4f, 0f, 0f);
+            go.transform.localScale = new Vector3(1.0f, 0.9f, 1f);
+            var sr = go.AddComponent<SpriteRenderer>();
+            sr.sortingOrder = 3;
+            var col = go.AddComponent<BoxCollider2D>();
+            col.size = Vector2.one;
+            var cf = go.AddComponent<ColorFallback>();
+            cf.Tint = new Color(0.55f, 0.45f, 0.3f);
+            cf.Shape = FallbackShape.Square;
+            cf.Circle = false;
+            cf.PixelSize = 32;
+            cf.OutlineWidth = 2;
+            cf.OutlineColor = new Color(0.25f, 0.18f, 0.1f, 1f);
+        }
+
+        private void SpawnFarm(Vector3 playerPos)
+        {
+            var go = new GameObject("Farm");
+            go.transform.position = playerPos + new Vector3(0f, -1.4f, 0f);
+            go.transform.localScale = new Vector3(1.2f, 1.2f, 1f);
+            var sr = go.AddComponent<SpriteRenderer>();
+            sr.sortingOrder = 2;
+            var cf = go.AddComponent<ColorFallback>();
+            cf.Tint = new Color(0.35f, 0.55f, 0.25f);
+            cf.Shape = FallbackShape.Square;
+            cf.Circle = false;
+            cf.PixelSize = 32;
+            cf.OutlineWidth = 2;
+            cf.OutlineColor = new Color(0.18f, 0.3f, 0.12f, 1f);
+            go.AddComponent<FarmBuilding>();
         }
 
         private void SpawnCampfire(Vector3 playerPos)

@@ -24,6 +24,9 @@ namespace IL6
         public float AttackCooldown = 1.6f;
         public float ProjectileSpeed = 7f;
 
+        [Header("Morale (식량 부족 시 감소)")]
+        public int Morale = 100;
+
         public enum Mode { Follow, Working }
         public Mode CurrentMode { get; private set; } = Mode.Follow;
         public Gatherable Target { get; private set; }

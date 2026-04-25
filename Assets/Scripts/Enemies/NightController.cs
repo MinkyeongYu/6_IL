@@ -22,9 +22,15 @@ namespace IL6
 
         public Color DayColor = new Color(0.88f, 0.93f, 0.98f);
         public Color NightColor = new Color(0.1f, 0.15f, 0.28f);
+        public Color BlizzardColor = new Color(0.55f, 0.7f, 0.85f);
         public Color EveningColor = new Color(0.55f, 0.4f, 0.35f);
         public Color DawnColor = new Color(0.75f, 0.7f, 0.65f);
 
+        [Header("Blizzard")]
+        [Range(0, 1)] public float BlizzardChance = 0.2f;
+        public float BlizzardDpsOutsideFire = 2f;
+
+        public bool IsBlizzard { get; private set; }
         public int ActiveZombies => _activeZombies;
         public int WavePending => _pendingSpawns;
         public Phase CurrentPhase { get; private set; } = Phase.Day;
@@ -64,7 +70,9 @@ namespace IL6
         public void StartNight(int day)
         {
             CurrentPhase = Phase.Night;
-            _pendingSpawns = BaseWaveCount + (day - 1) * PerDayIncrement;
+            IsBlizzard = _rng.Next() < BlizzardChance;
+            int basePending = BaseWaveCount + (day - 1) * PerDayIncrement;
+            _pendingSpawns = IsBlizzard ? basePending * 2 : basePending;
             _spawnTimer = 0f;
             if (day > 0 && day % 5 == 0) SpawnBoss(day);
         }
@@ -114,7 +122,7 @@ namespace IL6
         public void EndNight()
         {
             _pendingSpawns = 0;
-            // 남은 좀비는 그대로 두면 낮에도 계속 뛰어다님 — 새벽 정화
+            IsBlizzard = false;
             foreach (var z in _tracked)
             {
                 if (z != null) Destroy(z.gameObject);
@@ -123,23 +131,46 @@ namespace IL6
             _activeZombies = 0;
         }
 
+        private float _blizzardDmgAccum;
+
         private void Update()
         {
             _tracked.RemoveAll(z => z == null);
             _activeZombies = _tracked.Count;
 
             UpdateCameraBg();
+            ApplyBlizzardDamage();
 
             if (CurrentPhase != Phase.Night) return;
             if (_pendingSpawns <= 0) return;
             if (_activeZombies >= MaxActive) return;
             if (Player == null) return;
 
+            float interval = IsBlizzard ? BetweenSpawnsSec * 0.6f : BetweenSpawnsSec;
             _spawnTimer += Time.deltaTime;
-            if (_spawnTimer < BetweenSpawnsSec) return;
+            if (_spawnTimer < interval) return;
             _spawnTimer = 0f;
             SpawnOne();
             _pendingSpawns--;
+        }
+
+        private void ApplyBlizzardDamage()
+        {
+            if (!IsBlizzard || CurrentPhase != Phase.Night || Player == null) return;
+            _blizzardDmgAccum += Time.deltaTime * BlizzardDpsOutsideFire;
+            if (_blizzardDmgAccum < 1f) return;
+            int dmg = Mathf.FloorToInt(_blizzardDmgAccum);
+            _blizzardDmgAccum -= dmg;
+
+            // 모닥불 반경 안이면 보호
+            var auras = Object.FindObjectsByType<CampfireAura>(FindObjectsSortMode.None);
+            foreach (var a in auras)
+            {
+                if (a == null) continue;
+                if (Vector2.Distance(Player.position, a.transform.position) < a.Radius) return;
+            }
+            var pc = Player.GetComponent<PlayerController>();
+            if (pc != null) pc.TakeDamage(dmg);
         }
 
         private void SpawnOne()
@@ -188,7 +219,7 @@ namespace IL6
             {
                 Phase.Day => DayColor,
                 Phase.Evening => EveningColor,
-                Phase.Night => NightColor,
+                Phase.Night => IsBlizzard ? BlizzardColor : NightColor,
                 Phase.Dawn => DawnColor,
                 _ => DayColor,
             };
