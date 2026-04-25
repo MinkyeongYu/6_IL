@@ -80,6 +80,51 @@ namespace IL6
             if (go != null) Object.Destroy(go);
         }
 
+        /// <summary>발자국 눈 퍼프: 매우 작고 빠르게 사라짐 (이동 트레일용).</summary>
+        public static void SnowPuff(Vector3 worldPos)
+        {
+            var go = new GameObject("__snowpuff");
+            go.transform.position = worldPos;
+            float startScale = 0.18f + UnityEngine.Random.value * 0.08f;
+            go.transform.localScale = Vector3.one * startScale;
+
+            var sr = go.AddComponent<SpriteRenderer>();
+            sr.sortingOrder = 3;
+
+            var cf = go.AddComponent<ColorFallback>();
+            cf.Tint = new Color(1f, 1f, 1f, 0.85f);
+            cf.Shape = FallbackShape.Circle;
+            cf.Circle = true;
+            cf.PixelSize = 32;
+            cf.OutlineWidth = 0;
+            cf.OutlineColor = new Color(0, 0, 0, 0);
+
+            Runner().StartCoroutine(SnowPuffRoutine(go, startScale));
+        }
+
+        private static IEnumerator SnowPuffRoutine(GameObject go, float startScale)
+        {
+            float t = 0f;
+            float dur = 0.5f;
+            SpriteRenderer sr = null;
+            while (t < dur)
+            {
+                if (go == null) yield break;
+                if (sr == null) sr = go.GetComponent<SpriteRenderer>();
+                t += Time.deltaTime;
+                float k = t / dur;
+                go.transform.localScale = Vector3.one * Mathf.Lerp(startScale, startScale * 1.8f, k);
+                if (sr != null)
+                {
+                    var c = sr.color;
+                    c.a = (1f - k) * 0.7f;
+                    sr.color = c;
+                }
+                yield return null;
+            }
+            if (go != null) Object.Destroy(go);
+        }
+
         public static void FloatText(Vector3 worldPos, string text, Color color)
         {
             var ft = Runner().gameObject.GetComponent<FloatTextRoot>();

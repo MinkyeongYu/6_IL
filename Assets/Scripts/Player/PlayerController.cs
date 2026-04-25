@@ -50,10 +50,22 @@ namespace IL6
             }
         }
 
+        private float _snowTimer;
+
         private void FixedUpdate()
         {
             if (IsDead) { _rb.velocity = Vector2.zero; return; }
             _rb.velocity = _input.MoveAxis * _balance.PlayerMoveSpeed;
+
+            if (_rb.velocity.sqrMagnitude > 0.05f)
+            {
+                _snowTimer -= Time.fixedDeltaTime;
+                if (_snowTimer <= 0f)
+                {
+                    _snowTimer = 0.16f;
+                    GameFeel.SnowPuff(transform.position + Vector3.down * 0.2f);
+                }
+            }
         }
 
         public void TakeDamage(int amount)
