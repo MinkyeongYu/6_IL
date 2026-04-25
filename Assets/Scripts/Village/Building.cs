@@ -19,11 +19,18 @@ namespace IL6
 
         public readonly List<Companion> HostedCompanions = new();
 
+        private System.Action _unsubDawn;
+
         private void Awake()
         {
             var b = BalanceConfig.Instance;
             MaxHp = Kind == BuildingKind.Campfire ? b.CampfireHp : b.BarricadeHp;
             CurrentHp = MaxHp;
+        }
+
+        private void Start()
+        {
+            _unsubDawn = EventBus.Instance.Subscribe<DawnStartedPayload>(_ => DawnRepair());
         }
 
         public void TakeDamage(int amount)
@@ -39,8 +46,19 @@ namespace IL6
             }
         }
 
+        private void DawnRepair()
+        {
+            if (CurrentHp <= 0) return;
+            int heal = Mathf.Max(1, MaxHp / 4);
+            int before = CurrentHp;
+            CurrentHp = Mathf.Min(MaxHp, CurrentHp + heal);
+            int delta = CurrentHp - before;
+            if (delta > 0) GameFeel.FloatText(transform.position, $"+{delta} HP", new Color(0.6f, 1f, 0.7f));
+        }
+
         private void OnDestroy()
         {
+            _unsubDawn?.Invoke();
             ExposeHosted();
         }
 
