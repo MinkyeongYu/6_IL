@@ -163,6 +163,8 @@ namespace IL6
             return best;
         }
 
+        private static float _lastHitSfxAt;
+
         public void TakeDamage(int amount)
         {
             if (IsDead) return;
@@ -170,6 +172,12 @@ namespace IL6
             GameFeel.HitFlash(this, _sr);
             GameFeel.FloatText(transform.position, $"-{amount}",
                 new Color(1f, 0.85f, 0.4f));
+            // 사운드 rate-limit (50ms 간격)
+            if (Time.unscaledTime - _lastHitSfxAt > 0.05f)
+            {
+                _lastHitSfxAt = Time.unscaledTime;
+                Sfx.Hit();
+            }
             if (CurrentHp <= 0)
             {
                 var prog = Object.FindFirstObjectByType<PlayerProgression>();
@@ -177,6 +185,7 @@ namespace IL6
                 if (GameSession.Instance != null) GameSession.Instance.OnZombieKilled();
                 Color poofColor = _sr != null ? _sr.color : new Color(0.6f, 0.2f, 0.22f);
                 GameFeel.DeathPoof(transform.position, poofColor, 0.7f * transform.localScale.x);
+                Sfx.Death();
                 Destroy(gameObject);
             }
         }

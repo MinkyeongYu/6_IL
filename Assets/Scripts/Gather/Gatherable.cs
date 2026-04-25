@@ -18,6 +18,7 @@ namespace IL6
             store.Add(YieldKind, YieldAmount);
             Color tint = ResourceTint(YieldKind);
             GameFeel.FloatText(transform.position, $"+{YieldAmount} {YieldKind}", tint);
+            Sfx.Pickup();
             if (DestroyOnGather)
             {
                 GameFeel.DeathPoof(transform.position, tint, 0.5f);

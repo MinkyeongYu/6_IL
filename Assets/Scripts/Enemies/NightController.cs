@@ -78,7 +78,8 @@ namespace IL6
             _pendingSpawns = IsBlizzard ? basePending * 2 : basePending;
             _spawnTimer = 0f;
             IsBossNight = day > 0 && day % 5 == 0;
-            if (IsBossNight) StartCoroutine(BossWarningThenSpawn(day));
+            Sfx.NightHowl();
+            if (IsBossNight) { Sfx.Boss(); StartCoroutine(BossWarningThenSpawn(day)); }
         }
 
         private System.Collections.IEnumerator BossWarningThenSpawn(int day)

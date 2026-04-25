@@ -405,7 +405,10 @@ namespace IL6
             if (UiTheme.Button(new Rect(innerX, y, innerW, 28), $"🏹 망루     8 Wood + 4 Stone", _btn, watchtowerOk))
             {
                 if (session.Resources.Spend(ResourceKind.Wood, 8) && session.Resources.Spend(ResourceKind.Stone, 4))
+                {
+                    Sfx.Build();
                     SpawnWatchtower(Player.transform.position);
+                }
             }
             y += 36;
 
@@ -444,7 +447,11 @@ namespace IL6
             string txt = $"{label}     {cost} {kind}";
             if (UiTheme.Button(r, txt, _btn, enabled))
             {
-                if (GameSession.Instance.Resources.Spend(kind, cost)) onClick();
+                if (GameSession.Instance.Resources.Spend(kind, cost))
+                {
+                    Sfx.Build();
+                    onClick();
+                }
             }
         }
 
@@ -454,7 +461,7 @@ namespace IL6
         private void DrawRightPanel()
         {
             const int W = 270;
-            var panel = new Rect(Screen.width - W - 12, 12, W, 410);
+            var panel = new Rect(Screen.width - W - 12, 12, W, 440);
             UiTheme.Panel(panel);
             UiTheme.TitleBar(panel, "  자원  ", _title);
 
@@ -574,6 +581,14 @@ namespace IL6
                     session.Cycle.Update(session.Cycle.PhaseDurationSec + 0.1f);
                 }
             }
+            y += 30;
+
+            // SFX 볼륨 슬라이더
+            GUI.Label(new Rect(innerX, y, 70, 20), $"🔊 SFX", _label);
+            float vol = Sfx.Volume;
+            float newVol = GUI.HorizontalSlider(new Rect(innerX + 70, y + 6, innerW - 110, 12), vol, 0f, 1f);
+            if (Mathf.Abs(newVol - vol) > 0.005f) Sfx.Volume = newVol;
+            GUI.Label(new Rect(innerX + innerW - 36, y, 36, 20), $"{(newVol * 100):F0}%", _labelSubtle);
         }
 
         // ====================================================================
@@ -727,6 +742,7 @@ namespace IL6
                 var rect = new Rect(bx + i * (btnW + gap), by, btnW, btnH);
                 if (UiTheme.Button(rect, "", _btn))
                 {
+                    Sfx.Click();
                     Progression.ApplyRune(rune);
                     _runeOffer = null;
                     return;
