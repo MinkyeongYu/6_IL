@@ -198,7 +198,7 @@ namespace IL6
             // 토끼 (가장 흔함)
             new AnimalArchetype {
                 Name = "Rabbit_proc", MeatMin = 1, MeatMax = 1, MeatDropChance = 1f,
-                DurationSec = 1.5f, Hp = 1,
+                DurationSec = 1.5f, Hp = 4,
                 FleeRadius = 5.5f, FleeSpeed = 5.5f,
                 Scale = 0.5f, ColliderRadius = 0.25f,
                 Tint = new Color(0.92f, 0.88f, 0.82f),
@@ -209,7 +209,7 @@ namespace IL6
             // 여우
             new AnimalArchetype {
                 Name = "Fox_proc", MeatMin = 2, MeatMax = 2, MeatDropChance = 1f,
-                DurationSec = 2.5f, Hp = 2,
+                DurationSec = 2.5f, Hp = 8,
                 FleeRadius = 4.5f, FleeSpeed = 4.5f,
                 Scale = 0.7f, ColliderRadius = 0.3f,
                 Tint = new Color(0.85f, 0.45f, 0.18f),
@@ -220,7 +220,7 @@ namespace IL6
             // 멧돼지
             new AnimalArchetype {
                 Name = "Boar_proc", MeatMin = 3, MeatMax = 5, MeatDropChance = 1f,
-                DurationSec = 4.5f, Hp = 8,
+                DurationSec = 4.5f, Hp = 28,
                 FleeRadius = 2.5f, FleeSpeed = 2.2f,
                 Scale = 1.25f, ColliderRadius = 0.5f,
                 Tint = new Color(0.35f, 0.25f, 0.18f),
@@ -231,7 +231,7 @@ namespace IL6
             // 늑대 (포식자, 무리, 25%만 고기)
             new AnimalArchetype {
                 Name = "Wolf_proc", MeatMin = 1, MeatMax = 1, MeatDropChance = 0.25f,
-                DurationSec = 1.5f, Hp = 5,
+                DurationSec = 1.5f, Hp = 16,
                 FleeRadius = 0f, FleeSpeed = 0f, // 안 도망감
                 Scale = 0.85f, ColliderRadius = 0.35f,
                 Tint = new Color(0.45f, 0.45f, 0.5f),
@@ -243,7 +243,7 @@ namespace IL6
             // 사슴 (낮춘 빈도)
             new AnimalArchetype {
                 Name = "Deer_proc", MeatMin = 2, MeatMax = 2, MeatDropChance = 1f,
-                DurationSec = 3f, Hp = 3,
+                DurationSec = 3f, Hp = 12,
                 FleeRadius = 3.5f, FleeSpeed = 3f,
                 Scale = 1f, ColliderRadius = 0.4f,
                 Tint = new Color(0.55f, 0.4f, 0.25f),
@@ -254,7 +254,7 @@ namespace IL6
             // 흰토끼 (희귀, Frostbloom 보너스)
             new AnimalArchetype {
                 Name = "SnowHare_proc", MeatMin = 1, MeatMax = 1, MeatDropChance = 1f,
-                DurationSec = 1.8f, Hp = 1,
+                DurationSec = 1.8f, Hp = 5,
                 FleeRadius = 6f, FleeSpeed = 6.5f,
                 Scale = 0.45f, ColliderRadius = 0.25f,
                 Tint = new Color(0.95f, 0.97f, 1f),

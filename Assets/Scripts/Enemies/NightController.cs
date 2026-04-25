@@ -119,6 +119,8 @@ namespace IL6
 
             var zombie = go.AddComponent<Zombie>();
             zombie.InitHp(60 + day * 8);
+            zombie.VariantDamageBonus = 6 + (day - 1);
+            zombie.MoveSpeedMul = 1f + Mathf.Min((day - 1) * 0.02f, 0.5f);
             _tracked.Add(zombie);
 
             var cf = go.AddComponent<ColorFallback>();
@@ -236,6 +238,14 @@ namespace IL6
             var zombie = go.AddComponent<Zombie>();
             _tracked.Add(zombie);
 
+            // 일자별 강화 — Day 1 기준, 매 밤마다 +12% HP, +1 dmg, +2% speed (속도 +50% 캡)
+            int day = GameSession.Instance != null ? GameSession.Instance.Cycle.Day : 1;
+            float dayHpMul = 1f + (day - 1) * 0.12f;
+            int dayDmgBonus = day - 1;
+            float daySpeedMul = 1f + Mathf.Min((day - 1) * 0.02f, 0.5f);
+
+            int dayBaseHp = Mathf.RoundToInt(zombie.MaxHp * dayHpMul);
+
             var variant = PickVariant();
             Color tint;
             float scale = 1f;
@@ -244,18 +254,22 @@ namespace IL6
                 case Variant.Fast:
                     tint = new Color(0.85f, 0.5f, 0.25f);  // 주황
                     scale = 0.8f;
-                    zombie.MoveSpeedMul = 1.6f;
-                    zombie.InitHp(Mathf.RoundToInt(zombie.MaxHp * 0.6f));
+                    zombie.MoveSpeedMul = 1.6f * daySpeedMul;
+                    zombie.InitHp(Mathf.RoundToInt(dayBaseHp * 0.6f));
+                    zombie.VariantDamageBonus = dayDmgBonus;
                     break;
                 case Variant.Tank:
                     tint = new Color(0.35f, 0.18f, 0.4f);  // 짙은 보라
                     scale = 1.35f;
-                    zombie.MoveSpeedMul = 0.6f;
-                    zombie.InitHp(Mathf.RoundToInt(zombie.MaxHp * 2.2f));
-                    zombie.VariantDamageBonus = 4;
+                    zombie.MoveSpeedMul = 0.6f * daySpeedMul;
+                    zombie.InitHp(Mathf.RoundToInt(dayBaseHp * 2.2f));
+                    zombie.VariantDamageBonus = 4 + dayDmgBonus;
                     break;
                 default:
                     tint = new Color(0.6f, 0.2f, 0.22f);
+                    zombie.MoveSpeedMul = daySpeedMul;
+                    zombie.InitHp(dayBaseHp);
+                    zombie.VariantDamageBonus = dayDmgBonus;
                     break;
             }
             go.transform.localScale = Vector3.one * scale;
