@@ -38,7 +38,8 @@ namespace IL6
             if (rb == null) rb = gameObject.AddComponent<Rigidbody2D>();
             rb.gravityScale = 0f;
             rb.freezeRotation = true;
-            rb.bodyType = RigidbodyType2D.Dynamic;
+            // 영입 전에는 Kinematic — 좀비/플레이어 충돌에 밀려나지 않고 제자리에 고정.
+            rb.bodyType = RigidbodyType2D.Kinematic;
 
             var col = GetComponent<CircleCollider2D>();
             if (col == null)
@@ -78,6 +79,10 @@ namespace IL6
 
         public void Recruit()
         {
+            // 영입되면 Dynamic 으로 전환 — Companion 이 velocity 로 이동해야 하고 다른 유닛과 물리적 상호작용도 가능.
+            var rb = GetComponent<Rigidbody2D>();
+            if (rb != null) rb.bodyType = RigidbodyType2D.Dynamic;
+
             var comp = gameObject.AddComponent<Companion>();
             comp.Player = Player;
             comp.IsCombat = IsCombat;
