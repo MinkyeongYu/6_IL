@@ -45,6 +45,8 @@ namespace IL6
             {
                 var f = MainCamera.gameObject.AddComponent<CameraFollow>();
                 f.Target = Player.transform;
+                if (MainCamera.GetComponent<SnowEmitter>() == null)
+                    MainCamera.gameObject.AddComponent<SnowEmitter>();
             }
 
             _unsubEvening = EventBus.Instance.Subscribe<EveningStartedPayload>(_ =>
