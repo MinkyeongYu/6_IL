@@ -1,12 +1,10 @@
 using UnityEngine;
-using UnityEngine.SceneManagement;
-using IL6.Events;
 
 namespace IL6
 {
     /// <summary>
     /// Snowfield 신의 루트 컨트롤러. 플레이어 + 채집 + 청크 매니저 + 시야 조립.
-    /// 저녁 시작 시 Village 씬으로 이동.
+    /// 모든 페이즈를 한 신에서 — 저녁/밤은 NightController 가 처리.
     /// </summary>
     public sealed class SnowfieldController : MonoBehaviour
     {
