@@ -33,6 +33,7 @@ namespace IL6
             DrawAchievementToast();
             DrawHomeCompass();
             DrawControlsHint();
+            DrawTutorialOverlay();
             DrawDeathOverlay();
             DrawDamageFlash();
         }
@@ -170,6 +171,62 @@ namespace IL6
                     alignment = TextAnchor.MiddleCenter, normal = { textColor = UiTheme.TextCream } };
             }
             GUI.Label(new Rect(r.x + 36, r.y, r.width - 36, H), $"{dist:F0}u  →  집", _compassDist);
+        }
+
+        private const string TutorialPrefKey = "il6_tutorial_seen_v1";
+        private float _tutorialTimer = 0f;
+        private bool _tutorialDismissed;
+        private GUIStyle _tutTitle, _tutBody;
+
+        private void DrawTutorialOverlay()
+        {
+            if (_tutorialDismissed) return;
+            if (PlayerPrefs.GetInt(TutorialPrefKey, 0) == 1) { _tutorialDismissed = true; return; }
+            _tutorialTimer += Time.unscaledDeltaTime;
+            // 8초 자동 종료
+            if (_tutorialTimer > 12f) { DismissTutorial(); return; }
+
+            int W = 480, H = 280;
+            var r = new Rect(Screen.width / 2 - W / 2, Screen.height / 2 - H / 2 - 30, W, H);
+            UiTheme.Rect(new Rect(0, 0, Screen.width, Screen.height), new Color(0, 0, 0, 0.45f));
+            UiTheme.Panel(r);
+            UiTheme.TitleBar(r, "  처음 오신 분께  ", _title);
+
+            if (_tutTitle == null)
+            {
+                _tutTitle = new GUIStyle(GUI.skin.label) {
+                    fontSize = 16, fontStyle = FontStyle.Bold,
+                    normal = { textColor = UiTheme.TextGold }, wordWrap = true };
+                _tutBody = new GUIStyle(GUI.skin.label) {
+                    fontSize = 13, normal = { textColor = UiTheme.TextCream }, wordWrap = true };
+            }
+
+            int x = (int)r.x + 22, y = (int)r.y + 44, w = (int)r.width - 44;
+            GUI.Label(new Rect(x, y, w, 22), "🎮  조작", _tutTitle); y += 24;
+            GUI.Label(new Rect(x, y, w, 18), "·  WASD / 방향키  →  이동", _tutBody); y += 18;
+            GUI.Label(new Rect(x, y, w, 18), "·  E  →  근처 자원 채집  ·  F  →  방랑자 영입", _tutBody); y += 18;
+            GUI.Label(new Rect(x, y, w, 18), "·  공격은 자동 — 좀비가 사거리 안에 들어오면 사격/베기.", _tutBody); y += 22;
+
+            GUI.Label(new Rect(x, y, w, 22), "🌙  밤이 옵니다", _tutTitle); y += 24;
+            GUI.Label(new Rect(x, y, w, 18), "·  좀비 웨이브가 사방에서 몰려옵니다.  모닥불 근처를 사수하세요.", _tutBody); y += 18;
+            GUI.Label(new Rect(x, y, w, 18), "·  5일·10일·15일 밤은 보스가 등장합니다.", _tutBody); y += 22;
+
+            GUI.Label(new Rect(x, y, w, 22), "🏠  마을 만들기", _tutTitle); y += 24;
+            GUI.Label(new Rect(x, y, w, 18), "·  좌측 패널의 모닥불·바리게이트·창고·농장을 지어보세요.", _tutBody); y += 18;
+            GUI.Label(new Rect(x, y, w, 18), "·  레벨업 시 룬 3 종 중 하나를 골라 강해집니다 (최대 3중첩).", _tutBody); y += 18;
+
+            int btnW = 120;
+            if (UiTheme.Button(new Rect(r.x + r.width / 2 - btnW / 2, r.yMax - 36, btnW, 26), "시작하기", _btn))
+            {
+                DismissTutorial();
+            }
+        }
+
+        private void DismissTutorial()
+        {
+            _tutorialDismissed = true;
+            PlayerPrefs.SetInt(TutorialPrefKey, 1);
+            PlayerPrefs.Save();
         }
 
         private void DrawControlsHint()
