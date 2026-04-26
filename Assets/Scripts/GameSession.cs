@@ -59,7 +59,12 @@ namespace IL6
             + MaxCompanionsAtOnce * 5
             - CompanionsLost * 4);
 
-        public void OnZombieKilled() { TotalKills++; }
+        public void OnZombieKilled()
+        {
+            TotalKills++;
+            var night = Object.FindFirstObjectByType<NightController>();
+            if (night != null) night.OnNightKill();
+        }
         public void OnCompanionLost() { CompanionsLost++; }
 
         private System.Action _unsubDay;

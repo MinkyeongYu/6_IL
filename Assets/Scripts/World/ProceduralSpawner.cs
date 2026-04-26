@@ -50,7 +50,11 @@ namespace IL6
             int pcx = Mathf.FloorToInt(Player.position.x / ChunkSize);
             int pcy = Mathf.FloorToInt(Player.position.y / ChunkSize);
 
-            EnsureLoaded(pcx, pcy);
+            // 밤에는 새 동물/NPC 스폰 중단 — 좀비 웨이브에 집중. 기존 청크는 유지하되 신규 로드만 막음.
+            bool isNight = GameSession.Instance != null
+                && GameSession.Instance.Cycle != null
+                && GameSession.Instance.Cycle.Phase == Phase.Night;
+            if (!isNight) EnsureLoaded(pcx, pcy);
             UnloadFar(pcx, pcy);
         }
 

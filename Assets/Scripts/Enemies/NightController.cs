@@ -70,6 +70,10 @@ namespace IL6
         public float BossWarningRemaining { get; private set; }
         public bool IsBossNight { get; private set; }
 
+        public int KillsThisNight { get; private set; }
+        public int BossKillThreshold = 25;
+        private bool _bossSpawnedThisNight;
+
         public void StartNight(int day)
         {
             CurrentPhase = Phase.Night;
@@ -78,9 +82,26 @@ namespace IL6
             _pendingSpawns = IsBlizzard ? basePending * 2 : basePending;
             _spawnTimer = 0f;
             IsBossNight = day > 0 && day % 5 == 0;
+            KillsThisNight = 0;
+            _bossSpawnedThisNight = false;
             Sfx.NightHowl();
             CameraFollow.Shake(0.35f, 0.6f);
-            if (IsBossNight) { Sfx.Boss(); CameraFollow.Shake(0.7f, 1.2f); StartCoroutine(BossWarningThenSpawn(day)); }
+            if (IsBossNight) { Sfx.Boss(); CameraFollow.Shake(0.7f, 1.2f); _bossSpawnedThisNight = true; StartCoroutine(BossWarningThenSpawn(day)); }
+        }
+
+        /// <summary>좀비가 죽을 때 GameSession.OnZombieKilled 와 함께 호출됨.</summary>
+        public void OnNightKill()
+        {
+            if (CurrentPhase != Phase.Night) return;
+            KillsThisNight++;
+            // 일정 수 처치 시 — 보스가 아직 안 나왔다면 보스 강제 소환
+            if (!_bossSpawnedThisNight && KillsThisNight >= BossKillThreshold)
+            {
+                _bossSpawnedThisNight = true;
+                int day = GameSession.Instance != null ? GameSession.Instance.Cycle.Day : 1;
+                Sfx.Boss(); CameraFollow.Shake(0.7f, 1.2f);
+                StartCoroutine(BossWarningThenSpawn(day));
+            }
         }
 
         private System.Collections.IEnumerator BossWarningThenSpawn(int day)
@@ -98,13 +119,10 @@ namespace IL6
         private void SpawnBoss(int day)
         {
             if (Player == null) return;
-            float angle = Random.Range(0f, Mathf.PI * 2f);
-            float dist = SpawnDistance + 1f;
-            float x = Player.position.x + Mathf.Cos(angle) * dist;
-            float y = Player.position.y + Mathf.Sin(angle) * dist;
+            Vector3 spawnPos = PickOutsideVillageSpawnPos(rngBased: false);
 
             var go = new GameObject($"Boss_d{day}");
-            go.transform.position = new Vector3(x, y, 0);
+            go.transform.position = spawnPos;
             go.transform.localScale = Vector3.one * 1.7f;
 
             var sr = go.AddComponent<SpriteRenderer>();
@@ -166,9 +184,18 @@ namespace IL6
             ApplyBlizzardDamage();
 
             if (CurrentPhase != Phase.Night) return;
+            if (Player == null) return;
+
+            // 무한 웨이브 — 활성 좀비 0 이고 대기열도 0 이면 새 웨이브 보충 (점점 커짐)
+            if (_activeZombies == 0 && _pendingSpawns <= 0)
+            {
+                int day = GameSession.Instance != null ? GameSession.Instance.Cycle.Day : 1;
+                int refill = BaseWaveCount + (day - 1) * PerDayIncrement + KillsThisNight / 5;
+                _pendingSpawns = IsBlizzard ? refill * 2 : refill;
+            }
+
             if (_pendingSpawns <= 0) return;
             if (_activeZombies >= MaxActive) return;
-            if (Player == null) return;
 
             float interval = IsBlizzard ? BetweenSpawnsSec * 0.6f : BetweenSpawnsSec;
             _spawnTimer += Time.deltaTime;
@@ -215,15 +242,46 @@ namespace IL6
             return Variant.Normal;
         }
 
-        private void SpawnOne()
+        // 마을 펜스 사각형 — VillageStarter 의 halfSize 와 일치
+        private static readonly Vector2 _villageCenter = new Vector2(GameConstants.VillageCenterX, GameConstants.VillageCenterY);
+        private const float _villageHalfSize = 5f;
+        private const float _villageMargin = 1.0f; // 펜스에서 추가로 1u 더 밖
+
+        /// <summary>
+        /// 좀비 스폰 지점을 마을 펜스 밖에 보장.
+        /// 플레이어 주변 랜덤 각도/거리로 시도 → 마을 안이면 마을 밖으로 강제 이동.
+        /// </summary>
+        private Vector3 PickOutsideVillageSpawnPos(bool rngBased)
         {
-            float angle = _rng.Next() * Mathf.PI * 2f;
-            float dist = SpawnDistance + (_rng.Next() * 2f - 1f) * SpawnJitter;
+            float angle = rngBased ? _rng.Next() * Mathf.PI * 2f : Random.Range(0f, Mathf.PI * 2f);
+            float dist = SpawnDistance + (rngBased ? (_rng.Next() * 2f - 1f) : Random.Range(-1f, 1f)) * SpawnJitter;
             float x = Player.position.x + Mathf.Cos(angle) * dist;
             float y = Player.position.y + Mathf.Sin(angle) * dist;
 
+            // 마을 사각형 내부면 가장 가까운 외곽으로 밀어냄
+            Vector2 d = new Vector2(x - _villageCenter.x, y - _villageCenter.y);
+            float halfWithMargin = _villageHalfSize + _villageMargin;
+            if (Mathf.Abs(d.x) < halfWithMargin && Mathf.Abs(d.y) < halfWithMargin)
+            {
+                // 안에 있음 — 더 멀리 떨어진 축으로 밀어냄
+                if (Mathf.Abs(d.x) > Mathf.Abs(d.y))
+                {
+                    x = _villageCenter.x + Mathf.Sign(d.x == 0 ? 1 : d.x) * halfWithMargin;
+                }
+                else
+                {
+                    y = _villageCenter.y + Mathf.Sign(d.y == 0 ? 1 : d.y) * halfWithMargin;
+                }
+            }
+            return new Vector3(x, y, 0);
+        }
+
+        private void SpawnOne()
+        {
+            Vector3 spawnPos = PickOutsideVillageSpawnPos(rngBased: true);
+
             var go = new GameObject("Zombie_wave");
-            go.transform.position = new Vector3(x, y, 0);
+            go.transform.position = spawnPos;
 
             var sr = go.AddComponent<SpriteRenderer>();
             sr.sortingOrder = 8;
