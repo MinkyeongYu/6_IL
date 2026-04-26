@@ -341,6 +341,13 @@ namespace IL6
 
         private Vector2 ComputeWorkingVelocity()
         {
+            // 시야 안 적이 있으면 채집 중단하고 전투 모드로 — 다음 프레임부터 ComputeFollowVelocity 가 추격.
+            if (IsCombat && FindAnyHostileInSight() != null)
+            {
+                Target = null;
+                CurrentMode = Mode.Follow;
+                return Vector2.zero;
+            }
             if (Target == null) { CurrentMode = Mode.Follow; return Vector2.zero; }
             Vector2 toTarget = (Vector2)Target.transform.position - (Vector2)transform.position;
             float dist = toTarget.magnitude;
