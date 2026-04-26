@@ -26,6 +26,7 @@ namespace IL6
         [Header("Combat")]
         public bool IsCombat = true;
         public float AttackRange = 5f;
+        public float SightRange = 9f;     // AttackRange 보다 넓음 — 적 발견 시 추격
         public int Damage = 6;
         public float AttackCooldown = 1.6f;
         public float ProjectileSpeed = 7f;
@@ -38,9 +39,12 @@ namespace IL6
         public int CurrentHp { get; private set; }
         public bool IsDead => CurrentHp <= 0;
 
+        public float LastDamagedAt { get; private set; } = -100f;
+
         public void TakeDamage(int amount)
         {
             if (IsDead) return;
+            LastDamagedAt = Time.time;
             CurrentHp = Mathf.Max(0, CurrentHp - amount);
             GameFeel.HitFlash(this, GetComponent<SpriteRenderer>());
             if (CurrentHp <= 0)
@@ -259,19 +263,28 @@ namespace IL6
                 if (toAnchor.magnitude > 0.3f) return toAnchor.normalized * MoveSpeed * 0.7f + sep;
                 return sep;
             }
-            if (CurrentStance == Stance.Aggressive)
+            // 시야 안에 적이 있으면 기본 follow 도 추격을 우선 — 사거리 안까지 들어가야 발사 가능.
+            if (IsCombat)
             {
-                var z = FindNearestZombie(9f);
-                if (z != null)
+                Transform enemy = FindAnyHostileInSight();
+                if (enemy != null)
                 {
-                    Vector2 toZ = (Vector2)z.transform.position - (Vector2)transform.position;
-                    float dz = toZ.magnitude;
+                    Vector2 toE = (Vector2)enemy.position - (Vector2)transform.position;
+                    float de = toE.magnitude;
                     Vector2 sep = SeparationFromOthers();
-                    if (dz > AttackRange * 0.7f) return toZ.normalized * MoveSpeed + sep;
-                    return sep;
+                    if (de > AttackRange * 0.85f) return toE.normalized * MoveSpeed + sep;
+                    return sep; // 사거리 안 — 멈추고 자동 공격
                 }
             }
             if (Player == null) return Vector2.zero;
+
+            // 적이 없고 플레이어가 시야 안에 있으면 자리 유지 (formation 거리 너무 가까우면 안 따라감)
+            if (Vector2.Distance((Vector2)transform.position, (Vector2)Player.position) < SightRange)
+            {
+                bool playerNearMe = Vector2.Distance((Vector2)transform.position, (Vector2)Player.position) < FormationRadius * 1.5f;
+                if (playerNearMe) return SeparationFromOthers();
+                // 플레이어가 보이지만 약간 멀면 천천히 따라감 (formation slot)
+            }
 
             bool playerInside = IsInsideVillageBounds((Vector2)Player.position);
             bool selfInside = IsInsideVillageBounds((Vector2)transform.position);
@@ -434,6 +447,15 @@ namespace IL6
                 if (d < bestDist) { best = w; bestDist = d; }
             }
             return best;
+        }
+
+        /// <summary>SightRange 안에서 좀비 우선, 없으면 늑대.</summary>
+        private Transform FindAnyHostileInSight()
+        {
+            var z = FindNearestZombie(SightRange);
+            if (z != null) return z.transform;
+            var w = FindNearestHostileAnimal(SightRange);
+            return w != null ? w.transform : null;
         }
 
         private float GetCampfireFireRateMul()

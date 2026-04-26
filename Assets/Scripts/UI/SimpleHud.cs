@@ -50,6 +50,7 @@ namespace IL6
             DrawAutoSaveToast();
             DrawAchievementToast();
             DrawHomeCompass();
+            DrawThreatCompass();   // 공격받는 건물/동료 방향 화살표
             DrawPhaseClock();      // 상단 중앙
             // ControlsHint 제거 — 모드 탭과 튜토리얼이 키 안내 대신함
             DrawTutorialOverlay();
@@ -79,9 +80,15 @@ namespace IL6
                 if (_teleportPending && _fadeAlpha > 0.92f)
                 {
                     _teleportPending = false;
-                    if (Player != null)
+                    Vector3 villageCenter = new Vector3(GameConstants.VillageCenterX, GameConstants.VillageCenterY, 0f);
+                    if (Player != null) Player.transform.position = villageCenter;
+                    // 동료들도 같이 마을로 — 외곽에 두고 오면 사라진 것처럼 보임
+                    var comps = Object.FindObjectsByType<Companion>(FindObjectsSortMode.None);
+                    foreach (var c in comps)
                     {
-                        Player.transform.position = new Vector3(GameConstants.VillageCenterX, GameConstants.VillageCenterY, 0f);
+                        if (c == null || c.IsDead) continue;
+                        Vector2 jitter = Random.insideUnitCircle * 1.2f;
+                        c.transform.position = villageCenter + (Vector3)jitter;
                     }
                 }
             }
@@ -305,6 +312,72 @@ namespace IL6
         }
 
         private GUIStyle _compassDist;
+
+        /// <summary>최근 공격받은 건물/동료가 화면 밖에 있으면 화면 가장자리에 빨간 방향 화살표.</summary>
+        private void DrawThreatCompass()
+        {
+            var cam = Camera.main;
+            if (cam == null) return;
+            const float RecentSec = 4f;
+            const int ArrowSize = 22;
+            int margin = 40;
+
+            void DrawArrow(Vector3 worldPos, Color color, string label)
+            {
+                Vector3 sp = cam.WorldToScreenPoint(worldPos);
+                bool onScreen = sp.z > 0 && sp.x > 0 && sp.x < Screen.width && sp.y > 0 && sp.y < Screen.height;
+                if (onScreen) return; // 화면 안이면 HpBar 가 충분히 표시
+
+                Vector2 center = new Vector2(Screen.width * 0.5f, Screen.height * 0.5f);
+                Vector2 target = new Vector2(sp.x, Screen.height - sp.y);
+                if (sp.z < 0) target = center * 2f - target; // 카메라 뒤
+                Vector2 dir = (target - center).normalized;
+
+                // 화면 가장자리에서 안쪽으로 margin 만큼 위치
+                float halfW = Screen.width * 0.5f - margin;
+                float halfH = Screen.height * 0.5f - margin;
+                float t = Mathf.Min(halfW / Mathf.Abs(dir.x + 0.0001f), halfH / Mathf.Abs(dir.y + 0.0001f));
+                Vector2 edgePos = center + dir * t;
+
+                float angDeg = Mathf.Atan2(dir.y, dir.x) * Mathf.Rad2Deg;
+                var matrix = GUI.matrix;
+                GUIUtility.RotateAroundPivot(angDeg, edgePos);
+                // 삼각형 화살표
+                UiTheme.Rect(new Rect(edgePos.x - ArrowSize, edgePos.y - 4, ArrowSize, 8), color);
+                UiTheme.Rect(new Rect(edgePos.x, edgePos.y - 8, 6, 16), color);
+                UiTheme.Rect(new Rect(edgePos.x + 4, edgePos.y - 6, 4, 12), color);
+                UiTheme.Rect(new Rect(edgePos.x + 6, edgePos.y - 4, 4, 8), color);
+                UiTheme.Rect(new Rect(edgePos.x + 8, edgePos.y - 2, 4, 4), color);
+                GUI.matrix = matrix;
+
+                if (_threatLabel == null)
+                {
+                    _threatLabel = new GUIStyle(GUI.skin.label) {
+                        fontSize = 12, fontStyle = FontStyle.Bold,
+                        alignment = TextAnchor.MiddleCenter,
+                        normal = { textColor = color }
+                    };
+                }
+                GUI.Label(new Rect(edgePos.x - 40, edgePos.y + 14, 80, 16), label, _threatLabel);
+            }
+
+            float now = Time.time;
+            var bs = Object.FindObjectsByType<Building>(FindObjectsSortMode.None);
+            foreach (var b in bs)
+            {
+                if (b == null || b.CurrentHp <= 0) continue;
+                if (now - b.LastDamagedAt > RecentSec) continue;
+                DrawArrow(b.transform.position, new Color(0.95f, 0.4f, 0.4f), "⚠ 건물 피격");
+            }
+            var cs = Object.FindObjectsByType<Companion>(FindObjectsSortMode.None);
+            foreach (var c in cs)
+            {
+                if (c == null || c.IsDead) continue;
+                if (now - c.LastDamagedAt > RecentSec) continue;
+                DrawArrow(c.transform.position, new Color(0.95f, 0.6f, 0.4f), "⚠ 동료 피격");
+            }
+        }
+        private GUIStyle _threatLabel;
 
         private void DrawHomeCompass()
         {

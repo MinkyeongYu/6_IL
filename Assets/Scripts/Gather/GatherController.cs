@@ -66,10 +66,11 @@ namespace IL6
             _progress = 0f;
         }
 
-        /// <summary>외부 (HUD 버튼 등) 에서 특정 Gatherable 채집 시작 강제.</summary>
+        /// <summary>외부 (HUD 버튼 등) 에서 특정 Gatherable 채집 시작 강제.
+        /// 다른 채집이 진행 중이어도 자동 취소하고 새 노드로 전환.</summary>
         public bool StartGathering(Gatherable g)
         {
-            if (g == null || _active != null) return false;
+            if (g == null) return false;
             _active = g;
             _progress = 0f;
             return true;

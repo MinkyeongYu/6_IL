@@ -409,7 +409,7 @@ namespace IL6
                 Dialog = "검 한 자루로 살아남아 왔습니다. 데려가 주십시오.",
                 IsCombat = true,
                 CombatRating = 5, FarmRating = 1,
-                MoveSpeed = 4.2f, AttackRange = 1.6f, AttackDamage = 9, AttackCooldown = 1.1f,
+                MoveSpeed = 4.2f, AttackRange = 4.5f, AttackDamage = 9, AttackCooldown = 1.0f,
                 Tint = new Color(0.7f, 0.45f, 0.4f), Shape = FallbackShape.Rounded,
             },
             new NpcArchetype
@@ -436,7 +436,7 @@ namespace IL6
                 Dialog = "갈 곳이 없습니다. 같이 있어도 될까요.",
                 IsCombat = true,
                 CombatRating = 3, FarmRating = 3,
-                MoveSpeed = 4.5f, AttackRange = 2.0f, AttackDamage = 5, AttackCooldown = 1.5f,
+                MoveSpeed = 4.5f, AttackRange = 5.0f, AttackDamage = 5, AttackCooldown = 1.4f,
                 Tint = new Color(0.6f, 0.55f, 0.7f), Shape = FallbackShape.Circle,
             },
         };

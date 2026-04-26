@@ -39,9 +39,12 @@ namespace IL6
             _unsubDawn = EventBus.Instance.Subscribe<DawnStartedPayload>(_ => DawnRepair());
         }
 
+        public float LastDamagedAt { get; private set; } = -100f;
+
         public void TakeDamage(int amount)
         {
             CurrentHp = Mathf.Max(0, CurrentHp - amount);
+            LastDamagedAt = Time.time;
             GameFeel.HitFlash(this, GetComponent<SpriteRenderer>());
             if (CurrentHp <= 0)
             {
