@@ -220,7 +220,7 @@ namespace IL6
             // 멧돼지
             new AnimalArchetype {
                 Name = "Boar_proc", MeatMin = 3, MeatMax = 5, MeatDropChance = 1f,
-                DurationSec = 4.5f, Hp = 80,
+                DurationSec = 4.5f, Hp = 240,
                 FleeRadius = 2.5f, FleeSpeed = 2.2f,
                 Scale = 1.25f, ColliderRadius = 0.5f,
                 Tint = new Color(0.35f, 0.25f, 0.18f),
