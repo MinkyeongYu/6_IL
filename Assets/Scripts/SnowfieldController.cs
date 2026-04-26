@@ -50,13 +50,27 @@ namespace IL6
             // 마을 자리에 모닥불 + 울타리 링 자동 스폰 (이미 있으면 스킵)
             VillageStarter.SpawnStarterVillage(villageCenter);
 
-            // 게임 시작 시 동료 없음 — 씬에 미리 배치된 Companion 모두 제거.
-            // 영입은 외곽에서 만나는 RecruitableNpc 통해서만.
+            // 맨 첫 타일(마을 영역) 정리 — 동료/NPC/동물 모두 제거.
+            // 영입은 외곽에서 만나는 RecruitableNpc 로만, 동물은 외곽 청크에서만.
+            const float ClearRadius = 14f;
             var preComps = Object.FindObjectsByType<Companion>(FindObjectsSortMode.None);
             foreach (var c in preComps)
-            {
                 if (c != null) Destroy(c.gameObject);
-            }
+
+            var preNpcs = Object.FindObjectsByType<RecruitableNpc>(FindObjectsSortMode.None);
+            foreach (var n in preNpcs)
+                if (n != null && Vector2.Distance(n.transform.position, villageCenter) < ClearRadius)
+                    Destroy(n.gameObject);
+
+            var preDeer = Object.FindObjectsByType<DeerAi>(FindObjectsSortMode.None);
+            foreach (var d in preDeer)
+                if (d != null && Vector2.Distance(d.transform.position, villageCenter) < ClearRadius)
+                    Destroy(d.gameObject);
+
+            var preWolf = Object.FindObjectsByType<WolfAi>(FindObjectsSortMode.None);
+            foreach (var w in preWolf)
+                if (w != null && Vector2.Distance(w.transform.position, villageCenter) < ClearRadius)
+                    Destroy(w.gameObject);
             // PlayerDied 이벤트는 SimpleHud 의 Death overlay 가 처리.
         }
 
