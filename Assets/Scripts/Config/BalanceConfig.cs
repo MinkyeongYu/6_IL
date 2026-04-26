@@ -10,8 +10,8 @@ namespace IL6
     public sealed class BalanceConfig : ScriptableObject
     {
         [Header("Day/Night Cycle (seconds)")]
-        public float DayDurationSec = 180f;
-        public float NightDurationSec = 180f;
+        public float DayDurationSec = 60f;
+        public float NightDurationSec = 60f;
         public float EveningTransitionSec = 5f;
         public float DawnTransitionSec = 5f;
 

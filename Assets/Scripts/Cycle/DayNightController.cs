@@ -1,4 +1,5 @@
 using System;
+using UnityEngine;
 using IL6.Events;
 
 namespace IL6
@@ -24,6 +25,9 @@ namespace IL6
         public int Day { get; private set; } = 1;
         public Phase Phase { get; private set; } = Phase.Day;
         public float ElapsedInPhase { get; private set; }
+
+        /// <summary>레벨이 오를수록 낮/밤 길이가 늘어남 — PlayerProgression 가 갱신.</summary>
+        public float LevelDurationMul = 1f;
 
         public DayNightController(BalanceConfig balance) { _balance = balance; }
 
@@ -54,14 +58,20 @@ namespace IL6
             ElapsedInPhase = snap.elapsedInPhase;
         }
 
-        private float DurationOf(Phase p) => p switch
+        private float DurationOf(Phase p)
         {
-            Phase.Day => _balance.DayDurationSec,
-            Phase.Evening => _balance.EveningTransitionSec,
-            Phase.Night => _balance.NightDurationSec,
-            Phase.Dawn => _balance.DawnTransitionSec,
-            _ => 1f,
-        };
+            // Day/Night 만 레벨에 따라 길어짐. Evening/Dawn 은 짧은 시네마틱이라 고정.
+            float baseDur = p switch
+            {
+                Phase.Day => _balance.DayDurationSec,
+                Phase.Evening => _balance.EveningTransitionSec,
+                Phase.Night => _balance.NightDurationSec,
+                Phase.Dawn => _balance.DawnTransitionSec,
+                _ => 1f,
+            };
+            if (p == Phase.Day || p == Phase.Night) return baseDur * Mathf.Max(1f, LevelDurationMul);
+            return baseDur;
+        }
 
         private void Advance()
         {

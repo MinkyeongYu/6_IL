@@ -337,52 +337,97 @@ namespace IL6
             GUI.Label(new Rect(r.x + 36, r.y, r.width - 36, H), $"{dist:F0}u  →  집", _compassDist);
         }
 
-        private const string TutorialPrefKey = "il6_tutorial_seen_v1";
-        private float _tutorialTimer = 0f;
+        private const string TutorialPrefKey = "il6_tutorial_seen_v2"; // v2 = 세계관/목표 페이지 추가
         private bool _tutorialDismissed;
-        private GUIStyle _tutTitle, _tutBody;
+        private int _tutPage; // 0: 세계관 / 1: 목표 / 2: 조작
+        private GUIStyle _tutTitle, _tutBody, _tutLore;
 
         private void DrawTutorialOverlay()
         {
             if (_tutorialDismissed) return;
             if (PlayerPrefs.GetInt(TutorialPrefKey, 0) == 1) { _tutorialDismissed = true; return; }
-            _tutorialTimer += Time.unscaledDeltaTime;
-            // 8초 자동 종료
-            if (_tutorialTimer > 12f) { DismissTutorial(); return; }
 
-            int W = 480, H = 280;
-            var r = new Rect(Screen.width / 2 - W / 2, Screen.height / 2 - H / 2 - 30, W, H);
-            UiTheme.Rect(new Rect(0, 0, Screen.width, Screen.height), new Color(0, 0, 0, 0.45f));
+            int W = 620, H = 380;
+            var r = new Rect(Screen.width / 2 - W / 2, Screen.height / 2 - H / 2, W, H);
+            UiTheme.Rect(new Rect(0, 0, Screen.width, Screen.height), new Color(0, 0, 0, 0.7f));
             UiTheme.Panel(r);
-            UiTheme.TitleBar(r, "  처음 오신 분께  ", _title);
+
+            string pageTitle = _tutPage switch
+            {
+                0 => "  ❄  끝없는 겨울이 찾아왔다  ",
+                1 => "  🏹  목표  ",
+                _ => "  🎮  조작과 시스템  ",
+            };
+            UiTheme.TitleBar(r, pageTitle, _title);
 
             if (_tutTitle == null)
             {
                 _tutTitle = new GUIStyle(GUI.skin.label) {
-                    fontSize = 16, fontStyle = FontStyle.Bold,
+                    fontSize = 19, fontStyle = FontStyle.Bold,
                     normal = { textColor = UiTheme.TextGold }, wordWrap = true };
                 _tutBody = new GUIStyle(GUI.skin.label) {
-                    fontSize = 13, normal = { textColor = UiTheme.TextCream }, wordWrap = true };
+                    fontSize = 16, normal = { textColor = UiTheme.TextCream }, wordWrap = true };
+                _tutLore = new GUIStyle(GUI.skin.label) {
+                    fontSize = 17, fontStyle = FontStyle.Normal,
+                    normal = { textColor = UiTheme.TextCream }, wordWrap = true };
             }
 
-            int x = (int)r.x + 22, y = (int)r.y + 44, w = (int)r.width - 44;
-            GUI.Label(new Rect(x, y, w, 22), "🎮  조작", _tutTitle); y += 24;
-            GUI.Label(new Rect(x, y, w, 18), "·  WASD / 방향키  →  이동", _tutBody); y += 18;
-            GUI.Label(new Rect(x, y, w, 18), "·  E  →  근처 자원 채집  ·  F  →  방랑자 영입", _tutBody); y += 18;
-            GUI.Label(new Rect(x, y, w, 18), "·  공격은 자동 — 좀비가 사거리 안에 들어오면 사격/베기.", _tutBody); y += 22;
+            int x = (int)r.x + 28, y = (int)r.y + 56, w = (int)r.width - 56;
 
-            GUI.Label(new Rect(x, y, w, 22), "🌙  밤이 옵니다", _tutTitle); y += 24;
-            GUI.Label(new Rect(x, y, w, 18), "·  좀비 웨이브가 사방에서 몰려옵니다.  모닥불 근처를 사수하세요.", _tutBody); y += 18;
-            GUI.Label(new Rect(x, y, w, 18), "·  5일·10일·15일 밤은 보스가 등장합니다.", _tutBody); y += 22;
-
-            GUI.Label(new Rect(x, y, w, 22), "🏠  마을 만들기", _tutTitle); y += 24;
-            GUI.Label(new Rect(x, y, w, 18), "·  좌측 패널의 모닥불·바리게이트·창고·농장을 지어보세요.", _tutBody); y += 18;
-            GUI.Label(new Rect(x, y, w, 18), "·  레벨업 시 룬 3 종 중 하나를 골라 강해집니다 (최대 3중첩).", _tutBody); y += 18;
-
-            int btnW = 120;
-            if (UiTheme.Button(new Rect(r.x + r.width / 2 - btnW / 2, r.yMax - 36, btnW, 26), "시작하기", _btn))
+            if (_tutPage == 0)
             {
-                DismissTutorial();
+                GUI.Label(new Rect(x, y, w, 28), "한때 푸르렀던 이 땅에 끝없는 겨울이 내려앉았다.", _tutLore); y += 30;
+                GUI.Label(new Rect(x, y, w, 28), "사람들은 떠났고, 남은 자들은 얼어죽거나 — 더 끔찍한 운명을 맞았다.", _tutLore); y += 30;
+                GUI.Label(new Rect(x, y, w, 28), "밤이 되면 죽은 자들이 마을의 모닥불을 향해 일어선다.", _tutLore); y += 36;
+                GUI.Label(new Rect(x, y, w, 24), "당신은 이 작은 마을의 마지막 수호자.", _tutTitle); y += 28;
+                GUI.Label(new Rect(x, y, w, 28), "눈보라 너머에는 두려움도, 희망도 함께 살고 있다.", _tutLore); y += 30;
+            }
+            else if (_tutPage == 1)
+            {
+                GUI.Label(new Rect(x, y, w, 24), "🌅  낮 — 자원을 모으고 마을을 키워라", _tutTitle); y += 28;
+                GUI.Label(new Rect(x, y, w, 22), "·  나무·돌을 캐고 동물을 사냥해 식량 확보", _tutBody); y += 22;
+                GUI.Label(new Rect(x, y, w, 22), "·  문 밖에서 떠도는 방랑자(NPC)를 만나 영입", _tutBody); y += 22;
+                GUI.Label(new Rect(x, y, w, 22), "·  마을에 모닥불·울타리·망루를 지어 방어 강화", _tutBody); y += 30;
+
+                GUI.Label(new Rect(x, y, w, 24), "🌙  밤 — 마을을 사수하라", _tutTitle); y += 28;
+                GUI.Label(new Rect(x, y, w, 22), "·  좀비 웨이브가 사방에서 몰려온다", _tutBody); y += 22;
+                GUI.Label(new Rect(x, y, w, 22), "·  5일·10일·15일째 밤에는 보스가 출현", _tutBody); y += 22;
+                GUI.Label(new Rect(x, y, w, 22), "·  레벨이 오를수록 낮과 밤이 길어진다 — 더 많은 시간, 더 큰 위협", _tutBody); y += 30;
+            }
+            else // page 2
+            {
+                GUI.Label(new Rect(x, y, w, 24), "🎮  조작", _tutTitle); y += 28;
+                GUI.Label(new Rect(x, y, w, 22), "·  WASD / 방향키 — 이동 (W = 위)", _tutBody); y += 22;
+                GUI.Label(new Rect(x, y, w, 22), "·  E — 근처 자원 채집  ·  F — 방랑자 영입", _tutBody); y += 22;
+                GUI.Label(new Rect(x, y, w, 22), "·  공격은 자동 — 사거리 안 적을 즉시 공격", _tutBody); y += 22;
+                GUI.Label(new Rect(x, y, w, 22), "·  ESC — 일시정지 / 저장 / 처음부터", _tutBody); y += 30;
+
+                GUI.Label(new Rect(x, y, w, 24), "📈  성장", _tutTitle); y += 28;
+                GUI.Label(new Rect(x, y, w, 22), "·  좀비 처치 → XP → 레벨업 시 룬 3종 중 1개 선택 (최대 3중첩)", _tutBody); y += 22;
+                GUI.Label(new Rect(x, y, w, 22), "·  같은 원소 룬 마스터 시 시너지 발동 (독·얼음·번개)", _tutBody); y += 22;
+            }
+
+            // 페이지 인디케이터 (점 3개)
+            int dotY = (int)r.yMax - 60;
+            int dotX = (int)r.x + r.width / 2 - 18;
+            for (int i = 0; i < 3; i++)
+            {
+                Color dot = i == _tutPage ? UiTheme.TextGold : UiTheme.PanelBorderDim;
+                UiTheme.Rect(new Rect(dotX + i * 14, dotY, 8, 8), dot);
+            }
+
+            // 버튼
+            int btnW = 120;
+            int btnY = (int)r.yMax - 38;
+            if (_tutPage > 0)
+            {
+                if (UiTheme.Button(new Rect(r.x + 28, btnY, btnW, 28), "◀ 이전", _smallBtn)) _tutPage--;
+            }
+            string nextLabel = _tutPage < 2 ? "다음 ▶" : "시작하기";
+            if (UiTheme.Button(new Rect(r.xMax - btnW - 28, btnY, btnW, 28), nextLabel, _btn))
+            {
+                if (_tutPage < 2) _tutPage++;
+                else DismissTutorial();
             }
         }
 

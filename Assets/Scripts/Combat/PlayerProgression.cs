@@ -96,6 +96,9 @@ namespace IL6
                 Level++;
                 XpToNext = 5 + Level * 3;
                 LevelUpPending = true;
+                // 레벨이 오를수록 낮/밤이 길어짐 (+15% per level, 시작 1.0)
+                if (GameSession.Instance != null && GameSession.Instance.Cycle != null)
+                    GameSession.Instance.Cycle.LevelDurationMul = 1f + (Level - 1) * 0.15f;
             }
         }
 

@@ -49,6 +49,14 @@ namespace IL6
 
             // 마을 자리에 모닥불 + 울타리 링 자동 스폰 (이미 있으면 스킵)
             VillageStarter.SpawnStarterVillage(villageCenter);
+
+            // 게임 시작 시 동료 없음 — 씬에 미리 배치된 Companion 모두 제거.
+            // 영입은 외곽에서 만나는 RecruitableNpc 통해서만.
+            var preComps = Object.FindObjectsByType<Companion>(FindObjectsSortMode.None);
+            foreach (var c in preComps)
+            {
+                if (c != null) Destroy(c.gameObject);
+            }
             // PlayerDied 이벤트는 SimpleHud 의 Death overlay 가 처리.
         }
 
