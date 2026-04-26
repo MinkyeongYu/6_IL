@@ -43,6 +43,13 @@ namespace IL6
 
             if (kind == Kind.Dog)
             {
+                // 개는 지상 유닛 — 다른 유닛처럼 충돌 + Kinematic Rigidbody2D (적이 무시할 수 있도록 트리거 X 콜라이더)
+                var rb = go.AddComponent<Rigidbody2D>();
+                rb.gravityScale = 0f;
+                rb.freezeRotation = true;
+                rb.bodyType = RigidbodyType2D.Dynamic; // 다른 유닛에 막히고 밀림
+                var col = go.AddComponent<CircleCollider2D>();
+                col.radius = 0.30f;
                 pet.MoveSpeed = 6.5f;
                 pet.AttackRange = 1.4f;
                 pet.AttackCooldown = 0.55f;
@@ -72,6 +79,22 @@ namespace IL6
             }
         }
 
+        private Rigidbody2D _rb;
+
+        private void Move(Vector2 dir)
+        {
+            // Dog 처럼 Rigidbody2D 가 있으면 velocity 로 (충돌 정상 작동)
+            if (_rb == null) _rb = GetComponent<Rigidbody2D>();
+            if (_rb != null) _rb.velocity = dir * MoveSpeed;
+            else transform.position += (Vector3)(dir * MoveSpeed * Time.deltaTime);
+        }
+
+        private void StopMove()
+        {
+            if (_rb == null) _rb = GetComponent<Rigidbody2D>();
+            if (_rb != null) _rb.velocity = Vector2.zero;
+        }
+
         private void Update()
         {
             if (Player == null) return;
@@ -84,12 +107,16 @@ namespace IL6
                 if (dist > AttackRange)
                 {
                     Vector2 dir = ((Vector2)target.transform.position - (Vector2)transform.position).normalized;
-                    transform.position += (Vector3)(dir * MoveSpeed * Time.deltaTime);
+                    Move(dir);
                 }
-                else if (_attackCd <= 0f)
+                else
                 {
-                    AttackZombie(target);
-                    _attackCd = AttackCooldown;
+                    StopMove();
+                    if (_attackCd <= 0f)
+                    {
+                        AttackZombie(target);
+                        _attackCd = AttackCooldown;
+                    }
                 }
             }
             else
@@ -97,10 +124,8 @@ namespace IL6
                 float t = Time.time * 1.2f + _orbitPhase;
                 Vector2 dest = (Vector2)Player.position + new Vector2(Mathf.Cos(t), Mathf.Sin(t)) * FollowOffset;
                 Vector2 toDest = dest - (Vector2)transform.position;
-                if (toDest.magnitude > 0.1f)
-                {
-                    transform.position += (Vector3)(toDest.normalized * MoveSpeed * Time.deltaTime);
-                }
+                if (toDest.magnitude > 0.1f) Move(toDest.normalized);
+                else StopMove();
             }
         }
 

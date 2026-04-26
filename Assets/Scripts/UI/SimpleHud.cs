@@ -42,6 +42,7 @@ namespace IL6
             if (_hudMode == HudMode.Build) DrawBuildHotbar(); // 건축 모드에서만
             DrawDebugCorner();     // 하단 우측: 디버그 + SFX
             DrawWorldChopButton();
+            DrawWorldRepairButton();
             DrawWorldFarmButtons();
             DrawRecruitDialog();
             DrawRuneModal();
@@ -617,8 +618,9 @@ namespace IL6
         // ====================================================================
         private void DrawStatCard()
         {
-            const int W = 420, H = 230;
-            var panel = new Rect(12, 12, W, H);
+            const int W = 460, H = 200;
+            // 하단 좌측으로 이동 — HP/XP/장비를 아래로
+            var panel = new Rect(12, Screen.height - H - 12, W, H);
             UiTheme.Panel(panel);
             int innerX = (int)panel.x + 14;
             int innerW = W - 28;
@@ -676,19 +678,8 @@ namespace IL6
             {
                 var w = Attacker.Weapon;
                 GUI.Label(new Rect(innerX, y, innerW, 24), $"⚔ {w.DisplayName}", _weapon);
-                y += 26;
-
-                float cd = Attacker.CurrentCooldown;
-                float ready = 1f - Mathf.Clamp01(cd / Mathf.Max(0.01f, w.CooldownSec));
-                UiTheme.Bar(new Rect(innerX, y, innerW, 12), ready, UiTheme.BarCdFill);
-                var cdStyle = new GUIStyle(_labelSubtle) {
-                    alignment = TextAnchor.MiddleCenter,
-                    fontSize = 13, fontStyle = FontStyle.Bold,
-                    normal = { textColor = ready >= 1f ? new Color(0.2f, 0.95f, 0.4f) : UiTheme.TextCream },
-                };
-                GUI.Label(new Rect(innerX, y - 3, innerW, 16),
-                    ready >= 1f ? "READY" : $"{cd:F1}s", cdStyle);
-                y += 18;
+                y += 28;
+                // 쿨타임 바 제거 — 사용자 요청
             }
 
             // 채집 진행 (활성일 때만)
@@ -854,7 +845,8 @@ namespace IL6
             if (session == null) return;
 
             const int W = 320, H = 120;
-            var panel = new Rect(12, Screen.height - H - 12, W, H);
+            // 상단 좌측으로 이동 — StatCard 가 하단으로 내려가서 자리 비움
+            var panel = new Rect(12, 12, W, H);
             UiTheme.Panel(panel);
 
             int innerX = (int)panel.x + 12;
@@ -1168,6 +1160,68 @@ namespace IL6
         // ====================================================================
         // 월드 공간 버튼들
         // ====================================================================
+        // 손상된 건물 근처에 수리 버튼 — 클릭당 wood 1 소모, MaxHp 의 20% 회복.
+        // 플레이어 또는 동료가 3.5u 안에 있어야 표시.
+        private void DrawWorldRepairButton()
+        {
+            if (Player == null) return;
+            var session = GameSession.Instance;
+            if (session == null) return;
+
+            const float Range = 3.5f;
+            var companions = Object.FindObjectsByType<Companion>(FindObjectsSortMode.None);
+
+            // 플레이어 또는 동료 근처에 손상된 건물이 있으면 가장 가까운 것 선택
+            var bs = Object.FindObjectsByType<Building>(FindObjectsSortMode.None);
+            Building best = null;
+            float bestDist = float.MaxValue;
+            Vector3 ppos = Player.transform.position;
+            foreach (var b in bs)
+            {
+                if (b == null || b.CurrentHp <= 0) continue;
+                if (b.CurrentHp >= b.MaxHp) continue; // 풀체력은 스킵
+                bool anyNear = Vector2.Distance(ppos, b.transform.position) <= Range;
+                if (!anyNear)
+                {
+                    foreach (var c in companions)
+                    {
+                        if (c == null || c.IsDead) continue;
+                        if (Vector2.Distance(c.transform.position, b.transform.position) <= Range)
+                        { anyNear = true; break; }
+                    }
+                }
+                if (!anyNear) continue;
+                float d = Vector2.Distance(ppos, b.transform.position);
+                if (d < bestDist) { bestDist = d; best = b; }
+            }
+            if (best == null) return;
+
+            var cam = Camera.main;
+            if (cam == null) return;
+            Vector3 sp = cam.WorldToScreenPoint(best.transform.position + new Vector3(0f, 1.0f, 0f));
+            if (sp.z < 0) return;
+            float guiY = Screen.height - sp.y;
+
+            int wood = session.Resources.Get(ResourceKind.Wood);
+            const int Cost = 1;
+            bool canAfford = wood >= Cost;
+            int healAmount = Mathf.Max(1, best.MaxHp / 5);
+
+            string label = canAfford
+                ? $"🔨 수리  +{healAmount} HP  ({Cost} Wood)"
+                : $"🔨 수리  Wood 부족";
+            var rect = new Rect(sp.x - 130, guiY - 26, 260, 56);
+            var bigBtn = new GUIStyle(_btn) { fontSize = 18, fontStyle = FontStyle.Bold };
+            if (UiTheme.Button(rect, label, bigBtn, canAfford))
+            {
+                if (session.Resources.Spend(ResourceKind.Wood, Cost))
+                {
+                    best.RepairHp(healAmount);
+                    Sfx.Build();
+                }
+            }
+        }
+
         private void DrawWorldChopButton()
         {
             if (Player == null) return;
@@ -1212,20 +1266,20 @@ namespace IL6
             var bigBtn = new GUIStyle(_btn) { fontSize = 18, fontStyle = FontStyle.Bold };
             if (UiTheme.Button(rect, label, bigBtn))
             {
+                // 거리순 정렬, 동료는 최대 2명까지만 (요청)
+                nearbyCompanions.Sort((a, b) =>
+                    Vector2.Distance(a.transform.position, node.transform.position)
+                    .CompareTo(Vector2.Distance(b.transform.position, node.transform.position)));
+                int compCap = Mathf.Min(nearbyCompanions.Count, 2);
+
                 if (playerNear && Gather != null)
                 {
                     Gather.StartGathering(node);
-                    // 플레이어가 채집 중이면 동료들도 같이 시작
-                    foreach (var c in nearbyCompanions) c.AssignGather(node);
+                    for (int i = 0; i < compCap; i++) nearbyCompanions[i].AssignGather(node);
                 }
                 else
                 {
-                    // 플레이어가 멀면 가장 가까운 동료 1명만 시작 (요청: 가장 가까운 동료들)
-                    nearbyCompanions.Sort((a, b) =>
-                        Vector2.Distance(a.transform.position, node.transform.position)
-                        .CompareTo(Vector2.Distance(b.transform.position, node.transform.position)));
-                    int assignCount = Mathf.Min(nearbyCompanions.Count, 2); // 가장 가까운 2명까지
-                    for (int i = 0; i < assignCount; i++) nearbyCompanions[i].AssignGather(node);
+                    for (int i = 0; i < compCap; i++) nearbyCompanions[i].AssignGather(node);
                 }
             }
         }

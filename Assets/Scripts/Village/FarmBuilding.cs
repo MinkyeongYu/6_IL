@@ -15,7 +15,7 @@ namespace IL6
         public int NightsToRipe = 2;
         public int BaseYield = 4;
         public int PerWorkerBonus = 3;
-        public int MaxWorkers = 3;
+        public int MaxWorkers = 2;
 
         public bool HarvestReady { get; private set; }
         public int NightsPassed { get; private set; }

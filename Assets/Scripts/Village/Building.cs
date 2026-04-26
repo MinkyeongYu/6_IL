@@ -36,6 +36,22 @@ namespace IL6
 
         private void Start()
         {
+            // 모든 건물에 HpBarUi 자동 부착 (이미 있으면 스킵). 풀체력에서는 자동 숨김.
+            if (GetComponent<HpBarUi>() == null)
+            {
+                var hp = gameObject.AddComponent<HpBarUi>();
+                hp.Building = this;
+                hp.Offset = new Vector2(0f, 0.6f);
+                hp.Size = new Vector2(0.9f, 0.10f);
+                hp.BgColor = new Color(0.05f, 0.05f, 0.08f, 0.9f);
+                hp.FillColor = Kind switch
+                {
+                    BuildingKind.Campfire => new Color(1f, 0.55f, 0.2f),
+                    BuildingKind.Barricade => new Color(0.6f, 0.4f, 0.2f),
+                    BuildingKind.Fence => new Color(0.55f, 0.4f, 0.22f),
+                    _ => new Color(0.5f, 0.85f, 0.5f),
+                };
+            }
             _unsubDawn = EventBus.Instance.Subscribe<DawnStartedPayload>(_ => DawnRepair());
         }
 
@@ -53,6 +69,16 @@ namespace IL6
                 EventBus.Instance.Emit(new BuildingDestroyedPayload(Eid, Kind.ToString().ToLower()));
                 Destroy(gameObject);
             }
+        }
+
+        /// <summary>외부 (HUD 수리 버튼) 에서 즉시 HP 회복.</summary>
+        public void RepairHp(int amount)
+        {
+            if (CurrentHp <= 0) return;
+            int before = CurrentHp;
+            CurrentHp = Mathf.Min(MaxHp, CurrentHp + amount);
+            int delta = CurrentHp - before;
+            if (delta > 0) GameFeel.FloatText(transform.position, $"+{delta} HP", new Color(0.6f, 1f, 0.7f));
         }
 
         private void DawnRepair()
