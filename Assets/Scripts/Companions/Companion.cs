@@ -45,6 +45,12 @@ namespace IL6
         {
             if (IsDead) return;
             LastDamagedAt = Time.time;
+            // 채집/농사 중 피격 시 즉시 중단 — 다음 프레임 ComputeFollowVelocity 가 적 추격 시작.
+            if (CurrentMode == Mode.Working || CurrentMode == Mode.Farming)
+            {
+                Target = null;
+                CurrentMode = Mode.Follow;
+            }
             CurrentHp = Mathf.Max(0, CurrentHp - amount);
             GameFeel.HitFlash(this, GetComponent<SpriteRenderer>());
             if (CurrentHp <= 0)
@@ -213,7 +219,12 @@ namespace IL6
         private void Update()
         {
             _attackCd -= Time.deltaTime;
-            if (IsCombat && CurrentMode != Mode.Hiding) TryAttack();
+            // 채집/농사 중엔 전투 안 함 — 피격 시에만 TakeDamage 가 모드 전환.
+            bool combatAllowed = IsCombat
+                && CurrentMode != Mode.Hiding
+                && CurrentMode != Mode.Working
+                && CurrentMode != Mode.Farming;
+            if (combatAllowed) TryAttack();
 
             if (!IsDead)
             {
@@ -263,9 +274,20 @@ namespace IL6
                 if (toAnchor.magnitude > 0.3f) return toAnchor.normalized * MoveSpeed * 0.7f + sep;
                 return sep;
             }
-            // 시야 안에 적이 있으면 기본 follow 도 추격을 우선 — 사거리 안까지 들어가야 발사 가능.
-            if (IsCombat)
+
+            if (Player == null) return Vector2.zero;
+
+            // 우선순위: 플레이어가 시야를 벗어났으면 적 무시하고 따라감.
+            float playerDist = Vector2.Distance((Vector2)transform.position, (Vector2)Player.position);
+            bool playerInSight = playerDist < SightRange;
+            if (!playerInSight)
             {
+                // formation slot 으로 빠르게 — 마을 사각/문 통과는 아래 분기에서 처리
+                // 그냥 fall-through 해서 마을/문/포메이션 follow 로 진행
+            }
+            else if (IsCombat)
+            {
+                // 플레이어 시야 안 + 적 시야 안 → 적 우선 추격
                 Transform enemy = FindAnyHostileInSight();
                 if (enemy != null)
                 {
@@ -275,15 +297,8 @@ namespace IL6
                     if (de > AttackRange * 0.85f) return toE.normalized * MoveSpeed + sep;
                     return sep; // 사거리 안 — 멈추고 자동 공격
                 }
-            }
-            if (Player == null) return Vector2.zero;
-
-            // 적이 없고 플레이어가 시야 안에 있으면 자리 유지 (formation 거리 너무 가까우면 안 따라감)
-            if (Vector2.Distance((Vector2)transform.position, (Vector2)Player.position) < SightRange)
-            {
-                bool playerNearMe = Vector2.Distance((Vector2)transform.position, (Vector2)Player.position) < FormationRadius * 1.5f;
-                if (playerNearMe) return SeparationFromOthers();
-                // 플레이어가 보이지만 약간 멀면 천천히 따라감 (formation slot)
+                // 적이 없고 플레이어가 가까이 있으면 자리 유지
+                if (playerDist < FormationRadius * 1.5f) return SeparationFromOthers();
             }
 
             bool playerInside = IsInsideVillageBounds((Vector2)Player.position);
@@ -341,13 +356,7 @@ namespace IL6
 
         private Vector2 ComputeWorkingVelocity()
         {
-            // 시야 안 적이 있으면 채집 중단하고 전투 모드로 — 다음 프레임부터 ComputeFollowVelocity 가 추격.
-            if (IsCombat && FindAnyHostileInSight() != null)
-            {
-                Target = null;
-                CurrentMode = Mode.Follow;
-                return Vector2.zero;
-            }
+            // 채집 중엔 전투 무시 — 적 가까이 와도 채집 계속 (피격 시에만 TakeDamage 가 모드 전환).
             if (Target == null) { CurrentMode = Mode.Follow; return Vector2.zero; }
             Vector2 toTarget = (Vector2)Target.transform.position - (Vector2)transform.position;
             float dist = toTarget.magnitude;

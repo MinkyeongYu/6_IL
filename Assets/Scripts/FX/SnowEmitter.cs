@@ -42,8 +42,10 @@ namespace IL6
             var vel = ps.velocityOverLifetime;
             vel.enabled = true;
             vel.space = ParticleSystemSimulationSpace.World;
-            vel.y = new ParticleSystem.MinMaxCurve(-FallSpeed);
+            // Unity 요구사항: x/y/z 가 같은 모드여야 함 — 둘 다 TwoConstants 로 통일
+            vel.y = new ParticleSystem.MinMaxCurve(-FallSpeed * 1.1f, -FallSpeed * 0.9f);
             vel.x = new ParticleSystem.MinMaxCurve(-0.4f, 0.4f);
+            vel.z = new ParticleSystem.MinMaxCurve(0f, 0f);
 
             var sizeOverLife = ps.sizeOverLifetime;
             sizeOverLife.enabled = true;

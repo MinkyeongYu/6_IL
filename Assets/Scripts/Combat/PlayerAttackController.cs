@@ -57,6 +57,8 @@ namespace IL6
 
             float dmgMul = Progression != null ? Progression.DamageMultiplier : 1f;
             int baseDmg = Mathf.RoundToInt(Weapon.BaseDamage * dmgMul);
+            // _rng 가 어떤 경유로든 null 이면 즉석 초기화 (Awake 미실행 케이스 방어)
+            if (_rng == null) _rng = new SeededRng(RngSeed);
             int dmg = DamageCalc.Compute(new DamageCalc.Input
             {
                 Base = baseDmg,

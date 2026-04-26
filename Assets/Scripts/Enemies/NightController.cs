@@ -183,6 +183,21 @@ namespace IL6
             UpdateCameraBg();
             ApplyBlizzardDamage();
 
+            // 안전망: Cycle.Phase 가 Night 인데 자체 CurrentPhase 가 못 따라온 경우 (이벤트 누락 등) 강제 동기화
+            var session = GameSession.Instance;
+            if (session != null && session.Cycle != null)
+            {
+                if (session.Cycle.Phase == Phase.Night && CurrentPhase != Phase.Night)
+                {
+                    StartNight(session.Cycle.Day);
+                }
+                else if (session.Cycle.Phase != Phase.Night && CurrentPhase == Phase.Night)
+                {
+                    CurrentPhase = session.Cycle.Phase;
+                    EndNight();
+                }
+            }
+
             if (CurrentPhase != Phase.Night) return;
             if (Player == null) return;
 
