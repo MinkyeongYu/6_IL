@@ -125,6 +125,66 @@ namespace IL6
             if (go != null) Object.Destroy(go);
         }
 
+        // 캐시된 흰 정사각 sprite (슬래시 등에 재사용)
+        private static Sprite _whiteSquare;
+        private static Sprite GetWhiteSquare()
+        {
+            if (_whiteSquare != null) return _whiteSquare;
+            var tex = new Texture2D(8, 8, TextureFormat.RGBA32, false);
+            var pixels = new Color[64];
+            for (int i = 0; i < 64; i++) pixels[i] = Color.white;
+            tex.SetPixels(pixels);
+            tex.Apply();
+            _whiteSquare = Sprite.Create(tex, new Rect(0, 0, 8, 8), new Vector2(0.5f, 0.5f), 8);
+            return _whiteSquare;
+        }
+
+        /// <summary>근접 공격 슬래시 — from→to 방향으로 가로로 늘어난 반투명 막대를 살짝 보여주고 사라짐.</summary>
+        public static void Slash(Vector3 from, Vector3 to, Color color)
+        {
+            Vector2 d = (Vector2)to - (Vector2)from;
+            float dist = d.magnitude;
+            if (dist < 0.05f) dist = 0.5f;
+            float angle = Mathf.Atan2(d.y, d.x) * Mathf.Rad2Deg;
+            Vector3 mid = (from + to) * 0.5f;
+
+            var go = new GameObject("__slash");
+            go.transform.position = mid;
+            go.transform.rotation = Quaternion.Euler(0, 0, angle);
+            go.transform.localScale = new Vector3(dist, 0.30f, 1f);
+
+            var sr = go.AddComponent<SpriteRenderer>();
+            sr.sortingOrder = 30;
+            sr.sprite = GetWhiteSquare();
+            var c = color; c.a = 0.85f;
+            sr.color = c;
+
+            Runner().StartCoroutine(SlashFade(go, 0.13f));
+        }
+
+        private static IEnumerator SlashFade(GameObject go, float dur)
+        {
+            float t = 0f;
+            SpriteRenderer sr = null;
+            while (t < dur)
+            {
+                if (go == null) yield break;
+                if (sr == null) sr = go.GetComponent<SpriteRenderer>();
+                t += Time.deltaTime;
+                float k = t / dur;
+                if (sr != null)
+                {
+                    var c = sr.color;
+                    c.a = (1f - k) * 0.85f;
+                    sr.color = c;
+                }
+                // 살짝 두께 증가 (호 느낌)
+                go.transform.localScale = new Vector3(go.transform.localScale.x, 0.30f + k * 0.20f, 1f);
+                yield return null;
+            }
+            if (go != null) Object.Destroy(go);
+        }
+
         public static void FloatText(Vector3 worldPos, string text, Color color)
         {
             var ft = Runner().gameObject.GetComponent<FloatTextRoot>();

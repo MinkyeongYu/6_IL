@@ -161,6 +161,7 @@ namespace IL6
         {
             if (target is Zombie z && !z.IsDead)
             {
+                GameFeel.Slash(_self.position, target.transform.position, new Color(1f, 0.95f, 0.7f));
                 z.TakeDamage(dmg);
                 if (Progression != null)
                 {
@@ -177,10 +178,12 @@ namespace IL6
             }
             else if (target is DeerAi deer)
             {
+                GameFeel.Slash(_self.position, target.transform.position, new Color(1f, 0.95f, 0.7f));
                 deer.TakeDamage(dmg);
             }
             else if (target is WolfAi wolf)
             {
+                GameFeel.Slash(_self.position, target.transform.position, new Color(1f, 0.95f, 0.7f));
                 wolf.TakeDamage(dmg);
             }
         }
