@@ -222,9 +222,27 @@ namespace IL6
             }
         }
 
+        private static readonly Vector2 VillageCenter = new Vector2(GameConstants.VillageCenterX, GameConstants.VillageCenterY);
+        private const float VillageRadius = 7f;
+        private const float TeleportDistance = 9f;
+
         private void FixedUpdate()
         {
             if (CurrentMode == Mode.Hiding) { if (_rb != null) _rb.velocity = Vector2.zero; return; }
+
+            // 문 통과 텔레포트 — Follow 상태이고 플레이어가 너무 멀면 즉시 따라잡기.
+            if (Player != null && CurrentMode == Mode.Follow && CurrentStance != Stance.Hold)
+            {
+                float distToPlayer = Vector2.Distance(transform.position, Player.position);
+                if (distToPlayer > TeleportDistance)
+                {
+                    Vector2 spread = Random.insideUnitCircle * 0.8f;
+                    transform.position = Player.position + (Vector3)spread;
+                    _rb.velocity = Vector2.zero;
+                    return;
+                }
+            }
+
             Vector2 desired;
             switch (CurrentMode)
             {
@@ -258,6 +276,12 @@ namespace IL6
                 }
             }
             if (Player == null) return Vector2.zero;
+
+            // 마을 앵커: 플레이어가 마을 안에 있으면 동료는 따라다니지 않고 자리 지킴.
+            // 플레이어가 문을 통과해 마을 밖으로 나가야만 동료가 움직임.
+            float playerFromVillage = Vector2.Distance((Vector2)Player.position, VillageCenter);
+            if (playerFromVillage < VillageRadius) return SeparationFromOthers();
+
             Vector2 slot = GetFormationSlot();
             Vector2 toSlot = slot - (Vector2)transform.position;
             float d = toSlot.magnitude;
