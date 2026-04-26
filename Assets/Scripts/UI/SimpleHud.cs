@@ -21,10 +21,9 @@ namespace IL6
         private void OnGUI()
         {
             EnsureStyles();
-            // 새 레이아웃 — 모서리 카드 + 하단 자원/빌드 핫바 (Don't Starve / Vampire Survivors 참고)
             DrawStatCard();        // 상단 좌측: HP/XP/무기
-            DrawInfoCard();        // 상단 우측: 점수/킬/스탠스/웨이브
-            DrawResourceBar();     // 하단 좌측: 자원 가로 핫바
+            DrawResourceBar();     // 상단 우측: 자원 세로 카드 (점수 제거됨)
+            DrawWaveStanceBar();   // 하단 좌측: 동료 스탠스 + 웨이브 정보
             DrawBuildHotbar();     // 하단 중앙: 빌드 아이콘 6개
             DrawDebugCorner();     // 하단 우측: 디버그 + SFX
             DrawWorldChopButton();
@@ -481,9 +480,9 @@ namespace IL6
         }
 
         // ====================================================================
-        // INFO CARD (top-right): 점수 / 웨이브 / 스탠스
+        // (REMOVED) InfoCard — 점수/킬/손실 제거 요청. 사망 화면에는 여전히 점수 표시됨.
         // ====================================================================
-        private void DrawInfoCard()
+        private void DrawInfoCard_DEPRECATED()
         {
             const int W = 280, H = 152;
             var panel = new Rect(Screen.width - W - 12, 12, W, H);
@@ -567,7 +566,7 @@ namespace IL6
         }
 
         // ====================================================================
-        // RESOURCE BAR (bottom-left): 자원 가로 핫바 5칸
+        // RESOURCE BAR (top-right): 자원 세로 카드 5줄
         // ====================================================================
         private void DrawResourceBar()
         {
@@ -577,36 +576,113 @@ namespace IL6
             ResourceKind[] kinds = { ResourceKind.Wood, ResourceKind.Stone, ResourceKind.Meat, ResourceKind.Food, ResourceKind.Frostbloom };
             string[] names = { "Wood", "Stone", "Meat", "Food", "Frost" };
 
-            const int CellW = 116, CellH = 56, Gap = 4;
-            int totalW = CellW * kinds.Length + Gap * (kinds.Length - 1);
-            int startX = 12;
-            int y = Screen.height - CellH - 12;
+            const int W = 240, H = 200;
+            var panel = new Rect(Screen.width - W - 12, 12, W, H);
+            UiTheme.Panel(panel);
+            UiTheme.TitleBar(panel, "  자원  ", _title);
+
+            int innerX = (int)panel.x + 12;
+            int innerW = W - 24;
+            int y = (int)panel.y + 36;
+            int rowH = 30;
 
             for (int i = 0; i < kinds.Length; i++)
             {
                 var k = kinds[i];
-                int cx = startX + i * (CellW + Gap);
-                var r = new Rect(cx, y, CellW, CellH);
-                // 셀 배경
-                UiTheme.Rect(new Rect(r.x - 1, r.y - 1, r.width + 2, r.height + 2), UiTheme.PanelBorder);
-                UiTheme.Rect(r, UiTheme.PanelBg);
-
-                // 아이콘 (좌)
-                UiTheme.Icon(new Rect(r.x + 8, r.y + 16, 24, 24), UiTheme.ResColor(k));
-
-                // 이름 (위쪽 작게)
-                GUI.Label(new Rect(r.x + 38, r.y + 6, CellW - 44, 16), names[i], _labelSubtle);
-
-                // 수량 / 캡 (큰 글씨)
+                // 컬러 아이콘
+                UiTheme.Icon(new Rect(innerX, y + 6, 18, 18), UiTheme.ResColor(k));
+                // 이름
+                GUI.Label(new Rect(innerX + 26, y + 4, 80, 22), names[i], _label);
+                // 수량 / 캡 (우측 정렬)
                 int cur = session.Resources.Get(k);
                 int cap = session.Resources.GetCap(k);
                 var oldC = GUI.contentColor;
                 GUI.contentColor = cur >= cap ? UiTheme.TextDanger : UiTheme.TextCream;
-                var amountStyle = new GUIStyle(_section) { fontSize = 18, fontStyle = FontStyle.Bold };
-                GUI.Label(new Rect(r.x + 38, r.y + 22, CellW - 44, 24), $"{cur}", amountStyle);
-                GUI.contentColor = UiTheme.TextSubtle;
-                GUI.Label(new Rect(r.x + 38, r.y + 38, CellW - 44, 14), $"/ {cap}", _labelSubtle);
+                var amountStyle = new GUIStyle(_section) {
+                    fontSize = 16, fontStyle = FontStyle.Bold,
+                    alignment = TextAnchor.MiddleRight,
+                };
+                GUI.Label(new Rect(innerX + 80, y + 4, innerW - 80, 22), $"{cur} / {cap}", amountStyle);
                 GUI.contentColor = oldC;
+                y += rowH;
+            }
+        }
+
+        // ====================================================================
+        // WAVE / STANCE BAR (bottom-left): 좀비 웨이브 + 동료 스탠스
+        // ====================================================================
+        private void DrawWaveStanceBar()
+        {
+            var session = GameSession.Instance;
+            if (session == null) return;
+
+            const int W = 280, H = 96;
+            var panel = new Rect(12, Screen.height - H - 12, W, H);
+            UiTheme.Panel(panel);
+
+            int innerX = (int)panel.x + 12;
+            int innerW = W - 24;
+            int y = (int)panel.y + 8;
+
+            // 페이즈별 컨텍스트 라인
+            if (Night != null && Night.CurrentPhase == Phase.Night)
+            {
+                var oldC = GUI.contentColor;
+                GUI.contentColor = new Color(0.95f, 0.5f, 0.5f);
+                GUI.Label(new Rect(innerX, y, innerW, 22),
+                    $"🧟 활성 {Night.ActiveZombies}  ·  대기 {Night.WavePending}", _section);
+                GUI.contentColor = oldC;
+                y += 24;
+                if (Night.IsBlizzard)
+                {
+                    GUI.contentColor = new Color(0.55f, 0.85f, 1f);
+                    GUI.Label(new Rect(innerX, y, innerW, 22), "❄ 눈보라", _section);
+                    GUI.contentColor = oldC;
+                    y += 24;
+                }
+            }
+            else if (session.LastFoodShortage > 0)
+            {
+                var oldC = GUI.contentColor;
+                GUI.contentColor = UiTheme.TextDanger;
+                GUI.Label(new Rect(innerX, y, innerW, 22),
+                    $"⚠ 식량 부족 {session.LastFoodShortage}", _section);
+                GUI.contentColor = oldC;
+                y += 24;
+            }
+            else
+            {
+                GUI.Label(new Rect(innerX, y, innerW, 22), "☀ 평온한 낮", _labelSubtle);
+                y += 24;
+            }
+
+            // 동료 스탠스 토글 (하단 줄)
+            var allComps = Object.FindObjectsByType<Companion>(FindObjectsSortMode.None);
+            int liveCount = 0;
+            Companion.Stance majority = Companion.Stance.Follow;
+            foreach (var c in allComps)
+            {
+                if (c == null || c.IsDead || c.CurrentMode == Companion.Mode.Hiding) continue;
+                liveCount++;
+                majority = c.CurrentStance;
+            }
+            string sLabel = majority switch
+            {
+                Companion.Stance.Follow => "👣 따르기",
+                Companion.Stance.Hold => "🛡 사수",
+                Companion.Stance.Aggressive => "⚔ 공세",
+                _ => "",
+            };
+            int btnY = (int)panel.yMax - 32;
+            if (UiTheme.Button(new Rect(innerX, btnY, innerW, 26), $"동료 {sLabel}  ({liveCount})", _smallBtn, liveCount > 0))
+            {
+                var next = majority switch
+                {
+                    Companion.Stance.Follow => Companion.Stance.Hold,
+                    Companion.Stance.Hold => Companion.Stance.Aggressive,
+                    _ => Companion.Stance.Follow,
+                };
+                foreach (var c in allComps) if (c != null) c.SetStance(next);
             }
         }
 
