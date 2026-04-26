@@ -934,24 +934,51 @@ namespace IL6
         private void DrawWorldChopButton()
         {
             if (Player == null) return;
-            var tree = FindNearestTreeInRange(Player.transform.position, 3.5f);
-            if (tree == null) return;
+            DrawGatherButton(ResourceKind.Wood, "🪓 벌목", 3.5f);
+            DrawGatherButton(ResourceKind.Stone, "⛏ 채굴", 3.5f);
+        }
+
+        private void DrawGatherButton(ResourceKind kind, string verb, float range)
+        {
+            var node = FindNearestGatherableInRange(Player.transform.position, range, kind);
+            if (node == null) return;
             var cam = Camera.main;
             if (cam == null) return;
-            Vector3 sp = cam.WorldToScreenPoint(tree.transform.position + new Vector3(0f, 0.8f, 0f));
+            Vector3 sp = cam.WorldToScreenPoint(node.transform.position + new Vector3(0f, 1.0f, 0f));
             if (sp.z < 0) return;
             float guiY = Screen.height - sp.y;
 
             var companions = Object.FindObjectsByType<Companion>(FindObjectsSortMode.None);
             int workers = 0;
-            foreach (var c in companions) if (c != null && c.CurrentMode != Companion.Mode.Hiding && c.CurrentMode != Companion.Mode.Farming) workers++;
+            foreach (var c in companions)
+                if (c != null && c.CurrentMode != Companion.Mode.Hiding && c.CurrentMode != Companion.Mode.Farming) workers++;
 
-            string label = workers > 0 ? $"🪓 벌목 ({workers})" : "벌목 불가";
-            var rect = new Rect(sp.x - 75, guiY - 16, 150, 30);
-            if (UiTheme.Button(rect, label, _smallBtn, workers > 0))
+            string label = workers > 0 ? $"{verb} ({workers})" : $"{verb} 불가";
+            // 더 크고 누르기 좋게 — 220×52
+            var rect = new Rect(sp.x - 110, guiY - 26, 220, 52);
+            var bigBtn = new GUIStyle(_btn) { fontSize = 17, fontStyle = FontStyle.Bold };
+            if (UiTheme.Button(rect, label, bigBtn, workers > 0))
             {
-                foreach (var c in companions) if (c != null && c.CurrentMode != Companion.Mode.Hiding && c.CurrentMode != Companion.Mode.Farming) c.AssignGather(tree);
+                foreach (var c in companions)
+                    if (c != null && c.CurrentMode != Companion.Mode.Hiding && c.CurrentMode != Companion.Mode.Farming)
+                        c.AssignGather(node);
             }
+        }
+
+        private static Gatherable FindNearestGatherableInRange(Vector3 center, float range, ResourceKind kind)
+        {
+            var all = Object.FindObjectsByType<Gatherable>(FindObjectsSortMode.None);
+            Gatherable best = null;
+            float bestDist = range;
+            foreach (var g in all)
+            {
+                if (g == null || g.YieldKind != kind) continue;
+                // DeerAi 가 붙은 건 동물이라 제외
+                if (g.GetComponent<DeerAi>() != null || g.GetComponent<WolfAi>() != null) continue;
+                float d = Vector2.Distance(center, g.transform.position);
+                if (d < bestDist) { best = g; bestDist = d; }
+            }
+            return best;
         }
 
         private void DrawWorldFarmButtons()
@@ -1231,20 +1258,6 @@ namespace IL6
                 if (c.CurrentMode == Companion.Mode.Hiding) continue;
                 float d = Vector2.Distance(center, c.transform.position);
                 if (d < bestDist) { best = c; bestDist = d; }
-            }
-            return best;
-        }
-
-        private static Gatherable FindNearestTreeInRange(Vector3 center, float range)
-        {
-            var all = Object.FindObjectsByType<Gatherable>(FindObjectsSortMode.None);
-            Gatherable best = null;
-            float bestDist = range;
-            foreach (var g in all)
-            {
-                if (g == null || g.YieldKind != ResourceKind.Wood) continue;
-                float d = Vector2.Distance(center, g.transform.position);
-                if (d < bestDist) { best = g; bestDist = d; }
             }
             return best;
         }
