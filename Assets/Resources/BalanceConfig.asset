@@ -12,8 +12,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5c78b8e13613a79428404c7c9dd3eb4c, type: 3}
   m_Name: BalanceConfig
   m_EditorClassIdentifier:
-  DayDurationSec: 180
-  NightDurationSec: 180
+  DayDurationSec: 40
+  NightDurationSec: 40
   EveningTransitionSec: 5
   DawnTransitionSec: 5
   DayRadiusTiles: 10
@@ -23,9 +23,9 @@ MonoBehaviour:
   StartingMeat: 0
   StartingFood: 5
   StartingFrostbloom: 0
-  TreeDurationSec: 4
-  DeerDurationSec: 2
-  TreeWoodYield: 3
+  TreeDurationSec: 9
+  DeerDurationSec: 3
+  TreeWoodYield: 4
   DeerMeatYield: 2
   PlayerMaxHp: 100
   PlayerMoveSpeed: 5
@@ -42,5 +42,6 @@ MonoBehaviour:
   WaveMaxCount: 300
   CampfireHp: 400
   BarricadeHp: 200
+  FenceHp: 18
   CampfireCost: 5
   BarricadeCost: 5

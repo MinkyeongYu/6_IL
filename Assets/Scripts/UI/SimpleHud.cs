@@ -18,13 +18,28 @@ namespace IL6
 
         private GUIStyle _label, _labelSubtle, _title, _section, _weapon, _bigDeath, _btn, _smallBtn;
 
+        // 장비 모드: 근접 / 원거리 / 건축. BuildHotbar 는 건축에서만, 무기는 모드 따라 자동 전환.
+        public enum HudMode { Melee, Ranged, Build }
+        private HudMode _hudMode = HudMode.Melee;
+
+        private void SetHudMode(HudMode m)
+        {
+            _hudMode = m;
+            if (Attacker != null)
+            {
+                if (m == HudMode.Melee) Attacker.SwitchToWeapon(0);
+                else if (m == HudMode.Ranged) Attacker.SwitchToWeapon(1);
+                // Build 모드는 무기 변경 안 함 — 직전 무기 유지
+            }
+        }
+
         private void OnGUI()
         {
             EnsureStyles();
-            DrawStatCard();        // 상단 좌측: HP/XP/무기
-            DrawResourceBar();     // 상단 우측: 자원 세로 카드 (점수 제거됨)
+            DrawStatCard();        // 상단 좌측: HP/XP/모드 탭/무기
+            DrawResourceBar();     // 상단 우측: 자원 세로 카드
             DrawWaveStanceBar();   // 하단 좌측: 동료 스탠스 + 웨이브 정보
-            DrawBuildHotbar();     // 하단 중앙: 빌드 아이콘 6개
+            if (_hudMode == HudMode.Build) DrawBuildHotbar(); // 건축 모드에서만
             DrawDebugCorner();     // 하단 우측: 디버그 + SFX
             DrawWorldChopButton();
             DrawWorldFarmButtons();
@@ -36,7 +51,7 @@ namespace IL6
             DrawAchievementToast();
             DrawHomeCompass();
             DrawPhaseClock();      // 상단 중앙
-            DrawControlsHint();
+            // ControlsHint 제거 — 모드 탭과 튜토리얼이 키 안내 대신함
             DrawTutorialOverlay();
             DrawPauseMenu();
             DrawDeathOverlay();
@@ -135,8 +150,9 @@ namespace IL6
             }
 
             float a = Mathf.Clamp01(_achToastLeft) > 0.6f ? 1f : Mathf.Clamp01(_achToastLeft / 0.6f);
-            int W = 320, H = 60;
-            var r = new Rect(Screen.width - W - 20, Screen.height - H - 60, W, H);
+            int W = 360, H = 64;
+            // 상단 중앙 — PhaseClock 아래 (Clock 64h + 6 gap)
+            var r = new Rect(Screen.width / 2 - W / 2, 88, W, H);
             UiTheme.Rect(r, new Color(0.07f, 0.09f, 0.14f, 0.92f * a));
             UiTheme.Rect(new Rect(r.x, r.y, r.width, 2), new Color(0.95f, 0.78f, 0.35f, a));
             UiTheme.Rect(new Rect(r.x, r.yMax - 2, r.width, 2), new Color(0.95f, 0.78f, 0.35f, a));
@@ -311,8 +327,9 @@ namespace IL6
             Vector2 dir = (home - (Vector2)Player.transform.position).normalized;
             float angDeg = Mathf.Atan2(dir.y, dir.x) * Mathf.Rad2Deg;
 
-            int W = 110, H = 36;
-            var r = new Rect(Screen.width - W - 290, 14, W, H);
+            int W = 130, H = 40;
+            // 상단 중앙 ResourceBar 왼쪽으로 — PhaseClock 우측 빈 공간
+            var r = new Rect(Screen.width / 2 + 160, 16, W, H);
             UiTheme.Rect(r, new Color(0.07f, 0.09f, 0.14f, 0.85f));
             UiTheme.Rect(new Rect(r.x, r.y, r.width, 1), new Color(0.78f, 0.62f, 0.30f, 0.7f));
             UiTheme.Rect(new Rect(r.x, r.yMax - 1, r.width, 1), new Color(0.78f, 0.62f, 0.30f, 0.7f));
@@ -479,8 +496,9 @@ namespace IL6
             float elapsed = Time.time - s.LastAutoSaveAt;
             if (elapsed > 2.5f) return;
             float a = Mathf.Clamp01(1f - elapsed / 2.5f);
-            int W = 140, H = 28;
-            var r = new Rect(Screen.width / 2 - W / 2, 14, W, H);
+            int W = 180, H = 32;
+            // StatCard(420 wide @ x=12) 아래로 — 겹침 방지
+            var r = new Rect(12, 250, W, H);
             UiTheme.Rect(r, new Color(0.07f, 0.09f, 0.14f, 0.85f * a));
             UiTheme.Rect(new Rect(r.x, r.y, r.width, 1), new Color(0.78f, 0.62f, 0.30f, a));
             UiTheme.Rect(new Rect(r.x, r.yMax - 1, r.width, 1), new Color(0.78f, 0.62f, 0.30f, a));
@@ -496,6 +514,12 @@ namespace IL6
         private void Update()
         {
             TryShowInitialBanner();
+
+            // 모드 단축키 1/2/3
+            if (Input.GetKeyDown(KeyCode.Alpha1)) SetHudMode(HudMode.Melee);
+            else if (Input.GetKeyDown(KeyCode.Alpha2)) SetHudMode(HudMode.Ranged);
+            else if (Input.GetKeyDown(KeyCode.Alpha3)) SetHudMode(HudMode.Build);
+
             if (Player == null) return;
             if (_lastPlayerHp == -1) _lastPlayerHp = Player.CurrentHp;
             if (Player.CurrentHp < _lastPlayerHp) _damageFlashAmount = 0.55f;
@@ -520,26 +544,26 @@ namespace IL6
         // ====================================================================
         private void DrawStatCard()
         {
-            const int W = 380, H = 180;
+            const int W = 420, H = 230;
             var panel = new Rect(12, 12, W, H);
             UiTheme.Panel(panel);
-            int innerX = (int)panel.x + 12;
-            int innerW = W - 24;
-            int y = (int)panel.y + 10;
+            int innerX = (int)panel.x + 14;
+            int innerW = W - 28;
+            int y = (int)panel.y + 12;
 
             if (Player != null)
             {
                 // HP 바 with text overlay
                 float hpPct = Player.MaxHp > 0 ? (float)Player.CurrentHp / Player.MaxHp : 0f;
                 Color hpFill = Color.Lerp(new Color(0.85f, 0.2f, 0.18f), new Color(0.4f, 0.85f, 0.4f), hpPct);
-                UiTheme.Bar(new Rect(innerX, y, innerW, 22), hpPct, hpFill);
+                UiTheme.Bar(new Rect(innerX, y, innerW, 26), hpPct, hpFill);
                 var hpStyle = new GUIStyle(_section) {
                     alignment = TextAnchor.MiddleCenter,
                     normal = { textColor = Color.white },
-                    fontSize = 14
+                    fontSize = 17
                 };
-                GUI.Label(new Rect(innerX, y, innerW, 22), $"HP  {Player.CurrentHp} / {Player.MaxHp}", hpStyle);
-                y += 28;
+                GUI.Label(new Rect(innerX, y, innerW, 26), $"HP  {Player.CurrentHp} / {Player.MaxHp}", hpStyle);
+                y += 32;
             }
             else
             {
@@ -551,46 +575,72 @@ namespace IL6
             if (Progression != null)
             {
                 float xpPct = Progression.XpToNext > 0 ? (float)Progression.Xp / Progression.XpToNext : 0f;
-                UiTheme.Bar(new Rect(innerX, y, innerW, 16), xpPct, UiTheme.BarXpFill);
+                UiTheme.Bar(new Rect(innerX, y, innerW, 20), xpPct, UiTheme.BarXpFill);
                 var xpStyle = new GUIStyle(_label) {
                     alignment = TextAnchor.MiddleCenter,
                     normal = { textColor = new Color(0.05f, 0.1f, 0.18f) },
-                    fontSize = 12, fontStyle = FontStyle.Bold
+                    fontSize = 14, fontStyle = FontStyle.Bold
                 };
-                GUI.Label(new Rect(innerX, y, innerW, 16),
+                GUI.Label(new Rect(innerX, y, innerW, 20),
                     $"Lv {Progression.Level}    {Progression.Xp} / {Progression.XpToNext} XP", xpStyle);
-                y += 22;
+                y += 26;
             }
 
-            // 무기 + 쿨다운
-            if (Attacker != null && Attacker.Weapon != null)
+            // 모드 탭 — 근접 / 원거리 / 건축
+            int tabW = (innerW - 12) / 3;
+            DrawModeTab(new Rect(innerX, y, tabW, 30), HudMode.Melee, "⚔ 근접 [1]");
+            DrawModeTab(new Rect(innerX + tabW + 6, y, tabW, 30), HudMode.Ranged, "🏹 원거리 [2]");
+            DrawModeTab(new Rect(innerX + (tabW + 6) * 2, y, tabW, 30), HudMode.Build, "🏠 건축 [3]");
+            y += 36;
+
+            // 모드별 표시
+            if (_hudMode == HudMode.Build)
+            {
+                GUI.Label(new Rect(innerX, y, innerW, 22), "건축 모드 — 하단 핫바에서 선택", _labelSubtle);
+                y += 24;
+            }
+            else if (Attacker != null && Attacker.Weapon != null)
             {
                 var w = Attacker.Weapon;
-                if (UiTheme.Button(new Rect(innerX, y, 26, 24), "<", _smallBtn)) Attacker.CycleWeapon(-1);
-                GUI.Label(new Rect(innerX + 32, y + 2, innerW - 70, 22), $"⚔ {w.DisplayName}", _weapon);
-                if (UiTheme.Button(new Rect(innerX + innerW - 26, y, 26, 24), ">", _smallBtn)) Attacker.CycleWeapon(+1);
+                GUI.Label(new Rect(innerX, y, innerW, 24), $"⚔ {w.DisplayName}", _weapon);
                 y += 26;
 
                 float cd = Attacker.CurrentCooldown;
                 float ready = 1f - Mathf.Clamp01(cd / Mathf.Max(0.01f, w.CooldownSec));
-                UiTheme.Bar(new Rect(innerX, y, innerW, 10), ready, UiTheme.BarCdFill);
+                UiTheme.Bar(new Rect(innerX, y, innerW, 12), ready, UiTheme.BarCdFill);
                 var cdStyle = new GUIStyle(_labelSubtle) {
                     alignment = TextAnchor.MiddleCenter,
-                    fontSize = 11, fontStyle = FontStyle.Bold,
+                    fontSize = 13, fontStyle = FontStyle.Bold,
                     normal = { textColor = ready >= 1f ? new Color(0.2f, 0.95f, 0.4f) : UiTheme.TextCream },
                 };
-                GUI.Label(new Rect(innerX, y - 3, innerW, 14),
+                GUI.Label(new Rect(innerX, y - 3, innerW, 16),
                     ready >= 1f ? "READY" : $"{cd:F1}s", cdStyle);
-                y += 16;
+                y += 18;
             }
 
             // 채집 진행 (활성일 때만)
             if (Gather != null && Gather.IsActive)
             {
-                UiTheme.Bar(new Rect(innerX, y, innerW, 8), Gather.Progress, new Color(0.6f, 0.85f, 0.4f));
-                GUI.Label(new Rect(innerX, y - 16, innerW, 14),
+                UiTheme.Bar(new Rect(innerX, y, innerW, 10), Gather.Progress, new Color(0.6f, 0.85f, 0.4f));
+                GUI.Label(new Rect(innerX, y - 18, innerW, 16),
                     $"채집 {(Gather.Progress * 100):F0}%", _labelSubtle);
             }
+        }
+
+        private void DrawModeTab(Rect r, HudMode mode, string label)
+        {
+            bool active = _hudMode == mode;
+            // 활성 탭은 골드 보더 + 밝은 배경
+            Color border = active ? UiTheme.PanelBorder : UiTheme.PanelBorderDim;
+            Color bg = active ? new Color(0.18f, 0.20f, 0.28f, 1f) : new Color(0.10f, 0.12f, 0.16f, 1f);
+            UiTheme.Rect(new Rect(r.x - 1, r.y - 1, r.width + 2, r.height + 2), border);
+            UiTheme.Rect(r, bg);
+            var oldC = GUI.contentColor;
+            GUI.contentColor = active ? UiTheme.TextGold : UiTheme.TextSubtle;
+            var s = new GUIStyle(_label) { fontSize = 14, fontStyle = FontStyle.Bold, alignment = TextAnchor.MiddleCenter };
+            GUI.Label(r, label, s);
+            GUI.contentColor = oldC;
+            if (GUI.Button(r, "", GUIStyle.none)) SetHudMode(mode);
         }
 
         // ====================================================================
@@ -1391,14 +1441,14 @@ namespace IL6
         private void EnsureStyles()
         {
             if (_label != null) return;
-            _label = new GUIStyle(GUI.skin.label) { fontSize = 19, normal = { textColor = UiTheme.TextCream } };
+            _label = new GUIStyle(GUI.skin.label) { fontSize = 20, normal = { textColor = UiTheme.TextCream } };
             _labelSubtle = new GUIStyle(GUI.skin.label) { fontSize = 17, normal = { textColor = UiTheme.TextSubtle } };
-            _section = new GUIStyle(GUI.skin.label) { fontSize = 21, fontStyle = FontStyle.Bold, normal = { textColor = UiTheme.TextCream } };
-            _title = new GUIStyle(GUI.skin.label) { fontSize = 23, fontStyle = FontStyle.Bold, alignment = TextAnchor.MiddleCenter, normal = { textColor = UiTheme.TextGold } };
-            _weapon = new GUIStyle(GUI.skin.label) { fontSize = 21, fontStyle = FontStyle.Bold, normal = { textColor = new Color(0.7f, 0.95f, 1f) } };
+            _section = new GUIStyle(GUI.skin.label) { fontSize = 22, fontStyle = FontStyle.Bold, normal = { textColor = UiTheme.TextCream } };
+            _title = new GUIStyle(GUI.skin.label) { fontSize = 24, fontStyle = FontStyle.Bold, alignment = TextAnchor.MiddleCenter, normal = { textColor = UiTheme.TextGold } };
+            _weapon = new GUIStyle(GUI.skin.label) { fontSize = 22, fontStyle = FontStyle.Bold, normal = { textColor = new Color(0.7f, 0.95f, 1f) } };
             _bigDeath = new GUIStyle(GUI.skin.label) { fontSize = 88, fontStyle = FontStyle.Bold, alignment = TextAnchor.MiddleCenter, normal = { textColor = UiTheme.TextDanger } };
-            _btn = new GUIStyle(GUI.skin.button) { fontSize = 19, fontStyle = FontStyle.Bold };
-            _smallBtn = new GUIStyle(GUI.skin.button) { fontSize = 17 };
+            _btn = new GUIStyle(GUI.skin.button) { fontSize = 20, fontStyle = FontStyle.Bold };
+            _smallBtn = new GUIStyle(GUI.skin.button) { fontSize = 18 };
         }
 
         private static Companion FindNearestFreeCompanion(Vector3 center)
