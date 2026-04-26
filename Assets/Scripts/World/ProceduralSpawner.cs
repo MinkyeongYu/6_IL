@@ -240,10 +240,10 @@ namespace IL6
                 Weight = 0.13f, IsPredator = true, PredatorDamage = 6,
                 PackMin = 4, PackMax = 7,
             },
-            // 사슴 (낮춘 빈도) — HP 4배
+            // 사슴 (낮춘 빈도) — HP 12배
             new AnimalArchetype {
                 Name = "Deer_proc", MeatMin = 2, MeatMax = 2, MeatDropChance = 1f,
-                DurationSec = 3f, Hp = 48,
+                DurationSec = 3f, Hp = 144,
                 FleeRadius = 3.5f, FleeSpeed = 3f,
                 Scale = 1f, ColliderRadius = 0.4f,
                 Tint = new Color(0.55f, 0.4f, 0.25f),
@@ -297,11 +297,14 @@ namespace IL6
                 // 개체별로 yield + drop 결정 (각 개체 독립)
                 int yield = a.MeatMin == a.MeatMax ? a.MeatMin : rng.IntRange(a.MeatMin, a.MeatMax);
                 if (a.MeatDropChance < 1f && rng.Next() > a.MeatDropChance) yield = 0;
-                sink.Add(CreateOneAnimal(a, x + ox, y + oy, yield));
+                // HP ±20% 랜덤 — 모든 개체 같은 종이라도 변동
+                float hpRoll = 0.80f + rng.Next() * 0.40f;
+                int hp = Mathf.Max(1, Mathf.RoundToInt(a.Hp * hpRoll));
+                sink.Add(CreateOneAnimal(a, x + ox, y + oy, yield, hp));
             }
         }
 
-        private static GameObject CreateOneAnimal(AnimalArchetype a, float x, float y, int yieldOverride)
+        private static GameObject CreateOneAnimal(AnimalArchetype a, float x, float y, int yieldOverride, int hpOverride)
         {
             var go = new GameObject(a.Name);
             go.transform.position = new Vector3(x, y, 0);
@@ -328,8 +331,8 @@ namespace IL6
             if (a.IsPredator)
             {
                 var ai = go.AddComponent<WolfAi>();
-                ai.MaxHp = a.Hp;
-                ai.InitHp(a.Hp);
+                ai.MaxHp = hpOverride;
+                ai.InitHp(hpOverride);
                 ai.Damage = a.PredatorDamage;
             }
             else
@@ -337,7 +340,7 @@ namespace IL6
                 var ai = go.AddComponent<DeerAi>();
                 ai.FleeRadius = a.FleeRadius;
                 ai.FleeSpeed = a.FleeSpeed;
-                ai.InitHp(a.Hp);
+                ai.InitHp(hpOverride);
             }
 
             var cf = go.AddComponent<ColorFallback>();
@@ -356,7 +359,7 @@ namespace IL6
             }
 
             // 큰 동물 (맘모스 등) 은 HP 바도 띄움
-            if (a.Hp >= 8)
+            if (hpOverride >= 8)
             {
                 var hpBar = go.AddComponent<HpBarUi>();
                 if (a.IsPredator) hpBar.WolfRef = go.GetComponent<WolfAi>();
