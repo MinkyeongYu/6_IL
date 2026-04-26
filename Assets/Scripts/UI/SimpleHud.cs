@@ -475,7 +475,7 @@ namespace IL6
         // ====================================================================
         private void DrawStatCard()
         {
-            const int W = 320, H = 152;
+            const int W = 380, H = 180;
             var panel = new Rect(12, 12, W, H);
             UiTheme.Panel(panel);
             int innerX = (int)panel.x + 12;
@@ -645,15 +645,15 @@ namespace IL6
             ResourceKind[] kinds = { ResourceKind.Wood, ResourceKind.Stone, ResourceKind.Meat, ResourceKind.Food, ResourceKind.Frostbloom };
             string[] names = { "Wood", "Stone", "Meat", "Food", "Frost" };
 
-            const int W = 240, H = 200;
+            const int W = 290, H = 244;
             var panel = new Rect(Screen.width - W - 12, 12, W, H);
             UiTheme.Panel(panel);
             UiTheme.TitleBar(panel, "  자원  ", _title);
 
             int innerX = (int)panel.x + 12;
             int innerW = W - 24;
-            int y = (int)panel.y + 36;
-            int rowH = 30;
+            int y = (int)panel.y + 42;
+            int rowH = 36;
 
             for (int i = 0; i < kinds.Length; i++)
             {
@@ -685,7 +685,7 @@ namespace IL6
             var session = GameSession.Instance;
             if (session == null) return;
 
-            const int W = 280, H = 96;
+            const int W = 320, H = 120;
             var panel = new Rect(12, Screen.height - H - 12, W, H);
             UiTheme.Panel(panel);
 
@@ -789,7 +789,7 @@ namespace IL6
                     OnBuild = () => SpawnWatchtower(Player.transform.position) },
             };
 
-            const int CellW = 84, CellH = 84, Gap = 6;
+            const int CellW = 96, CellH = 96, Gap = 6;
             int totalW = CellW * slots.Length + Gap * (slots.Length - 1);
             int startX = Screen.width / 2 - totalW / 2;
             int y = Screen.height - CellH - 12;
@@ -808,24 +808,24 @@ namespace IL6
                 UiTheme.Rect(new Rect(r.x, r.y, r.width, 4), s.Color);
 
                 // 아이콘 (큰 글자)
-                var iconStyle = new GUIStyle(_title) { fontSize = 28, alignment = TextAnchor.MiddleCenter };
+                var iconStyle = new GUIStyle(_title) { fontSize = 32, alignment = TextAnchor.MiddleCenter };
                 var oldC = GUI.contentColor;
                 GUI.contentColor = ok ? Color.white : new Color(1f, 1f, 1f, 0.4f);
-                GUI.Label(new Rect(r.x, r.y + 8, r.width, 32), s.Icon, iconStyle);
+                GUI.Label(new Rect(r.x, r.y + 10, r.width, 36), s.Icon, iconStyle);
 
                 // 이름
                 GUI.contentColor = ok ? UiTheme.TextCream : new Color(1f, 1f, 1f, 0.4f);
                 var nameStyle = new GUIStyle(_label) {
-                    fontSize = 12, fontStyle = FontStyle.Bold,
+                    fontSize = 14, fontStyle = FontStyle.Bold,
                     alignment = TextAnchor.MiddleCenter,
                 };
-                GUI.Label(new Rect(r.x, r.y + 38, r.width, 16), s.Name, nameStyle);
+                GUI.Label(new Rect(r.x, r.y + 46, r.width, 18), s.Name, nameStyle);
 
                 // 비용
                 string cost = s.CostStone > 0 ? $"{s.CostWood}W + {s.CostStone}S" : $"{s.CostWood}W";
                 GUI.contentColor = ok ? UiTheme.TextSubtle : new Color(0.5f, 0.5f, 0.5f, 0.6f);
-                var costStyle = new GUIStyle(_labelSubtle) { fontSize = 11, alignment = TextAnchor.MiddleCenter };
-                GUI.Label(new Rect(r.x, r.y + 56, r.width, 14), cost, costStyle);
+                var costStyle = new GUIStyle(_labelSubtle) { fontSize = 13, alignment = TextAnchor.MiddleCenter };
+                GUI.Label(new Rect(r.x, r.y + 66, r.width, 16), cost, costStyle);
                 GUI.contentColor = oldC;
 
                 // 클릭 영역 (보더 안쪽)
@@ -849,7 +849,7 @@ namespace IL6
             var session = GameSession.Instance;
             if (session == null) return;
 
-            const int W = 240, H = 130;
+            const int W = 280, H = 160;
             var panel = new Rect(Screen.width - W - 12, Screen.height - H - 12, W, H);
             UiTheme.Panel(panel);
 
@@ -1009,43 +1009,84 @@ namespace IL6
 
         private void DrawGatherButton(ResourceKind kind, string verb, float range)
         {
-            var node = FindNearestGatherableInRange(Player.transform.position, range, kind);
+            // 플레이어 또는 동료가 근처에 있는 가장 가까운 (플레이어 기준) gatherable 찾기.
+            var companions = Object.FindObjectsByType<Companion>(FindObjectsSortMode.None);
+            var node = FindGatherableWithUnitsNearby(kind, range, companions);
             if (node == null) return;
+
             var cam = Camera.main;
             if (cam == null) return;
             Vector3 sp = cam.WorldToScreenPoint(node.transform.position + new Vector3(0f, 1.0f, 0f));
             if (sp.z < 0) return;
             float guiY = Screen.height - sp.y;
 
-            var companions = Object.FindObjectsByType<Companion>(FindObjectsSortMode.None);
-            int workers = 0;
-            foreach (var c in companions)
-                if (c != null && c.CurrentMode != Companion.Mode.Hiding && c.CurrentMode != Companion.Mode.Farming) workers++;
+            // 누가 이 노드 근처에 있나 분류
+            float playerDist = Vector2.Distance(Player.transform.position, node.transform.position);
+            bool playerNear = playerDist <= range;
 
-            string label = workers > 0 ? $"{verb} ({workers})" : $"{verb} 불가";
-            // 더 크고 누르기 좋게 — 220×52
-            var rect = new Rect(sp.x - 110, guiY - 26, 220, 52);
-            var bigBtn = new GUIStyle(_btn) { fontSize = 17, fontStyle = FontStyle.Bold };
-            if (UiTheme.Button(rect, label, bigBtn, workers > 0))
+            // 사용 가능한 동료 (= Hiding/Farming 아닌) 중 노드 근처
+            var nearbyCompanions = new System.Collections.Generic.List<Companion>();
+            foreach (var c in companions)
             {
-                foreach (var c in companions)
-                    if (c != null && c.CurrentMode != Companion.Mode.Hiding && c.CurrentMode != Companion.Mode.Farming)
-                        c.AssignGather(node);
+                if (c == null || c.CurrentMode == Companion.Mode.Hiding || c.CurrentMode == Companion.Mode.Farming) continue;
+                if (Vector2.Distance(c.transform.position, node.transform.position) <= range)
+                    nearbyCompanions.Add(c);
+            }
+
+            int totalWorkers = (playerNear ? 1 : 0) + nearbyCompanions.Count;
+            if (totalWorkers == 0) return;
+
+            string who = playerNear
+                ? (nearbyCompanions.Count > 0 ? $"나 + 동료 {nearbyCompanions.Count}" : "나")
+                : $"동료 {nearbyCompanions.Count}";
+            string label = $"{verb} ({who})";
+            var rect = new Rect(sp.x - 130, guiY - 26, 260, 56);
+            var bigBtn = new GUIStyle(_btn) { fontSize = 18, fontStyle = FontStyle.Bold };
+            if (UiTheme.Button(rect, label, bigBtn))
+            {
+                if (playerNear && Gather != null)
+                {
+                    Gather.StartGathering(node);
+                    // 플레이어가 채집 중이면 동료들도 같이 시작
+                    foreach (var c in nearbyCompanions) c.AssignGather(node);
+                }
+                else
+                {
+                    // 플레이어가 멀면 가장 가까운 동료 1명만 시작 (요청: 가장 가까운 동료들)
+                    nearbyCompanions.Sort((a, b) =>
+                        Vector2.Distance(a.transform.position, node.transform.position)
+                        .CompareTo(Vector2.Distance(b.transform.position, node.transform.position)));
+                    int assignCount = Mathf.Min(nearbyCompanions.Count, 2); // 가장 가까운 2명까지
+                    for (int i = 0; i < assignCount; i++) nearbyCompanions[i].AssignGather(node);
+                }
             }
         }
 
-        private static Gatherable FindNearestGatherableInRange(Vector3 center, float range, ResourceKind kind)
+        /// <summary>지정 종류의 Gatherable 중, 플레이어/동료가 range 안에 있는 것 중 플레이어에게서 가장 가까운 것.</summary>
+        private Gatherable FindGatherableWithUnitsNearby(ResourceKind kind, float range, Companion[] companions)
         {
             var all = Object.FindObjectsByType<Gatherable>(FindObjectsSortMode.None);
             Gatherable best = null;
-            float bestDist = range;
+            float bestDistToPlayer = float.MaxValue;
+            Vector3 ppos = Player.transform.position;
             foreach (var g in all)
             {
                 if (g == null || g.YieldKind != kind) continue;
-                // DeerAi 가 붙은 건 동물이라 제외
                 if (g.GetComponent<DeerAi>() != null || g.GetComponent<WolfAi>() != null) continue;
-                float d = Vector2.Distance(center, g.transform.position);
-                if (d < bestDist) { best = g; bestDist = d; }
+
+                bool anyNear = Vector2.Distance(ppos, g.transform.position) <= range;
+                if (!anyNear)
+                {
+                    foreach (var c in companions)
+                    {
+                        if (c == null || c.CurrentMode == Companion.Mode.Hiding || c.CurrentMode == Companion.Mode.Farming) continue;
+                        if (Vector2.Distance(c.transform.position, g.transform.position) <= range) { anyNear = true; break; }
+                    }
+                }
+                if (!anyNear) continue;
+
+                float dp = Vector2.Distance(ppos, g.transform.position);
+                if (dp < bestDistToPlayer) { bestDistToPlayer = dp; best = g; }
             }
             return best;
         }
@@ -1305,14 +1346,14 @@ namespace IL6
         private void EnsureStyles()
         {
             if (_label != null) return;
-            _label = new GUIStyle(GUI.skin.label) { fontSize = 16, normal = { textColor = UiTheme.TextCream } };
-            _labelSubtle = new GUIStyle(GUI.skin.label) { fontSize = 14, normal = { textColor = UiTheme.TextSubtle } };
-            _section = new GUIStyle(GUI.skin.label) { fontSize = 17, fontStyle = FontStyle.Bold, normal = { textColor = UiTheme.TextCream } };
-            _title = new GUIStyle(GUI.skin.label) { fontSize = 19, fontStyle = FontStyle.Bold, alignment = TextAnchor.MiddleCenter, normal = { textColor = UiTheme.TextGold } };
-            _weapon = new GUIStyle(GUI.skin.label) { fontSize = 18, fontStyle = FontStyle.Bold, normal = { textColor = new Color(0.7f, 0.95f, 1f) } };
-            _bigDeath = new GUIStyle(GUI.skin.label) { fontSize = 80, fontStyle = FontStyle.Bold, alignment = TextAnchor.MiddleCenter, normal = { textColor = UiTheme.TextDanger } };
-            _btn = new GUIStyle(GUI.skin.button) { fontSize = 16, fontStyle = FontStyle.Bold };
-            _smallBtn = new GUIStyle(GUI.skin.button) { fontSize = 15 };
+            _label = new GUIStyle(GUI.skin.label) { fontSize = 19, normal = { textColor = UiTheme.TextCream } };
+            _labelSubtle = new GUIStyle(GUI.skin.label) { fontSize = 17, normal = { textColor = UiTheme.TextSubtle } };
+            _section = new GUIStyle(GUI.skin.label) { fontSize = 21, fontStyle = FontStyle.Bold, normal = { textColor = UiTheme.TextCream } };
+            _title = new GUIStyle(GUI.skin.label) { fontSize = 23, fontStyle = FontStyle.Bold, alignment = TextAnchor.MiddleCenter, normal = { textColor = UiTheme.TextGold } };
+            _weapon = new GUIStyle(GUI.skin.label) { fontSize = 21, fontStyle = FontStyle.Bold, normal = { textColor = new Color(0.7f, 0.95f, 1f) } };
+            _bigDeath = new GUIStyle(GUI.skin.label) { fontSize = 88, fontStyle = FontStyle.Bold, alignment = TextAnchor.MiddleCenter, normal = { textColor = UiTheme.TextDanger } };
+            _btn = new GUIStyle(GUI.skin.button) { fontSize = 19, fontStyle = FontStyle.Bold };
+            _smallBtn = new GUIStyle(GUI.skin.button) { fontSize = 17 };
         }
 
         private static Companion FindNearestFreeCompanion(Vector3 center)

@@ -65,5 +65,14 @@ namespace IL6
             _active = null;
             _progress = 0f;
         }
+
+        /// <summary>외부 (HUD 버튼 등) 에서 특정 Gatherable 채집 시작 강제.</summary>
+        public bool StartGathering(Gatherable g)
+        {
+            if (g == null || _active != null) return false;
+            _active = g;
+            _progress = 0f;
+            return true;
+        }
     }
 }
