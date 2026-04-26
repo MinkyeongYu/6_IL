@@ -224,24 +224,11 @@ namespace IL6
 
         private static readonly Vector2 VillageCenter = new Vector2(GameConstants.VillageCenterX, GameConstants.VillageCenterY);
         private const float VillageRadius = 7f;
-        private const float TeleportDistance = 9f;
+        private const float SprintSpeedMul = 2.2f; // 문 향해 달릴 때 속도 배수
 
         private void FixedUpdate()
         {
             if (CurrentMode == Mode.Hiding) { if (_rb != null) _rb.velocity = Vector2.zero; return; }
-
-            // 문 통과 텔레포트 — Follow 상태이고 플레이어가 너무 멀면 즉시 따라잡기.
-            if (Player != null && CurrentMode == Mode.Follow && CurrentStance != Stance.Hold)
-            {
-                float distToPlayer = Vector2.Distance(transform.position, Player.position);
-                if (distToPlayer > TeleportDistance)
-                {
-                    Vector2 spread = Random.insideUnitCircle * 0.8f;
-                    transform.position = Player.position + (Vector3)spread;
-                    _rb.velocity = Vector2.zero;
-                    return;
-                }
-            }
 
             Vector2 desired;
             switch (CurrentMode)
@@ -253,6 +240,10 @@ namespace IL6
             }
             _rb.velocity = desired;
         }
+
+        /// <summary>동료가 마을 안인지 (= 둘러친 사각 펜스 안)</summary>
+        private bool IsInsideVillage()
+            => Vector2.Distance((Vector2)transform.position, VillageCenter) < VillageRadius + 0.5f;
 
         private Vector2 ComputeFollowVelocity()
         {
@@ -278,9 +269,29 @@ namespace IL6
             if (Player == null) return Vector2.zero;
 
             // 마을 앵커: 플레이어가 마을 안에 있으면 동료는 따라다니지 않고 자리 지킴.
-            // 플레이어가 문을 통과해 마을 밖으로 나가야만 동료가 움직임.
             float playerFromVillage = Vector2.Distance((Vector2)Player.position, VillageCenter);
             if (playerFromVillage < VillageRadius) return SeparationFromOthers();
+
+            // 플레이어는 마을 밖, 동료는 마을 안 — 가장 가까운 문을 거쳐 빠르게 추격.
+            // 문에 도달했거나, 동료도 이미 마을 밖이면 일반 follow.
+            if (IsInsideVillage())
+            {
+                var door = Door.FindNearest((Vector2)transform.position);
+                if (door != null)
+                {
+                    Vector2 doorPos = door.transform.position;
+                    Vector2 toDoor = doorPos - (Vector2)transform.position;
+                    float distToDoor = toDoor.magnitude;
+                    if (distToDoor > 0.4f)
+                    {
+                        Vector2 sprintDir = toDoor.normalized;
+                        return sprintDir * MoveSpeed * SprintSpeedMul + SeparationFromOthers() * 0.3f;
+                    }
+                    // 문 바로 앞 — 한 발 더 밖으로 (남쪽으로 밀어내기) 그 후 일반 follow
+                    Vector2 outward = ((Vector2)door.transform.position - VillageCenter).normalized;
+                    return outward * MoveSpeed * SprintSpeedMul;
+                }
+            }
 
             Vector2 slot = GetFormationSlot();
             Vector2 toSlot = slot - (Vector2)transform.position;

@@ -9,12 +9,31 @@ namespace IL6
     [RequireComponent(typeof(Collider2D))]
     public sealed class Door : MonoBehaviour
     {
+        // 정적 레지스트리 — 동료 길 찾기에서 가장 가까운 문을 빠르게 찾기 위함.
+        private static readonly System.Collections.Generic.List<Door> _all = new();
+        public static System.Collections.Generic.IReadOnlyList<Door> All => _all;
+
+        public static Door FindNearest(Vector2 from)
+        {
+            Door best = null;
+            float bestDist = float.MaxValue;
+            for (int i = 0; i < _all.Count; i++)
+            {
+                var d = _all[i];
+                if (d == null) continue;
+                float dist = Vector2.Distance(from, d.transform.position);
+                if (dist < bestDist) { bestDist = dist; best = d; }
+            }
+            return best;
+        }
+
         private Collider2D _self;
         private Collider2D _playerCol;
 
         private void Awake()
         {
             _self = GetComponent<Collider2D>();
+            _all.Add(this);
         }
 
         private void Start()
@@ -40,7 +59,8 @@ namespace IL6
 
         private void OnDestroy()
         {
-            // IgnoreCollision 은 대상 콜라이더가 사라지면 자동 해제됨 — 별도 정리 불필요
+            _all.Remove(this);
+            // Physics2D.IgnoreCollision 은 대상 콜라이더가 사라지면 자동 해제됨 — 별도 정리 불필요
         }
     }
 }
