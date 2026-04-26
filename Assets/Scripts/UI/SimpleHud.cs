@@ -41,6 +41,73 @@ namespace IL6
             DrawPauseMenu();
             DrawDeathOverlay();
             DrawDamageFlash();
+            DrawNightIntroFade();
+        }
+
+        // ====================================================================
+        // 밤 인트로: Evening 시작 → 화면 암전 → 플레이어 마을로 이동 → 암전 해제 → Night
+        // ====================================================================
+        private float _fadeAlpha;          // 0 (투명) ~ 1 (완전 암전)
+        private float _fadeTarget;         // 목표 alpha
+        private float _fadeSpeed = 1.6f;   // alpha/sec
+        private bool _teleportPending;
+        private GUIStyle _fadeStyle;
+
+        private void DrawNightIntroFade()
+        {
+            // 부드러운 이행
+            if (Mathf.Abs(_fadeAlpha - _fadeTarget) > 0.001f)
+            {
+                float dir = Mathf.Sign(_fadeTarget - _fadeAlpha);
+                _fadeAlpha = Mathf.Clamp01(_fadeAlpha + dir * _fadeSpeed * Time.unscaledDeltaTime);
+                // 암전 절정에서 마을로 이동
+                if (_teleportPending && _fadeAlpha > 0.92f)
+                {
+                    _teleportPending = false;
+                    if (Player != null)
+                    {
+                        Player.transform.position = new Vector3(GameConstants.VillageCenterX, GameConstants.VillageCenterY, 0f);
+                    }
+                }
+            }
+            if (_fadeAlpha <= 0.001f) return;
+
+            UiTheme.Rect(new Rect(0, 0, Screen.width, Screen.height), new Color(0, 0, 0, _fadeAlpha));
+            // 중앙 텍스트
+            if (_fadeStyle == null)
+            {
+                _fadeStyle = new GUIStyle(GUI.skin.label) {
+                    fontSize = 28, fontStyle = FontStyle.Bold,
+                    alignment = TextAnchor.MiddleCenter,
+                    normal = { textColor = new Color(1f, 0.86f, 0.45f, 1f) }
+                };
+            }
+            var oldC = GUI.contentColor;
+            GUI.contentColor = new Color(1f, 0.86f, 0.45f, _fadeAlpha);
+            GUI.Label(new Rect(0, Screen.height / 2 - 20, Screen.width, 40), "마을로 돌아가는 중...", _fadeStyle);
+            GUI.contentColor = oldC;
+        }
+
+        // OnEnable에서 추가 페이즈 핸들러 등록 (기존 unsubE/N/D/A 옆에 한 쌍 더)
+        private System.Action _unsubFadeIn, _unsubFadeOut;
+        private void HookFadeEvents()
+        {
+            if (_unsubFadeIn != null) return;
+            _unsubFadeIn = EventBus.Instance.Subscribe<EveningStartedPayload>(_ =>
+            {
+                _fadeTarget = 1f;
+                _teleportPending = true;
+            });
+            _unsubFadeOut = EventBus.Instance.Subscribe<NightStartedPayload>(_ =>
+            {
+                _fadeTarget = 0f;
+            });
+        }
+
+        private void UnhookFadeEvents()
+        {
+            _unsubFadeIn?.Invoke(); _unsubFadeIn = null;
+            _unsubFadeOut?.Invoke(); _unsubFadeOut = null;
         }
 
         private AchievementManager.Entry? _achToast;
@@ -92,11 +159,13 @@ namespace IL6
             _unsubN = EventBus.Instance.Subscribe<NightStartedPayload>(p => ShowBanner($"Day {p.Day}  🌙  밤이 찾아옵니다"));
             _unsubD = EventBus.Instance.Subscribe<DawnStartedPayload>(p => ShowBanner($"Day {p.Day}  🌄  새벽"));
             _unsubA = EventBus.Instance.Subscribe<DayStartedPayload>(p => ShowBanner($"Day {p.Day}  ☀  새 날"));
+            HookFadeEvents();
         }
 
         private void OnDisable()
         {
             _unsubE?.Invoke(); _unsubN?.Invoke(); _unsubD?.Invoke(); _unsubA?.Invoke();
+            UnhookFadeEvents();
         }
 
         private bool _initialBannerShown;
