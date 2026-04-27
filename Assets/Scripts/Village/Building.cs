@@ -24,13 +24,25 @@ namespace IL6
         private void Awake()
         {
             var b = BalanceConfig.Instance;
-            MaxHp = Kind switch
+            int baseHp = Kind switch
             {
                 BuildingKind.Campfire => b.CampfireHp,
                 BuildingKind.Barricade => b.BarricadeHp,
                 BuildingKind.Fence => b.FenceHp,
                 _ => b.BarricadeHp,
             };
+            // 마을 성장도 — 펜스 제외 건물 수에 따라 HP 가산.
+            // 기존 building 1개당 +12%, 최대 +200%.
+            int existingCore = 0;
+            var all = Object.FindObjectsByType<Building>(FindObjectsSortMode.None);
+            foreach (var bb in all)
+            {
+                if (bb == null || bb == this) continue;
+                if (bb.Kind == BuildingKind.Fence) continue;
+                existingCore++;
+            }
+            float growth = 1f + Mathf.Min(existingCore * 0.12f, 2f);
+            MaxHp = Mathf.RoundToInt(baseHp * growth);
             CurrentHp = MaxHp;
         }
 

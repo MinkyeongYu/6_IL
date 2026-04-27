@@ -42,6 +42,6 @@ MonoBehaviour:
   WaveMaxCount: 300
   CampfireHp: 400
   BarricadeHp: 200
-  FenceHp: 8
+  FenceHp: 4
   CampfireCost: 5
   BarricadeCost: 5

@@ -56,12 +56,18 @@ namespace IL6
                 pet.Damage = 5 + (level - 1) * 3;
                 pet.Tint = new Color(0.55f, 0.40f, 0.20f);
             }
-            else // Hawk
+            else // Hawk — 근접 공격으로 변경
             {
-                pet.MoveSpeed = 7.5f;
-                pet.AttackRange = 5.5f;
-                pet.AttackCooldown = 0.9f;
-                pet.Damage = 4 + (level - 1) * 3;
+                var rb = go.AddComponent<Rigidbody2D>();
+                rb.gravityScale = 0f;
+                rb.freezeRotation = true;
+                rb.bodyType = RigidbodyType2D.Dynamic;
+                var col = go.AddComponent<CircleCollider2D>();
+                col.radius = 0.25f;
+                pet.MoveSpeed = 8.0f;       // 빠른 비행
+                pet.AttackRange = 1.2f;     // 근접
+                pet.AttackCooldown = 0.7f;
+                pet.Damage = 5 + (level - 1) * 3;
                 pet.Tint = new Color(0.95f, 0.92f, 0.78f);
             }
             cf.Tint = pet.Tint;
@@ -131,24 +137,10 @@ namespace IL6
 
         private void AttackZombie(Zombie z)
         {
-            if (Type == Kind.Hawk)
-            {
-                var go = new GameObject("HawkProj");
-                go.transform.position = transform.position;
-                go.transform.localScale = Vector3.one * 0.65f;
-                var sr = go.AddComponent<SpriteRenderer>();
-                sr.sortingOrder = 50;
-                sr.color = new Color(1f, 0.95f, 0.5f);
-                var proj = go.AddComponent<Projectile>();
-                proj.Speed = 12f;
-                proj.Damage = Damage;
-                proj.HitRadius = 0.45f;
-                proj.Aim(z, transform.position);
-            }
-            else
-            {
-                z.TakeDamage(Damage);
-            }
+            // 두 종류 모두 근접 — 슬래시 VFX + 즉시 대미지
+            GameFeel.Slash(transform.position, z.transform.position,
+                Type == Kind.Hawk ? new Color(1f, 0.95f, 0.7f) : new Color(0.85f, 0.65f, 0.4f));
+            z.TakeDamage(Damage);
         }
 
         private Zombie FindNearestZombie(float range)

@@ -46,6 +46,9 @@ namespace IL6
             }
         }
 
+        private float _dailyNpcTimer;
+        public float DailyNpcIntervalSec = 20f; // 낮 1분당 ~3명
+
         private void Update()
         {
             if (Player == null) return;
@@ -58,6 +61,21 @@ namespace IL6
                 && GameSession.Instance.Cycle.Phase == Phase.Night;
             if (!isNight) EnsureLoaded(pcx, pcy);
             UnloadFar(pcx, pcy);
+
+            // 낮에만 마을 근처에 일정 간격으로 NPC 스폰 — 영입 페이스 ~3명/분
+            bool isDay = GameSession.Instance != null
+                && GameSession.Instance.Cycle != null
+                && GameSession.Instance.Cycle.Phase == Phase.Day;
+            if (isDay)
+            {
+                _dailyNpcTimer += Time.deltaTime;
+                if (_dailyNpcTimer >= DailyNpcIntervalSec)
+                {
+                    _dailyNpcTimer = 0f;
+                    SpawnDailyVillageNpc();
+                }
+            }
+            else _dailyNpcTimer = 0f;
         }
 
         private void EnsureLoaded(int pcx, int pcy)
