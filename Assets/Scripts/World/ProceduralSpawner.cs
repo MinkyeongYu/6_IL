@@ -322,9 +322,12 @@ namespace IL6
 
         private static void SpawnAnimalAt(float x, float y, SeededRng rng, System.Collections.Generic.List<GameObject> sink)
         {
+            // 밤에는 동물 절대 스폰 X
+            var session = GameSession.Instance;
+            if (session != null && session.Cycle != null && session.Cycle.Phase == Phase.Night) return;
+
             // 현재 게임 일자 — 일자별 출현 제한 적용
-            int day = GameSession.Instance != null && GameSession.Instance.Cycle != null
-                ? GameSession.Instance.Cycle.Day : 1;
+            int day = session != null && session.Cycle != null ? session.Cycle.Day : 1;
 
             // 가중치 추첨 — 출현 가능한 종만
             float total = 0f;
@@ -497,9 +500,15 @@ namespace IL6
             },
         };
 
-        /// <summary>매일 아침 마을 근처에 동료 후보 1명 스폰 — DayStartedPayload 구독자가 호출.</summary>
+        /// <summary>매일 아침 마을 근처에 동료 후보 1명 스폰 — DayStartedPayload 구독자가 호출.
+        /// 밤(또는 저녁/새벽)에 호출되면 스킵.</summary>
         public void SpawnDailyVillageNpc()
         {
+            // 밤에는 영입 NPC 절대 스폰 안 함 — Day 페이즈에만 허용
+            var session = GameSession.Instance;
+            if (session == null || session.Cycle == null) return;
+            if (session.Cycle.Phase != Phase.Day) return;
+
             // 마을 외곽 6.5~9u 바깥에 1명
             uint seed = Seed ^ unchecked((uint)Time.frameCount);
             var rng = new SeededRng(seed);
