@@ -51,7 +51,7 @@ namespace IL6
         private int CountWorkersNearby()
         {
             int n = 0;
-            var comps = Object.FindObjectsByType<Companion>(FindObjectsSortMode.None);
+            var comps = UnityEngine.Object.FindObjectsByType<Companion>(FindObjectsSortMode.None);
             foreach (var c in comps)
             {
                 if (c == null || c.IsDead) continue;

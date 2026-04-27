@@ -215,7 +215,7 @@ namespace IL6
             if (!IsCombat)
             {
                 if (FindNearestZombie(SightRange) != null) nonCombatThreatened = true;
-                else if (FindNearestHostileAnimal(SightRange) != null) nonCombatThreatened = true;
+                else if (FindNearestAnimal(SightRange) != null) nonCombatThreatened = true;
             }
 
             if (!blizzard && !nonCombatThreatened) return;

@@ -21,7 +21,7 @@ namespace IL6
         public static int MaxFarmsAllowed()
         {
             int storages = 0;
-            var bs = Object.FindObjectsByType<Building>(FindObjectsSortMode.None);
+            var bs = UnityEngine.Object.FindObjectsByType<Building>(FindObjectsSortMode.None);
             foreach (var b in bs)
             {
                 if (b == null || b.CurrentHp <= 0) continue;
@@ -32,7 +32,7 @@ namespace IL6
 
         public static int CurrentFarmCount()
         {
-            return Object.FindObjectsByType<FarmBuilding>(FindObjectsSortMode.None).Length;
+            return UnityEngine.Object.FindObjectsByType<FarmBuilding>(FindObjectsSortMode.None).Length;
         }
 
         public bool HarvestReady { get; private set; }
