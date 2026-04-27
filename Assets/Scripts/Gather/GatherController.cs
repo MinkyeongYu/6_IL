@@ -20,6 +20,10 @@ namespace IL6
         public float Progress => _progress;
         public Gatherable ActiveTarget => _active;
 
+        public float CompanionAssistRange = 4.0f;
+        public int CompanionAssistMax = 2;
+        private float _assistRecheck;
+
         private void Update()
         {
             if (Store == null || Player == null || Input == null) return;
@@ -32,6 +36,13 @@ namespace IL6
             if (_active != null)
             {
                 _progress += Time.deltaTime / _active.DurationSec;
+                // 유휴 동료 자동 합류 — 0.5초마다 탐색
+                _assistRecheck -= Time.deltaTime;
+                if (_assistRecheck <= 0f)
+                {
+                    _assistRecheck = 0.5f;
+                    AssignNearbyHelpers();
+                }
                 if (_progress >= 1f)
                 {
                     _active.OnGathered(Store);
@@ -39,6 +50,31 @@ namespace IL6
                     _progress = 0f;
                 }
             }
+        }
+
+        private void AssignNearbyHelpers()
+        {
+            if (_active == null) return;
+            var comps = Object.FindObjectsByType<Companion>(FindObjectsSortMode.None);
+            // Follow 모드 + 유휴 동료만 모음
+            var candidates = new System.Collections.Generic.List<Companion>();
+            int alreadyOnTask = 0;
+            foreach (var c in comps)
+            {
+                if (c == null || c.IsDead) continue;
+                if (c.CurrentMode == Companion.Mode.Working && c.Target == _active) { alreadyOnTask++; continue; }
+                if (c.CurrentMode != Companion.Mode.Follow) continue;
+                if (Vector2.Distance(c.transform.position, _active.transform.position) > CompanionAssistRange) continue;
+                candidates.Add(c);
+            }
+            int slotsLeft = CompanionAssistMax - alreadyOnTask;
+            if (slotsLeft <= 0) return;
+            // 가까운 순 정렬
+            candidates.Sort((a, b) =>
+                Vector2.Distance(a.transform.position, _active.transform.position)
+                .CompareTo(Vector2.Distance(b.transform.position, _active.transform.position)));
+            int n = Mathf.Min(slotsLeft, candidates.Count);
+            for (int i = 0; i < n; i++) candidates[i].AssignGather(_active);
         }
 
         private void TryStart()
