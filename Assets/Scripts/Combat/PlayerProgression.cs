@@ -33,7 +33,8 @@ namespace IL6
     {
         public int Xp { get; private set; }
         public int Level { get; private set; } = 1;
-        public int XpToNext { get; private set; } = 5;
+        // 밤당 2렙 정도가 한계가 되도록 곡선 가팔라짐. Lv 1→2 = 12, 2→3 = 16, 3→4 = 20 ...
+        public int XpToNext { get; private set; } = 12;
         public bool LevelUpPending { get; private set; }
 
         public const int MaxStacks = 3;
@@ -103,7 +104,7 @@ namespace IL6
             {
                 Xp -= XpToNext;
                 Level++;
-                XpToNext = 5 + Level * 3;
+                XpToNext = 8 + Level * 4;
                 LevelUpPending = true;
                 // 레벨이 오를수록 낮/밤이 길어짐 (+25% per level, 시작 1.0)
                 if (GameSession.Instance != null && GameSession.Instance.Cycle != null)
