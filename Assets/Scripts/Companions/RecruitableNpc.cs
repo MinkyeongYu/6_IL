@@ -77,8 +77,38 @@ namespace IL6
             }
         }
 
+        /// <summary>초반 그레이스 — 건물 수와 무관하게 항상 허용되는 최저 수용 인원.</summary>
+        public const int FreeCapacity = 12;
+
+        /// <summary>현재 마을이 수용 가능한 동료 수 — 펜스 제외 핵심 건물 개수, 단 최저 FreeCapacity 보장.</summary>
+        public static int VillageCapacity()
+        {
+            int built = 0;
+            var bs = Object.FindObjectsByType<Building>(FindObjectsSortMode.None);
+            foreach (var b in bs)
+            {
+                if (b == null || b.CurrentHp <= 0) continue;
+                if (b.Kind == BuildingKind.Fence) continue;
+                built++;
+            }
+            return Mathf.Max(FreeCapacity, built);
+        }
+
+        public static int CurrentCompanionCount()
+        {
+            int n = 0;
+            var cs = Object.FindObjectsByType<Companion>(FindObjectsSortMode.None);
+            foreach (var c in cs) if (c != null && !c.IsDead) n++;
+            return n;
+        }
+
+        public bool CanRecruit() => CurrentCompanionCount() < VillageCapacity();
+
         public void Recruit()
         {
+            // 마을 수용 한도 — 펜스 제외 건물 수만큼만 영입 가능
+            if (!CanRecruit()) return;
+
             // 영입되면 Dynamic 으로 전환 — Companion 이 velocity 로 이동해야 하고 다른 유닛과 물리적 상호작용도 가능.
             var rb = GetComponent<Rigidbody2D>();
             if (rb != null) rb.bodyType = RigidbodyType2D.Dynamic;

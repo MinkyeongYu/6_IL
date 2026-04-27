@@ -1461,11 +1461,25 @@ namespace IL6
             GUI.Label(new Rect(tx, panel.y + 120, 60, 18), "농사", _labelSubtle);
             GUI.Label(new Rect(tx + 60, panel.y + 120, 120, 18), Stars(npc.FarmRating), _label);
 
-            if (UiTheme.Button(new Rect(tx + 200, panel.y + panel.height - 38, 110, 28), "영입 (F)", _btn))
+            // 마을 수용 한도 체크 — 건물 수만큼만 영입 가능 (초반 12명까지는 무료)
+            int cap = RecruitableNpc.VillageCapacity();
+            int have = RecruitableNpc.CurrentCompanionCount();
+            bool canRecruit = have < cap;
+
+            // 수용 인원 표시
+            var capStyle = new GUIStyle(_labelSubtle) { fontSize = 14 };
+            var oldC = GUI.contentColor;
+            GUI.contentColor = canRecruit ? UiTheme.TextSubtle : UiTheme.TextDanger;
+            GUI.Label(new Rect(tx, panel.y + panel.height - 60, 200, 18),
+                $"마을 수용  {have} / {cap}", capStyle);
+            GUI.contentColor = oldC;
+
+            string label = canRecruit ? "영입 (F)" : "건물 더 필요";
+            if (UiTheme.Button(new Rect(tx + 200, panel.y + panel.height - 38, 130, 28), label, _btn, canRecruit))
             {
                 npc.Recruit();
             }
-            if (UiTheme.Button(new Rect(tx + 318, panel.y + panel.height - 38, 90, 28), "거절", _smallBtn))
+            if (UiTheme.Button(new Rect(tx + 338, panel.y + panel.height - 38, 90, 28), "거절", _smallBtn))
             {
                 // 범위 벗어나면 자동 닫힘
             }
