@@ -1446,16 +1446,21 @@ namespace IL6
 
             UiTheme.Rect(new Rect(0, 0, Screen.width, Screen.height), new Color(0, 0, 0, 0.65f));
 
-            const int W = 640;
-            const int H = 260;
+            const int W = 920;
+            const int H = 380;
             var modal = new Rect(Screen.width / 2 - W / 2, Screen.height / 2 - H / 2, W, H);
             UiTheme.Panel(modal);
             UiTheme.TitleBar(modal, $"  LEVEL {Progression.Level} — 룬 선택  ", _title);
 
-            int btnW = 188, btnH = 160, gap = 14;
+            int btnW = 280, btnH = 270, gap = 20;
             int total = btnW * 3 + gap * 2;
             int bx = (int)modal.x + (W - total) / 2;
-            int by = (int)modal.y + 50;
+            int by = (int)modal.y + 60;
+
+            var titleStyle = new GUIStyle(_weapon) { fontSize = 24, alignment = TextAnchor.MiddleLeft };
+            var bodyStyle = new GUIStyle(_label) { fontSize = 18, wordWrap = true };
+            var subStyle = new GUIStyle(_labelSubtle) { fontSize = 16 };
+
             for (int i = 0; i < _runeOffer.Count; i++)
             {
                 var rune = _runeOffer[i];
@@ -1470,12 +1475,15 @@ namespace IL6
                 int curStacks = Progression.GetStacks(rune);
                 int next = curStacks + 1;
                 bool willMaster = next == PlayerProgression.MaxStacks;
-                string title = PlayerProgression.Title(rune) + (willMaster ? "  ★ MASTER" : (next == 2 ? "  +" : ""));
-                GUI.Label(new Rect(rect.x + 10, rect.y + 14, rect.width - 20, 24), title, _weapon);
-                GUI.Label(new Rect(rect.x + 10, rect.y + 36, rect.width - 20, 16),
-                    $"진행 {curStacks}/{PlayerProgression.MaxStacks} → {next}/{PlayerProgression.MaxStacks}", _labelSubtle);
-                UiTheme.Separator(new Rect(rect.x + 10, rect.y + 56, rect.width - 20, 1));
-                GUI.Label(new Rect(rect.x + 10, rect.y + 64, rect.width - 20, 90), PlayerProgression.DescribeAt(rune, next), _label);
+                string suffix = willMaster ? "  ★ MASTER" : (next == 2 ? "  +" : "");
+                string title = PlayerProgression.Title(rune) + suffix;
+
+                GUI.Label(new Rect(rect.x + 16, rect.y + 18, rect.width - 32, 32), title, titleStyle);
+                GUI.Label(new Rect(rect.x + 16, rect.y + 56, rect.width - 32, 22),
+                    $"진행 {curStacks}/{PlayerProgression.MaxStacks} → {next}/{PlayerProgression.MaxStacks}", subStyle);
+                UiTheme.Separator(new Rect(rect.x + 16, rect.y + 86, rect.width - 32, 1));
+                GUI.Label(new Rect(rect.x + 16, rect.y + 100, rect.width - 32, btnH - 110),
+                    PlayerProgression.DescribeAt(rune, next), bodyStyle);
             }
         }
 
