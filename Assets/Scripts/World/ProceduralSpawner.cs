@@ -18,9 +18,9 @@ namespace IL6
         public int UnloadRadius = 4;
 
         [Header("Spawn probability (per slot)")]
-        [Range(0, 1)] public float TreeChance = 0.5f;
-        [Range(0, 1)] public float RockChance = 0.15f;
-        [Range(0, 1)] public float DeerChance = 0.08f;
+        [Range(0, 1)] public float TreeChance = 0.22f;  // 0.5→0.22 — 너무 흔하던 거 다운
+        [Range(0, 1)] public float RockChance = 0.08f;  // 0.15→0.08
+        [Range(0, 1)] public float DeerChance = 0.10f;
         [Range(0, 1)] public float NpcChance = 0.04f;
         public int SlotsPerChunk = 6;
 
@@ -134,9 +134,15 @@ namespace IL6
                 float x = baseX + rng.Next() * ChunkSize;
                 float y = baseY + rng.Next() * ChunkSize;
                 float roll = rng.Next();
+                // 사냥꾼 오두막 수에 비례해 동물 스폰 확률 +25%/채
+                int huts = 0;
+                var bs = UnityEngine.Object.FindObjectsByType<Building>(FindObjectsSortMode.None);
+                foreach (var bb in bs) if (bb != null && bb.Kind == BuildingKind.HuntersHut) huts++;
+                float deerBoost = 1f + 0.25f * huts;
+
                 float cumTree = TreeChance;
                 float cumRock = cumTree + RockChance;
-                float cumDeer = cumRock + DeerChance;
+                float cumDeer = cumRock + DeerChance * deerBoost;
                 float cumNpc = cumDeer + NpcChance;
                 if (roll < cumTree) data.Spawned.Add(CreateTree(x, y));
                 else if (roll < cumRock) data.Spawned.Add(CreateRock(x, y));
@@ -264,7 +270,7 @@ namespace IL6
             // 멧돼지 — HP 높아서 빈도 ↑
             new AnimalArchetype {
                 Name = "Boar_proc", MeatMin = 3, MeatMax = 5, MeatDropChance = 1f,
-                DurationSec = 4.5f, Hp = 240,
+                DurationSec = 4.5f, Hp = 480,
                 FleeRadius = 2.5f, FleeSpeed = 2.2f,
                 Scale = 1.25f, ColliderRadius = 0.5f,
                 Tint = new Color(0.35f, 0.25f, 0.18f),
@@ -306,6 +312,23 @@ namespace IL6
                 Shape = FallbackShape.Circle,
                 Outline = new Color(0.45f, 0.6f, 0.85f, 1f),
                 Weight = 0.03f, PackMin = 1, PackMax = 1, DropsFrostbloom = true,
+            },
+            // 곰 — 중대형 포식자. Day 4+ 등장.
+            new AnimalArchetype {
+                Name = "Bear_proc", MeatMin = 6, MeatMax = 10, MeatDropChance = 1f,
+                DurationSec = 6f, Hp = 700,
+                FleeRadius = 0f, FleeSpeed = 0f,
+                Scale = 1.5f, ColliderRadius = 0.55f,
+                Tint = new Color(0.30f, 0.20f, 0.12f),
+                Shape = FallbackShape.Rounded,
+                Outline = new Color(0.10f, 0.06f, 0.02f, 1f),
+                Weight = 0.04f, PackMin = 1, PackMax = 1,
+                MinDay = 4,
+                IsPredator = true, PredatorDamage = 18,
+                PredatorMoveSpeed = 3.0f,
+                PredatorAttackRange = 1.6f,
+                PredatorSightRange = 7.0f,
+                PredatorAttackCooldown = 1.2f,
             },
             // 맘모스 (희귀, 매우 단단함, 공격적) — 느리지만 강타. 가까이 가면 위험.
             new AnimalArchetype {

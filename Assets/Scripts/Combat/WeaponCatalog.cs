@@ -40,10 +40,10 @@ namespace IL6
         {
             return new List<WeaponDefinition>
             {
-                // 근접: 투사체 없음 (ProjectileSpeed=0 → 즉시 대미지). 사거리 짧고 강타.
-                Make("longsword", "Longsword", dmg: 16, range: 1.8f, cd: 0.7f, projSpd: 0f, crit: 0.10f),
-                // 원거리: 사거리 길고 투사체 발사.
-                Make("bow", "Bow", dmg: 10, range: 7.0f, cd: 1.1f, projSpd: 10f, crit: 0.12f),
+                // 근접: 느리지만 강타 (cd 0.7→1.0, dmg 16→28). 사거리 짧음.
+                Make("longsword", "Longsword", dmg: 28, range: 1.8f, cd: 1.0f, projSpd: 0f, crit: 0.10f),
+                // 원거리: 빠르지만 약함 (cd 1.1→0.55, dmg 10→6). 사거리 길고 투사체.
+                Make("bow", "Bow", dmg: 6, range: 7.0f, cd: 0.55f, projSpd: 12f, crit: 0.12f),
             };
         }
 

@@ -13,8 +13,8 @@ namespace IL6
     {
         public Transform Player;
         public Camera MainCamera;
-        public int BaseWaveCount = 6;
-        public int PerDayIncrement = 3;
+        public int BaseWaveCount = 8;
+        public int PerDayIncrement = 6;
         public int MaxActive = 40;
         public float SpawnDistance = 6f;
         public float SpawnJitter = 2f;
@@ -246,13 +246,14 @@ namespace IL6
             SpawnOne();
         }
 
-        private enum Variant { Normal, Fast, Tank }
+        private enum Variant { Normal, Fast, Tank, Archer }
 
         private Variant PickVariant()
         {
             int day = GameSession.Instance != null ? GameSession.Instance.Cycle.Day : 1;
             float r = _rng.Next();
             if (day >= 7 && r < 0.18f) return Variant.Tank;
+            if (day >= 4 && r < 0.20f) return Variant.Archer; // 원거리 좀비 — Day 4+
             if (day >= 3 && r < 0.30f) return Variant.Fast;
             return Variant.Normal;
         }
@@ -337,6 +338,16 @@ namespace IL6
                     zombie.MoveSpeedMul = 0.6f * daySpeedMul;
                     zombie.InitHp(Mathf.RoundToInt(dayBaseHp * 2.2f));
                     zombie.VariantDamageBonus = 4 + dayDmgBonus;
+                    break;
+                case Variant.Archer:
+                    tint = new Color(0.4f, 0.6f, 0.4f); // 어두운 녹색
+                    scale = 0.95f;
+                    zombie.MoveSpeedMul = 0.85f * daySpeedMul;
+                    zombie.InitHp(Mathf.RoundToInt(dayBaseHp * 0.8f));
+                    zombie.VariantDamageBonus = dayDmgBonus;
+                    zombie.IsRanged = true;
+                    zombie.RangedRange = 7f;
+                    zombie.RangedDamage = 6 + dayDmgBonus;
                     break;
                 default:
                     tint = new Color(0.6f, 0.2f, 0.22f);

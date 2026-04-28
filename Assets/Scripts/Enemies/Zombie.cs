@@ -48,6 +48,13 @@ namespace IL6
         public float MoveSpeedMul = 1f;
         public int VariantDamageBonus = 0;
 
+        // 원거리 변종 (Archer) — 사거리 안에 들어오면 정지하고 투사체.
+        public bool IsRanged = false;
+        public float RangedRange = 7f;
+        public int RangedDamage = 6;
+        public float RangedCooldown = 1.5f;
+        private float _rangedCd;
+
         public void ApplyPoison(float duration, int dps)
         {
             PoisonRemainingSec = Mathf.Max(PoisonRemainingSec, duration);
@@ -114,6 +121,21 @@ namespace IL6
 
             float slowMul = SlowRemainingSec > 0f ? 0.5f : 1f;
             float dist = Vector2.Distance(transform.position, pathTarget.position);
+
+            // 원거리 변종 — RangedRange 안에 타겟 들어오면 정지 + 사격
+            if (IsRanged && dist <= RangedRange && pathTarget == target)
+            {
+                _rb.velocity = Vector2.zero;
+                _rangedCd -= Time.fixedDeltaTime;
+                if (_rangedCd <= 0f)
+                {
+                    SpawnRangedShot(pathTarget);
+                    _rangedCd = RangedCooldown;
+                }
+                return;
+            }
+            if (IsRanged && _rangedCd > 0f) _rangedCd -= Time.fixedDeltaTime;
+
             if (dist <= _balance.ZombieAttackRange)
             {
                 _rb.velocity = Vector2.zero;
@@ -136,6 +158,21 @@ namespace IL6
                 _rb.velocity = dir * _balance.ZombieMoveSpeed * slowMul * MoveSpeedMul;
                 if (_attackCooldown > 0f) _attackCooldown -= Time.fixedDeltaTime;
             }
+        }
+
+        private void SpawnRangedShot(Transform target)
+        {
+            var go = new GameObject("ZombieArrow");
+            go.transform.position = transform.position;
+            go.transform.localScale = Vector3.one * 0.6f;
+            var sr = go.AddComponent<SpriteRenderer>();
+            sr.sortingOrder = 50;
+            sr.color = new Color(0.4f, 0.85f, 0.4f); // 녹색 — 좀비 화살
+            var p = go.AddComponent<ZombieProjectile>();
+            p.Speed = 9f;
+            p.Damage = RangedDamage;
+            p.HitRadius = 0.5f;
+            p.Aim(target);
         }
 
         private static readonly RaycastHit2D[] _pathHits = new RaycastHit2D[8];

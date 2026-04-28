@@ -585,7 +585,14 @@ namespace IL6
             sr.color = new Color(0.55f, 1f, 0.7f);
             var proj = go.AddComponent<Projectile>();
             proj.Speed = ProjectileSpeed;
-            proj.Damage = Mathf.RoundToInt(Damage * GetWatchtowerBoost());
+            float allyMul = 1f;
+            var p = GameObject.FindWithTag("Player");
+            if (p != null)
+            {
+                var prog = p.GetComponent<PlayerProgression>();
+                if (prog != null) allyMul = prog.AllyDamageMul;
+            }
+            proj.Damage = Mathf.RoundToInt(Damage * GetWatchtowerBoost() * allyMul);
             proj.HitRadius = 0.45f;
             proj.Aim(target, transform.position);
         }

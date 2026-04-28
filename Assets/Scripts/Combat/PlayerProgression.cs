@@ -23,6 +23,8 @@ namespace IL6
         Vampirism,    // 신규: 처치 시 HP 회복
         Thorns,       // 신규: 피격 시 인근 적에게 반사 대미지
         Pierce,       // 신규: 투사체 관통 (1회 추가 적중)
+        AllyBoost,    // 신규: 동료 데미지 +%
+        ResourceGift, // 신규: 즉시 자원 획득 (스택 안 됨, 매번 효과 발동)
     }
 
     /// <summary>
@@ -80,6 +82,7 @@ namespace IL6
         public int ThornsDmg => GetStacks(RuneKind.Thorns) switch { 0 => 0, 1 => 5, 2 => 9, 3 => 20, _ => 0 };
         public float ThornsRadius => GetStacks(RuneKind.Thorns) switch { 0 => 0f, 1 => 1.5f, 2 => 1.8f, 3 => 2.5f, _ => 0f };
         public int PierceExtraHits => GetStacks(RuneKind.Pierce) switch { 0 => 0, 1 => 1, 2 => 2, 3 => 4, _ => 0 };
+        public float AllyDamageMul => GetStacks(RuneKind.AllyBoost) switch { 0 => 1f, 1 => 1.25f, 2 => 1.5f, 3 => 2.0f, _ => 1f };
 
         private int Scaled(RuneKind kind, int s1, int s2, int s3)
         {
@@ -118,7 +121,7 @@ namespace IL6
             _stacks[kind] = GetStacks(kind) + 1;
             Applied.Add(kind);
 
-            // 즉시 효과 (펫/HP 회복)
+            // 즉시 효과 (펫/자원 보급)
             if (kind == RuneKind.SummonDog || kind == RuneKind.SummonHawk)
             {
                 var player = GameObject.FindWithTag("Player");
@@ -127,6 +130,22 @@ namespace IL6
                     int level = GetStacks(kind);
                     var petKind = kind == RuneKind.SummonDog ? Pet.Kind.Dog : Pet.Kind.Hawk;
                     Pet.Spawn(petKind, player.transform, level);
+                }
+            }
+            else if (kind == RuneKind.ResourceGift)
+            {
+                int s = GetStacks(kind);
+                int wood = s switch { 1 => 10, 2 => 20, 3 => 40, _ => 0 };
+                int stone = s switch { 1 => 5, 2 => 10, 3 => 20, _ => 0 };
+                int food = s switch { 1 => 5, 2 => 10, 3 => 20, _ => 0 };
+                int frost = s == 3 ? 1 : 0;
+                var session = GameSession.Instance;
+                if (session != null)
+                {
+                    if (wood > 0) session.Resources.Add(ResourceKind.Wood, wood);
+                    if (stone > 0) session.Resources.Add(ResourceKind.Stone, stone);
+                    if (food > 0) session.Resources.Add(ResourceKind.Food, food);
+                    if (frost > 0) session.Resources.Add(ResourceKind.Frostbloom, frost);
                 }
             }
 
@@ -164,6 +183,8 @@ namespace IL6
             AddIfRoom(RuneKind.Vampirism, 2);
             AddIfRoom(RuneKind.Thorns, 2);
             AddIfRoom(RuneKind.Pierce, 2);
+            AddIfRoom(RuneKind.AllyBoost, 2);
+            AddIfRoom(RuneKind.ResourceGift, 2);
 
             var pick = new List<RuneKind>();
             var used = new HashSet<RuneKind>();
@@ -191,6 +212,8 @@ namespace IL6
             RuneKind.Vampirism => "🩸 흡혈",
             RuneKind.Thorns => "🌵 가시",
             RuneKind.Pierce => "🏹 관통",
+            RuneKind.AllyBoost => "🤝 동료 강화",
+            RuneKind.ResourceGift => "📦 보급 상자",
             RuneKind.DamageUp => "⚔ 대미지",
             RuneKind.FireRateUp => "⚡ 공격속도",
             RuneKind.HpUp => "❤ 체력",
@@ -293,6 +316,22 @@ namespace IL6
                         1 => "투사체 1회 추가 관통",
                         2 => "투사체 2회 추가 관통",
                         3 => "투사체 4회 추가 관통",
+                        _ => ""
+                    };
+                case RuneKind.AllyBoost:
+                    return level switch
+                    {
+                        1 => "동료 대미지 +25%",
+                        2 => "동료 대미지 +50%",
+                        3 => "동료 대미지 +100%",
+                        _ => ""
+                    };
+                case RuneKind.ResourceGift:
+                    return level switch
+                    {
+                        1 => "즉시 +10 Wood / +5 Stone / +5 Food",
+                        2 => "즉시 +20 Wood / +10 Stone / +10 Food",
+                        3 => "즉시 +40 Wood / +20 Stone / +20 Food / +1 Frostbloom",
                         _ => ""
                     };
             }

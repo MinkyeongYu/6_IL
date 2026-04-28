@@ -157,6 +157,7 @@ namespace IL6
             BuildingKind.Farm => 6,
             BuildingKind.Watchtower => 8,
             BuildingKind.Infirmary => 7,
+            BuildingKind.HuntersHut => 8,
             _ => 5,
         };
 
@@ -192,6 +193,7 @@ namespace IL6
                     case BuildingKind.Watchtower: SpawnWatchtower(p); break;
                     case BuildingKind.Barricade: SpawnBarricade(p); break;
                     case BuildingKind.Infirmary: SpawnInfirmary(p); break;
+                    case BuildingKind.HuntersHut: SpawnHuntersHut(p); break;
                 }
             };
         }
@@ -1187,6 +1189,10 @@ namespace IL6
                     CostWood = Inflate(7, BuildingKind.Infirmary),
                     Kind = BuildingKind.Infirmary, Available = true,
                     Color = new Color(0.9f, 0.95f, 0.95f) },
+                new BuildSlot { Icon = "🪤", Name = "사냥꾼 오두막",
+                    CostWood = Inflate(8, BuildingKind.HuntersHut),
+                    Kind = BuildingKind.HuntersHut, Available = true,
+                    Color = new Color(0.55f, 0.4f, 0.25f) },
             };
 
             const int CellW = 96, CellH = 96, Gap = 6;
@@ -1944,6 +1950,21 @@ namespace IL6
             cf.Shape = FallbackShape.Square; cf.Circle = false; cf.PixelSize = 32;
             cf.OutlineWidth = 2; cf.OutlineColor = new Color(0.25f, 0.18f, 0.1f, 1f);
             var b = go.AddComponent<Building>(); b.Kind = BuildingKind.Storage;
+        }
+
+        private void SpawnHuntersHut(Vector3 playerPos)
+        {
+            var go = new GameObject("HuntersHut");
+            go.transform.position = playerPos;
+            go.transform.localScale = new Vector3(1.0f, 1.0f, 1f);
+            var sr = go.AddComponent<SpriteRenderer>();
+            sr.sortingOrder = 3;
+            var col = go.AddComponent<BoxCollider2D>(); col.size = Vector2.one;
+            var cf = go.AddComponent<ColorFallback>();
+            cf.Tint = new Color(0.55f, 0.4f, 0.25f);
+            cf.Shape = FallbackShape.Rounded; cf.Circle = false; cf.PixelSize = 64;
+            cf.OutlineWidth = 2; cf.OutlineColor = new Color(0.25f, 0.15f, 0.05f, 1f);
+            var b = go.AddComponent<Building>(); b.Kind = BuildingKind.HuntersHut;
         }
 
         private void SpawnInfirmary(Vector3 playerPos)

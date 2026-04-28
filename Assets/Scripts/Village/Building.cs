@@ -4,7 +4,7 @@ using IL6.Events;
 
 namespace IL6
 {
-    public enum BuildingKind { Campfire, Barricade, Fence, House, Storage, Farm, Watchtower, Infirmary }
+    public enum BuildingKind { Campfire, Barricade, Fence, House, Storage, Farm, Watchtower, Infirmary, HuntersHut }
 
     /// <summary>
     /// 모든 건물 공통. HP, 파괴 처리, 안에 숨은 비전투 동료 노출.
@@ -34,6 +34,7 @@ namespace IL6
                 BuildingKind.Farm => 90,      // 150→90 — 가장 약한 핵심 건물 (지속 식량 위해 보호 필요)
                 BuildingKind.Watchtower => 200, // 220→200
                 BuildingKind.Infirmary => 180,  // 회복 건물
+                BuildingKind.HuntersHut => 160, // 사냥꾼 오두막 — 야외 동물 스폰 부스트
                 _ => b.BarricadeHp,
             };
             // 망루는 펜스 HP 50% 부스트 (스택)
