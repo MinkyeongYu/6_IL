@@ -46,6 +46,7 @@ namespace IL6
             DrawDebugCorner();     // 하단 우측: 디버그 + SFX
             DrawWorldChopButton();
             DrawWorldRepairButton();
+            DrawWorldRefuelButton();
             DrawWorldFarmButtons();
             DrawRecruitDialog();
             DrawRuneModal();
@@ -155,6 +156,7 @@ namespace IL6
             BuildingKind.Storage => 8,
             BuildingKind.Farm => 6,
             BuildingKind.Watchtower => 8,
+            BuildingKind.Infirmary => 7,
             _ => 5,
         };
 
@@ -189,6 +191,7 @@ namespace IL6
                     case BuildingKind.Farm: SpawnFarm(p); break;
                     case BuildingKind.Watchtower: SpawnWatchtower(p); break;
                     case BuildingKind.Barricade: SpawnBarricade(p); break;
+                    case BuildingKind.Infirmary: SpawnInfirmary(p); break;
                 }
             };
         }
@@ -1180,6 +1183,10 @@ namespace IL6
                     CostStone = Inflate(4, BuildingKind.Watchtower),
                     Kind = BuildingKind.Watchtower, Available = true,
                     Color = new Color(0.6f, 0.85f, 0.55f) },
+                new BuildSlot { Icon = "🏥", Name = "의무실",
+                    CostWood = Inflate(7, BuildingKind.Infirmary),
+                    Kind = BuildingKind.Infirmary, Available = true,
+                    Color = new Color(0.9f, 0.95f, 0.95f) },
             };
 
             const int CellW = 96, CellH = 96, Gap = 6;
@@ -1446,6 +1453,49 @@ namespace IL6
                 if (session.Resources.Spend(ResourceKind.Wood, Cost))
                 {
                     best.RepairHp(healAmount);
+                    Sfx.Build();
+                }
+            }
+        }
+
+        // 모닥불 연료 보충 — 플레이어 3.5u 안의 모닥불에 1 Wood 마다 +30 fuel.
+        private void DrawWorldRefuelButton()
+        {
+            if (Player == null) return;
+            var session = GameSession.Instance;
+            if (session == null) return;
+            var auras = Object.FindObjectsByType<CampfireAura>(FindObjectsSortMode.None);
+            CampfireAura best = null;
+            float bestDist = 3.5f;
+            Vector3 ppos = Player.transform.position;
+            foreach (var a in auras)
+            {
+                if (a == null) continue;
+                if (a.Fuel >= a.MaxFuel - 0.5f) continue; // 풀 연료면 버튼 X
+                float d = Vector2.Distance(ppos, a.transform.position);
+                if (d < bestDist) { bestDist = d; best = a; }
+            }
+            if (best == null) return;
+            var cam = Camera.main;
+            if (cam == null) return;
+            Vector3 sp = cam.WorldToScreenPoint(best.transform.position + new Vector3(0f, 1.0f, 0f));
+            if (sp.z < 0) return;
+            float guiY = Screen.height - sp.y;
+
+            int wood = session.Resources.Get(ResourceKind.Wood);
+            const int Cost = 1;
+            const float FuelAdd = 30f;
+            bool ok = wood >= Cost;
+            int fuelPct = Mathf.RoundToInt(best.Fuel / best.MaxFuel * 100f);
+            string label = ok ? $"🔥 장작 +{(int)FuelAdd} ({Cost}W)  연료 {fuelPct}%"
+                              : $"🔥 Wood 부족  연료 {fuelPct}%";
+            var rect = new Rect(sp.x - 130, guiY - 26, 260, 56);
+            var bigBtn = new GUIStyle(_btn) { fontSize = 17, fontStyle = FontStyle.Bold };
+            if (UiTheme.Button(rect, label, bigBtn, ok))
+            {
+                if (session.Resources.Spend(ResourceKind.Wood, Cost))
+                {
+                    best.AddFuel(FuelAdd);
                     Sfx.Build();
                 }
             }
@@ -1894,6 +1944,22 @@ namespace IL6
             cf.Shape = FallbackShape.Square; cf.Circle = false; cf.PixelSize = 32;
             cf.OutlineWidth = 2; cf.OutlineColor = new Color(0.25f, 0.18f, 0.1f, 1f);
             var b = go.AddComponent<Building>(); b.Kind = BuildingKind.Storage;
+        }
+
+        private void SpawnInfirmary(Vector3 playerPos)
+        {
+            var go = new GameObject("Infirmary");
+            go.transform.position = playerPos;
+            go.transform.localScale = new Vector3(1.0f, 1.0f, 1f);
+            var sr = go.AddComponent<SpriteRenderer>();
+            sr.sortingOrder = 3;
+            var col = go.AddComponent<BoxCollider2D>(); col.size = Vector2.one;
+            var cf = go.AddComponent<ColorFallback>();
+            cf.Tint = new Color(0.95f, 0.97f, 0.95f);
+            cf.Shape = FallbackShape.Rounded; cf.Circle = false; cf.PixelSize = 64;
+            cf.OutlineWidth = 2; cf.OutlineColor = new Color(0.5f, 0.7f, 0.5f, 1f);
+            var b = go.AddComponent<Building>(); b.Kind = BuildingKind.Infirmary;
+            go.AddComponent<HealingShrine>();
         }
 
         private void SpawnHouse(Vector3 playerPos)

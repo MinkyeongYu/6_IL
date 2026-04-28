@@ -136,8 +136,8 @@ namespace IL6
             col.radius = 0.45f;
 
             var zombie = go.AddComponent<Zombie>();
-            zombie.InitHp(60 + day * 8);
-            zombie.VariantDamageBonus = 6 + (day - 1);
+            zombie.InitHp(100 + day * 100);
+            zombie.VariantDamageBonus = 18 + (day - 1) * 2;
             zombie.MoveSpeedMul = 1f + Mathf.Min((day - 1) * 0.02f, 0.5f);
             _tracked.Add(zombie);
 

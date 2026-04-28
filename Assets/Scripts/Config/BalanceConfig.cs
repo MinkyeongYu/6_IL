@@ -52,9 +52,9 @@ namespace IL6
         public int WaveMaxCount = 300;
 
         [Header("Building HP")]
-        public int CampfireHp = 400;
-        public int BarricadeHp = 200;
-        public int FenceHp = 4;
+        public int CampfireHp = 280;   // 400→280, 너무 탱키하던 거 다운
+        public int BarricadeHp = 280;  // 200→280, 메인 방어 벽
+        public int FenceHp = 14;       // 4→14, 실수 한 방엔 안 부서짐
 
         [Header("Building Cost (wood)")]
         public int CampfireCost = 5;

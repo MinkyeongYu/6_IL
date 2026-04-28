@@ -85,9 +85,14 @@ namespace IL6
 
         private bool _diedEmitted;
 
+        private float _coldTickTimer;
+        private const float ColdTickInterval = 4f;
+        private const int ColdDamagePerTick = 2;
+        private const float VillageHalfSize = 5f;
+        private static readonly Vector2 VillageCenterV = new Vector2(GameConstants.VillageCenterX, GameConstants.VillageCenterY);
+
         private void Update()
         {
-            // GameSession.Instance 가 HardReset 등으로 사라졌다 다시 생기는 경우 대비해 매번 다시 조회
             if (_session == null || GameSession.Instance != _session) _session = GameSession.Instance;
             if (_session == null || _session.Cycle == null) return;
             _session.Cycle.Update(Time.deltaTime);
@@ -96,6 +101,35 @@ namespace IL6
             {
                 EventBus.Instance.Emit(new PlayerDiedPayload(_session.Cycle.Day));
                 _diedEmitted = true;
+            }
+
+            // 마을 한기 — 모닥불이 모두 꺼지면 마을 안 유닛이 데미지 입음
+            _coldTickTimer += Time.deltaTime;
+            if (_coldTickTimer >= ColdTickInterval)
+            {
+                _coldTickTimer = 0f;
+                ApplyColdDamage();
+            }
+        }
+
+        private void ApplyColdDamage()
+        {
+            if (CampfireAura.VillageHasHeat(VillageCenterV, VillageHalfSize)) return;
+
+            // 마을 안 유닛 — 플레이어 + 동료 + 펫
+            if (Player != null && !Player.IsDead)
+            {
+                Vector2 d = (Vector2)Player.transform.position - VillageCenterV;
+                if (Mathf.Abs(d.x) < VillageHalfSize && Mathf.Abs(d.y) < VillageHalfSize)
+                    Player.TakeDamage(ColdDamagePerTick);
+            }
+            var comps = Object.FindObjectsByType<Companion>(FindObjectsSortMode.None);
+            foreach (var c in comps)
+            {
+                if (c == null || c.IsDead) continue;
+                Vector2 d = (Vector2)c.transform.position - VillageCenterV;
+                if (Mathf.Abs(d.x) < VillageHalfSize && Mathf.Abs(d.y) < VillageHalfSize)
+                    c.TakeDamage(ColdDamagePerTick);
             }
         }
 
