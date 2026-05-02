@@ -204,8 +204,7 @@ namespace IL6
         {
             if (target == null) return false;
             if (target is Zombie z) return !z.IsDead;
-            if (target is DeerAi d) return d.CurrentHp > 0;
-            if (target is WolfAi w) return w.CurrentHp > 0;
+            if (target is AnimalAi a) return !a.IsDead;
             return false;
         }
 
@@ -217,13 +216,9 @@ namespace IL6
                 ApplyEffectsTo(z);
                 return;
             }
-            if (target is DeerAi deer)
+            if (target is AnimalAi animal)
             {
-                deer.TakeDamage(Damage);
-            }
-            if (target is WolfAi wolf)
-            {
-                wolf.TakeDamage(Damage);
+                animal.TakeDamage(Damage);
             }
         }
 

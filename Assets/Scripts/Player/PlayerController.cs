@@ -99,8 +99,8 @@ namespace IL6
                     if (h == null) continue;
                     var z = h.GetComponent<Zombie>();
                     if (z != null && !z.IsDead) { z.TakeDamage(td); continue; }
-                    var w = h.GetComponent<WolfAi>();
-                    if (w != null && w.CurrentHp > 0) w.TakeDamage(td);
+                    var a = h.GetComponent<AnimalAi>();
+                    if (a != null && !a.IsDead) a.TakeDamage(td);
                 }
             }
         }

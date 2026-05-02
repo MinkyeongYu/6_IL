@@ -562,21 +562,12 @@ namespace IL6
         {
             MonoBehaviour best = null;
             float bestDist = range;
-            // 늑대 (위협)
-            var ws = Object.FindObjectsByType<WolfAi>(FindObjectsSortMode.None);
-            foreach (var w in ws)
+            var all = Object.FindObjectsByType<AnimalAi>(FindObjectsSortMode.None);
+            foreach (var a in all)
             {
-                if (w == null || w.CurrentHp <= 0) continue;
-                float d = Vector2.Distance(transform.position, w.transform.position);
-                if (d < bestDist) { best = w; bestDist = d; }
-            }
-            // 평화 동물 (사냥감)
-            var ds = Object.FindObjectsByType<DeerAi>(FindObjectsSortMode.None);
-            foreach (var d in ds)
-            {
-                if (d == null || d.CurrentHp <= 0) continue;
-                float dist = Vector2.Distance(transform.position, d.transform.position);
-                if (dist < bestDist) { best = d; bestDist = dist; }
+                if (a == null || a.IsDead) continue;
+                float d = Vector2.Distance(transform.position, a.transform.position);
+                if (d < bestDist) { best = a; bestDist = d; }
             }
             return best;
         }

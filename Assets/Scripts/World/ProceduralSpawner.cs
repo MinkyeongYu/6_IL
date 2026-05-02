@@ -454,8 +454,7 @@ namespace IL6
             if (hpOverride >= 8)
             {
                 var hpBar = go.AddComponent<HpBarUi>();
-                if (a.IsPredator) hpBar.WolfRef = go.GetComponent<WolfAi>();
-                else hpBar.DeerRef = go.GetComponent<DeerAi>();
+                hpBar.AnimalRef = go.GetComponent<AnimalAi>();
                 hpBar.Offset = new Vector2(0f, 0.55f);
                 hpBar.Size = new Vector2(0.9f, 0.1f);
                 hpBar.BgColor = new Color(0.05f, 0.05f, 0.08f, 0.9f);

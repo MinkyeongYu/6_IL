@@ -123,13 +123,8 @@ namespace IL6
                 if (z != null && !z.IsDead) candidate = z;
                 if (candidate == null)
                 {
-                    var w = h.GetComponent<WolfAi>();
-                    if (w != null && w.CurrentHp > 0) candidate = w;
-                }
-                if (candidate == null)
-                {
-                    var d = h.GetComponent<DeerAi>();
-                    if (d != null && d.CurrentHp > 0) candidate = d;
+                    var a = h.GetComponent<AnimalAi>();
+                    if (a != null && !a.IsDead) candidate = a;
                 }
                 if (candidate == null) continue;
                 float dist = Vector2.Distance(_self.position, candidate.transform.position);
@@ -184,15 +179,10 @@ namespace IL6
                     }
                 }
             }
-            else if (target is DeerAi deer)
+            else if (target is AnimalAi animal)
             {
                 GameFeel.Slash(_self.position, target.transform.position, new Color(1f, 0.95f, 0.7f));
-                deer.TakeDamage(dmg);
-            }
-            else if (target is WolfAi wolf)
-            {
-                GameFeel.Slash(_self.position, target.transform.position, new Color(1f, 0.95f, 0.7f));
-                wolf.TakeDamage(dmg);
+                animal.TakeDamage(dmg);
             }
         }
 

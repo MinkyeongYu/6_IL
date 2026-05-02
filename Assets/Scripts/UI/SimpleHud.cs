@@ -1591,7 +1591,7 @@ namespace IL6
             foreach (var g in all)
             {
                 if (g == null || g.YieldKind != kind) continue;
-                if (g.GetComponent<DeerAi>() != null || g.GetComponent<WolfAi>() != null) continue;
+                if (g.GetComponent<AnimalAi>() != null) continue; // 동물에 붙은 Gatherable 은 제외
 
                 bool anyNear = Vector2.Distance(ppos, g.transform.position) <= range;
                 if (!anyNear)

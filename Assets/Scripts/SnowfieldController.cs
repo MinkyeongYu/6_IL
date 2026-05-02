@@ -71,15 +71,10 @@ namespace IL6
                 if (n != null && Vector2.Distance(n.transform.position, villageCenter) < ClearRadius)
                     Destroy(n.gameObject);
 
-            var preDeer = Object.FindObjectsByType<DeerAi>(FindObjectsSortMode.None);
-            foreach (var d in preDeer)
-                if (d != null && Vector2.Distance(d.transform.position, villageCenter) < ClearRadius)
-                    Destroy(d.gameObject);
-
-            var preWolf = Object.FindObjectsByType<WolfAi>(FindObjectsSortMode.None);
-            foreach (var w in preWolf)
-                if (w != null && Vector2.Distance(w.transform.position, villageCenter) < ClearRadius)
-                    Destroy(w.gameObject);
+            var preAnimals = Object.FindObjectsByType<AnimalAi>(FindObjectsSortMode.None);
+            foreach (var a in preAnimals)
+                if (a != null && Vector2.Distance(a.transform.position, villageCenter) < ClearRadius)
+                    Destroy(a.gameObject);
             // PlayerDied 이벤트는 SimpleHud 의 Death overlay 가 처리.
         }
 
