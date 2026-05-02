@@ -505,15 +505,6 @@ namespace IL6
             },
             new NpcArchetype
             {
-                Role = "치유사",
-                Dialog = "약초를 다룹니다. 부상자를 돌볼 수 있습니다.",
-                IsCombat = true,
-                CombatRating = 2, FarmRating = 4,
-                MoveSpeed = 4.4f, AttackRange = 4.5f, AttackDamage = 3, AttackCooldown = 1.8f,
-                Tint = new Color(0.85f, 0.85f, 0.95f), Shape = FallbackShape.Circle,
-            },
-            new NpcArchetype
-            {
                 Role = "농부",
                 Dialog = "씨를 뿌리고 거두는 일이라면 자신 있어요.",
                 IsCombat = false,
@@ -523,12 +514,21 @@ namespace IL6
             },
             new NpcArchetype
             {
-                Role = "방랑객",
-                Dialog = "갈 곳이 없습니다. 같이 있어도 될까요.",
-                IsCombat = true,
-                CombatRating = 3, FarmRating = 3,
-                MoveSpeed = 4.5f, AttackRange = 5.0f, AttackDamage = 5, AttackCooldown = 1.4f,
-                Tint = new Color(0.6f, 0.55f, 0.7f), Shape = FallbackShape.Circle,
+                Role = "아이",
+                Dialog = "...혼자 살아남았어요. 같이 가도 될까요?",
+                IsCombat = false,
+                CombatRating = 0, FarmRating = 2,
+                MoveSpeed = 5.5f, AttackRange = 1.0f, AttackDamage = 1, AttackCooldown = 2.5f,
+                Tint = new Color(0.95f, 0.85f, 0.75f), Shape = FallbackShape.Circle,
+            },
+            new NpcArchetype
+            {
+                Role = "노인",
+                Dialog = "젊은 시절엔 농사로 마을을 먹여살렸지... 도울 수 있을 게야.",
+                IsCombat = false,
+                CombatRating = 1, FarmRating = 5,
+                MoveSpeed = 3.0f, AttackRange = 1.5f, AttackDamage = 2, AttackCooldown = 2.2f,
+                Tint = new Color(0.85f, 0.85f, 0.95f), Shape = FallbackShape.Rounded, // 흰머리 회백
             },
         };
 
