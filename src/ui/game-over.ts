@@ -5,42 +5,49 @@ export class GameOverScreen {
     const { width, height } = scene.scale;
 
     const bg = scene.add
-      .rectangle(width / 2, height / 2, width, height, 0x000000, 0.7)
+      .rectangle(width / 2, height / 2, width, height, 0x05080f, 0.74)
       .setScrollFactor(0)
       .setDepth(2000);
 
+    const panel = scene.add
+      .rectangle(width / 2, height / 2, 420, 210, 0x17191f, 0.94)
+      .setScrollFactor(0)
+      .setDepth(2001);
+    panel.setStrokeStyle(3, 0x6f4e3a, 1);
+
     const title = scene.add
-      .text(width / 2, height / 2 - 60, '마을이 무너졌다...', {
+      .text(width / 2, height / 2 - 65, 'The village has fallen', {
         fontFamily: 'ui-monospace, monospace',
         fontSize: '28px',
-        color: '#ff4444',
+        color: '#ff6f5f',
+        stroke: '#10151c',
+        strokeThickness: 5,
       })
       .setOrigin(0.5)
       .setScrollFactor(0)
-      .setDepth(2001);
+      .setDepth(2002);
 
     const stats = scene.add
-      .text(width / 2, height / 2, `생존 일수: ${day}\n처치 수: ${kills}`, {
+      .text(width / 2, height / 2, `Days survived: ${day}\nEnemies defeated: ${kills}`, {
         fontFamily: 'ui-monospace, monospace',
         fontSize: '18px',
-        color: '#e0e0e0',
+        color: '#f5f1e8',
         align: 'center',
       })
       .setOrigin(0.5)
       .setScrollFactor(0)
-      .setDepth(2001);
+      .setDepth(2002);
 
     const restart = scene.add
-      .text(width / 2, height / 2 + 80, '[R] 다시 시작', {
+      .text(width / 2, height / 2 + 70, 'Press R to restart', {
         fontFamily: 'ui-monospace, monospace',
         fontSize: '16px',
-        color: '#ffd700',
+        color: '#ffd47a',
       })
       .setOrigin(0.5)
       .setScrollFactor(0)
-      .setDepth(2001);
+      .setDepth(2002);
 
-    // Suppress unused warnings — objects stay alive in scene
     void bg;
     void title;
     void stats;

@@ -10,10 +10,12 @@ export class BootScene extends Phaser.Scene {
     this.cameras.main.setBackgroundColor('#0c1626');
 
     this.add
-      .text(width / 2, height / 2, '눈보라 마을...', {
+      .text(width / 2, height / 2, '6IL', {
         fontFamily: 'ui-monospace, monospace',
-        fontSize: '20px',
-        color: '#d0d8e0',
+        fontSize: '28px',
+        color: '#f5f1e8',
+        stroke: '#10151c',
+        strokeThickness: 5,
       })
       .setOrigin(0.5);
 

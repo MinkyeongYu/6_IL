@@ -63,7 +63,7 @@ export class GameScene extends Phaser.Scene {
 
   // Tracked entity lists
   private snowfieldEntities: number[] = [];
-  private villageSprites: Phaser.GameObjects.Sprite[] = [];
+  private villageSprites: Phaser.GameObjects.GameObject[] = [];
 
   constructor() {
     super({ key: 'Game' });
@@ -92,6 +92,7 @@ export class GameScene extends Phaser.Scene {
     this.villageSprites = [];
 
     this.drawBackground();
+    this.drawEnvironmentDetails();
 
     // Place starting village
     this.village.place(BuildingType.Bonfire, 11, 11);
@@ -337,9 +338,52 @@ export class GameScene extends Phaser.Scene {
     void villageBg;
   }
 
+  private drawEnvironmentDetails(): void {
+    const addDecor = (key: string, count: number, minDist: number, maxDist: number, depth: number) => {
+      const cx = SNOWFIELD_SIZE / 2;
+      const cy = SNOWFIELD_SIZE / 2;
+
+      for (let i = 0; i < count; i++) {
+        const angle = this.rng.next() * Math.PI * 2;
+        const dist = minDist + this.rng.next() * (maxDist - minDist);
+        const sprite = this.add
+          .sprite(cx + Math.cos(angle) * dist, cy + Math.sin(angle) * dist, key)
+          .setDepth(depth);
+        sprite.setFlipX(this.rng.next() > 0.5);
+        sprite.setAlpha(0.85 + this.rng.next() * 0.15);
+      }
+    };
+
+    addDecor('snow_patch', 70, 120, 1050, 2);
+    addDecor('footprints', 36, 120, 900, 3);
+    addDecor('small_rock', 24, 260, 1000, 4);
+    addDecor('stump', 14, 260, 920, 4);
+
+    const forestPositions = [
+      { x: 180, y: 240 }, { x: 260, y: 420 }, { x: 170, y: 700 },
+      { x: 2230, y: 300 }, { x: 2150, y: 590 }, { x: 2240, y: 840 },
+      { x: 430, y: 160 }, { x: 680, y: 190 }, { x: 1740, y: 170 },
+      { x: 1970, y: 150 }, { x: 390, y: 2180 }, { x: 770, y: 2230 },
+      { x: 1710, y: 2210 }, { x: 2050, y: 2160 },
+    ];
+
+    for (const pos of forestPositions) {
+      this.add.sprite(pos.x, pos.y, 'tree').setDepth(10).setScale(1.2);
+    }
+  }
+
   private drawVillage(): void {
     for (const s of this.villageSprites) s.destroy();
     this.villageSprites = [];
+
+    const villageCenterX = VILLAGE_OFFSET + VILLAGE_PX / 2;
+    const villageCenterY = VILLAGE_OFFSET + VILLAGE_PX / 2;
+    const glow = this.add.sprite(villageCenterX, villageCenterY, 'warm_glow').setDepth(30).setScale(1.7);
+    const cabinA = this.add.sprite(villageCenterX - 180, villageCenterY - 135, 'cabin').setDepth(35);
+    const cabinB = this.add.sprite(villageCenterX + 185, villageCenterY + 120, 'cabin').setDepth(35).setScale(0.92);
+    const crates = this.add.sprite(villageCenterX - 230, villageCenterY + 120, 'crate_stack').setDepth(36);
+    const logs = this.add.sprite(villageCenterX + 230, villageCenterY - 90, 'log_stack').setDepth(36);
+    this.villageSprites.push(glow, cabinA, cabinB, crates, logs);
 
     for (const b of this.village.getBuildings()) {
       const def = b.type === BuildingType.Bonfire
@@ -349,6 +393,9 @@ export class GameScene extends Phaser.Scene {
       const py = VILLAGE_OFFSET + b.gridY * TILE_SIZE + (def.h * TILE_SIZE) / 2;
       const texture = b.type === BuildingType.Bonfire ? 'bonfire' : 'barricade';
       const sprite = this.add.sprite(px, py, texture).setDepth(40);
+      if (b.type === BuildingType.Bonfire) {
+        sprite.setDepth(45);
+      }
       this.villageSprites.push(sprite);
     }
   }
