@@ -154,9 +154,10 @@ export class GameScene extends Phaser.Scene {
       this.applyBonfireDamage(dtSec);
     }
 
-    // Day-specific: deer flee + player can attack deer (reuse combat for melee range)
+    // Day-specific: deer flee + player melee attacks deer
     if (this.cycle.phase === Phase.Day) {
       deerAiSystem(this.world);
+      this.playerAttackDeer();
     }
 
     movementSystem(this.world);
@@ -523,6 +524,31 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
+  // --- Player attacks deer (melee) ---
+
+  private playerAttackDeer(): void {
+    const now = this.world.elapsed;
+    const cd = Combat.cooldown[this.playerEid]!;
+    if (now - Combat.lastAttackTime[this.playerEid]! < cd) return;
+
+    const px = Position.x[this.playerEid]!;
+    const py = Position.y[this.playerEid]!;
+    const range = Combat.range[this.playerEid]!;
+    const rangeSq = range * range;
+
+    for (const eid of this.snowfieldEntities) {
+      if (!hasComponent(this.world, DeerTag, eid)) continue;
+      if (Health.current[eid]! <= 0) continue;
+      const dx = Position.x[eid]! - px;
+      const dy = Position.y[eid]! - py;
+      if (dx * dx + dy * dy <= rangeSq) {
+        Health.current[eid]! -= Combat.damage[this.playerEid]!;
+        Combat.lastAttackTime[this.playerEid] = now;
+        return; // one attack per frame
+      }
+    }
+  }
+
   // --- Vision ---
 
   private drawVision(): void {
@@ -541,54 +567,32 @@ export class GameScene extends Phaser.Scene {
 
     this.visionMask.clear();
 
-    // Dark overlay with gradient circle cutout
-    // Draw outer dark ring, progressively lighter toward center
-    const steps = 10;
-    for (let i = steps; i >= 1; i--) {
-      const outerR = radius * (i / steps) + radius * 0.3;
-      const alpha = darkness * (i / steps);
-      this.visionMask.fillStyle(0x0c1626, alpha);
-      this.visionMask.fillRect(left, top, w, h);
-      // "Erase" center circle by drawing transparent over it
-      this.visionMask.fillStyle(0x0c1626, 0);
-      this.visionMask.fillCircle(px, py, outerR);
-    }
+    // Outer darkness: 4 rectangles forming a frame around a central opening
+    const outerR = radius;
+    this.visionMask.fillStyle(0x0c1626, darkness);
+    // Top
+    this.visionMask.fillRect(left, top, w, Math.max(0, py - outerR - top));
+    // Bottom
+    this.visionMask.fillRect(left, py + outerR, w, Math.max(0, top + h - py - outerR));
+    // Left
+    this.visionMask.fillRect(left, py - outerR, Math.max(0, px - outerR - left), outerR * 2);
+    // Right
+    this.visionMask.fillRect(px + outerR, py - outerR, Math.max(0, left + w - px - outerR), outerR * 2);
 
-    // Simplify: just draw one dark overlay with a circular hole
-    this.visionMask.clear();
-
-    // Use a simpler approach: dark rectangle + alpha mask
-    // Phaser doesn't support true alpha masking easily with graphics,
-    // so we approximate with concentric rings
-    const ringCount = 6;
-    for (let i = ringCount; i >= 0; i--) {
-      const r = radius + (radius * 0.5 * i) / ringCount;
-      const alpha = darkness * ((ringCount - i) / ringCount);
-      if (alpha < 0.01) continue;
-
-      this.visionMask.fillStyle(0x0c1626, alpha * 0.3);
-      // Draw 4 rectangles around the circle (top, bottom, left, right)
-      // Top band
-      this.visionMask.fillRect(left, top, w, Math.max(0, py - r - top));
-      // Bottom band
-      const bottomY = py + r;
-      this.visionMask.fillRect(left, bottomY, w, Math.max(0, top + h - bottomY));
-      // Left band
-      this.visionMask.fillRect(left, py - r, Math.max(0, px - r - left), r * 2);
-      // Right band
-      const rightX = px + r;
-      this.visionMask.fillRect(rightX, py - r, Math.max(0, left + w - rightX), r * 2);
-    }
-
-    // Night: add dark corners that the rectangle bands miss
-    if (isNight) {
-      this.visionMask.fillStyle(0x0c1626, darkness);
-      // Full overlay outside vision
-      const outerR = radius * 1.2;
-      this.visionMask.fillRect(left, top, w, Math.max(0, py - outerR - top));
-      this.visionMask.fillRect(left, py + outerR, w, Math.max(0, top + h - py - outerR));
-      this.visionMask.fillRect(left, py - outerR, Math.max(0, px - outerR - left), outerR * 2);
-      this.visionMask.fillRect(px + outerR, py - outerR, Math.max(0, left + w - px - outerR), outerR * 2);
+    // Corner fill (rectangles leave corners uncovered)
+    // Draw dark triangles as small rects at corners of the opening
+    const cornerSize = outerR * 0.3;
+    for (let cx = -1; cx <= 1; cx += 2) {
+      for (let cy = -1; cy <= 1; cy += 2) {
+        const cornerX = px + cx * outerR;
+        const cornerY = py + cy * outerR;
+        this.visionMask.fillStyle(0x0c1626, darkness * 0.7);
+        this.visionMask.fillRect(
+          cx > 0 ? cornerX - cornerSize : cornerX,
+          cy > 0 ? cornerY - cornerSize : cornerY,
+          cornerSize, cornerSize,
+        );
+      }
     }
   }
 }
