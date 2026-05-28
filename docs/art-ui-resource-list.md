@@ -48,8 +48,8 @@ Last updated: 2026-05-28
 
 | 파일 | 용도 |
 |---|---|
-| `docs/assets/6il-image-resource-sheet.png` | 캐릭터, 건물, 환경, 이펙트 제작 방향 참고 |
-| `docs/assets/6il-ui-resource-sheet.png` | HUD, 아이콘, 패널, 무기/룬 UI 제작 방향 참고 |
+| `docs/assets/generated/6il-image-resource-sheet.png` | 캐릭터, 건물, 환경, 이펙트 제작 방향 참고 |
+| `docs/assets/generated/6il-ui-resource-sheet.png` | HUD, 아이콘, 패널, 무기/룬 UI 제작 방향 참고 |
 
 ## 4. 스타일 기준
 
