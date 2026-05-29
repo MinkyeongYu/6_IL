@@ -10,10 +10,10 @@ namespace IL6
     public sealed class BalanceConfig : ScriptableObject
     {
         [Header("Day/Night Cycle (seconds)")]
-        public float DayDurationSec = 40f;
-        public float NightDurationSec = 40f;
-        public float EveningTransitionSec = 5f;
-        public float DawnTransitionSec = 5f;
+        public float DayDurationSec = 540f;
+        public float NightDurationSec = 360f;
+        public float EveningTransitionSec = 30f;
+        public float DawnTransitionSec = 30f;
 
         [Header("Vision (tiles)")]
         public int DayRadiusTiles = 10;
@@ -22,14 +22,17 @@ namespace IL6
 
         [Header("Resources (starting)")]
         public int StartingWood = 15;
+        public int StartingStone = 5;
         public int StartingMeat = 0;
         public int StartingFood = 5;
         public int StartingFrostbloom = 0;
 
         [Header("Gather (seconds + yield)")]
-        public float TreeDurationSec = 9f;
+        public float TreeDurationSec = 4f;
+        public float RockDurationSec = 6f;
         public float DeerDurationSec = 3f;
-        public int TreeWoodYield = 4;
+        public int TreeWoodYield = 3;
+        public int RockStoneYield = 2;
         public int DeerMeatYield = 2;
 
         [Header("Player")]
@@ -59,6 +62,11 @@ namespace IL6
         [Header("Building Cost (wood)")]
         public int CampfireCost = 5;
         public int BarricadeCost = 5;
+
+        [Header("Campfire Aura")]
+        public float BonfireDamagePerSec = 5f;
+        public float BonfireRadius = 128f;
+        public float BonfireAttackBuff = 0.15f;
 
         // 싱글톤 접근 (Resources에서 자동 로드)
         private static BalanceConfig _instance;
