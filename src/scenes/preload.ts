@@ -83,7 +83,7 @@ export class PreloadScene extends Phaser.Scene {
     this.createVillageProps();
     this.createEffects();
 
-    this.scene.start('Game');
+    this.scene.start('Onboarding');
   }
 
   private createSheetFrames(): void {
