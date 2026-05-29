@@ -464,6 +464,25 @@ namespace IL6
 
         private GUIStyle _clockBig, _clockSmall;
 
+        private static float GetTemperatureCelsius()
+        {
+            var s = GameSession.Instance;
+            if (s?.Cycle == null) return -10f;
+            float baseTemp = s.Cycle.Phase switch
+            {
+                Phase.Day     => -8f,
+                Phase.Evening => -18f,
+                Phase.Night   => -28f,
+                Phase.Dawn    => -14f,
+                _             => -10f,
+            };
+            float progress = s.Cycle.PhaseDurationSec > 0
+                ? s.Cycle.ElapsedInPhase / s.Cycle.PhaseDurationSec : 0f;
+            // 밤은 시간이 지날수록 더 추워짐
+            float nightDrop = s.Cycle.Phase == Phase.Night ? -8f * progress : 0f;
+            return baseTemp + nightDrop;
+        }
+
         private void DrawPhaseClock()
         {
             var s = GameSession.Instance;
@@ -503,7 +522,7 @@ namespace IL6
             int ss = Mathf.FloorToInt(rem % 60f);
             string clock = $"{mm:00}:{ss:00}";
 
-            int W = 300, H = 64;
+            int W = 300, H = 80;
             var r = new Rect(Screen.width / 2 - W / 2, 12, W, H);
 
             // 배경 패널 (페이즈 색조)
@@ -529,7 +548,14 @@ namespace IL6
             // 큰 시계 텍스트 + 아이콘
             GUI.Label(new Rect(r.x, r.y + 4, r.width, 36), $"{phaseIcon}  {clock}  남음", _clockBig);
             // Day + 페이즈명
-            GUI.Label(new Rect(r.x, r.y + 40, r.width, 22), $"Day {s.Cycle.Day}  ·  {phaseName}", _clockSmall);
+            GUI.Label(new Rect(r.x, r.y + 40, r.width, 20), $"Day {s.Cycle.Day}  ·  {phaseName}", _clockSmall);
+            // 현재 기온
+            float temp = GetTemperatureCelsius();
+            Color tempColor = temp < -25f ? new Color(0.55f, 0.85f, 1f) : UiTheme.TextSubtle;
+            var oldTempC = GUI.contentColor;
+            GUI.contentColor = tempColor;
+            GUI.Label(new Rect(r.x, r.y + 58, r.width, 18), $"🌡 현재 기온  {temp:F0}°C", _clockSmall);
+            GUI.contentColor = oldTempC;
         }
 
         private GUIStyle _compassDist;
@@ -1014,45 +1040,52 @@ namespace IL6
         }
 
         // ====================================================================
-        // RESOURCE BAR (top-right): 자원 세로 카드 5줄
+        // RESOURCE BAR (좌상단 수평 스트립): Wood / Stone / Meat / Food
         // ====================================================================
+        private GUIStyle _resStyle;
+
         private void DrawResourceBar()
         {
             var session = GameSession.Instance;
             if (session == null) return;
 
-            ResourceKind[] kinds = { ResourceKind.Wood, ResourceKind.Stone, ResourceKind.Meat, ResourceKind.Food, ResourceKind.Frostbloom };
-            string[] names = { "Wood", "Stone", "Meat", "Food", "Frost" };
+            if (_resStyle == null)
+                _resStyle = new GUIStyle(GUI.skin.label)
+                {
+                    fontSize = 15, fontStyle = FontStyle.Bold,
+                    alignment = TextAnchor.MiddleLeft,
+                    normal = { textColor = UiTheme.TextCream }
+                };
 
-            const int W = 290, H = 244;
-            var panel = new Rect(Screen.width - W - 12, 12, W, H);
-            UiTheme.Panel(panel);
-            UiTheme.TitleBar(panel, "  자원  ", _title);
+            // WaveStanceBar(H=120) 바로 아래
+            const int W = 320, H = 34;
+            var panel = new Rect(12, 138, W, H);
+            UiTheme.Rect(panel, new Color(0.05f, 0.07f, 0.12f, 0.90f));
+            UiTheme.Rect(new Rect(panel.x - 1, panel.y - 1, panel.width + 2, panel.height + 2), UiTheme.PanelBorderDim);
 
-            int innerX = (int)panel.x + 12;
-            int innerW = W - 24;
-            int y = (int)panel.y + 42;
-            int rowH = 36;
-
+            // 4 자원 수평 배치
+            ResourceKind[] kinds  = { ResourceKind.Wood, ResourceKind.Stone, ResourceKind.Meat, ResourceKind.Food };
+            string[]        emojis = { "🪵", "🪨", "🥩", "🌾" };
+            int itemW = W / 4;
             for (int i = 0; i < kinds.Length; i++)
             {
                 var k = kinds[i];
-                // 컬러 아이콘
-                UiTheme.Icon(new Rect(innerX, y + 6, 18, 18), UiTheme.ResColor(k));
-                // 이름
-                GUI.Label(new Rect(innerX + 26, y + 4, 80, 22), names[i], _label);
-                // 수량 / 캡 (우측 정렬)
                 int cur = session.Resources.Get(k);
                 int cap = session.Resources.GetCap(k);
+                int x = (int)panel.x + i * itemW + 6;
+
+                // 컬러 점
+                UiTheme.Icon(new Rect(x, (int)panel.y + 9, 14, 14), UiTheme.ResColor(k));
+
                 var oldC = GUI.contentColor;
                 GUI.contentColor = cur >= cap ? UiTheme.TextDanger : UiTheme.TextCream;
-                var amountStyle = new GUIStyle(_section) {
-                    fontSize = 16, fontStyle = FontStyle.Bold,
-                    alignment = TextAnchor.MiddleRight,
-                };
-                GUI.Label(new Rect(innerX + 80, y + 4, innerW - 80, 22), $"{cur} / {cap}", amountStyle);
+                GUI.Label(new Rect(x + 18, (int)panel.y + 6, itemW - 22, 22),
+                    $"{emojis[i]} {cur}", _resStyle);
                 GUI.contentColor = oldC;
-                y += rowH;
+
+                // 구분선 (마지막 제외)
+                if (i < kinds.Length - 1)
+                    UiTheme.Rect(new Rect(panel.x + (i + 1) * itemW, panel.y + 6, 1, H - 12), UiTheme.PanelBorderDim);
             }
         }
 
@@ -1335,7 +1368,6 @@ namespace IL6
             DrawRes(ResourceKind.Stone, "Stone");
             DrawRes(ResourceKind.Meat, "Meat");
             DrawRes(ResourceKind.Food, "Food");
-            DrawRes(ResourceKind.Frostbloom, "Frostbloom");
 
             UiTheme.Separator(new Rect(innerX, y + 4, innerW, 1));
             y += 10;
