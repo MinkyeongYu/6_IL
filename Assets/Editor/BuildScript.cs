@@ -13,6 +13,7 @@ namespace IL6.EditorBuild
     {
         private const string OutputDirWebGL = "Build/WebGL";
         private const string OutputDirWin = "Build/Windows";
+        private const string PortableExeName = "InisLand_v0.2.0_portable.exe";
 
         [MenuItem("IL6/Build/WebGL")]
         public static void BuildWebGL()
@@ -81,6 +82,21 @@ namespace IL6.EditorBuild
             var report = BuildPipeline.BuildPlayer(opts);
             int code = report.summary.totalErrors == 0 ? 0 : 1;
             Debug.Log($"[BuildScript] Windows build complete. errors={report.summary.totalErrors}");
+
+            if (report.summary.totalErrors == 0)
+            {
+                // 프로젝트 루트에 portable exe 복사
+                string repoRoot = Path.GetFullPath(Path.Combine(Application.dataPath, ".."));
+                string dest = Path.Combine(repoRoot, PortableExeName);
+
+                // 이전 portable exe 삭제
+                foreach (var old in Directory.GetFiles(repoRoot, "InisLand_v*_portable.exe"))
+                    File.Delete(old);
+
+                File.Copy(exe, dest, overwrite: true);
+                Debug.Log($"[BuildScript] Portable exe → {dest}");
+            }
+
             if (Application.isBatchMode) EditorApplication.Exit(code);
         }
 

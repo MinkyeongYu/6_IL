@@ -4,13 +4,13 @@ using UnityEngine.SceneManagement;
 namespace IL6
 {
     /// <summary>
-    /// Boot 신: GameSession 초기화 후 Snowfield로 자동 전환.
+    /// Boot 신: GameSession 초기화 후 OnboardingScene 으로 전환.
     /// 빈 씬에 GameSession 컴포넌트 + 이 BootController 컴포넌트 하나만 두면 됨.
     /// </summary>
     [DefaultExecutionOrder(-100)]
     public sealed class BootController : MonoBehaviour
     {
-        public string SnowfieldSceneName = "SnowfieldScene";
+        public string OnboardingSceneName = "OnboardingScene";
 
         private void Start()
         {
@@ -19,7 +19,7 @@ namespace IL6
                 var go = new GameObject("GameSession");
                 go.AddComponent<GameSession>();
             }
-            SceneManager.LoadScene(SnowfieldSceneName);
+            SceneManager.LoadScene(OnboardingSceneName);
         }
     }
 }
