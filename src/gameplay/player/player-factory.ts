@@ -45,7 +45,7 @@ export function spawnPlayer(
   Weapon.cooldown[eid] = 0;
   Weapon.range[eid] = WEAPONS.longsword!.range;
 
-  const sprite = scene.add.image(x, y, 'player');
+  const sprite = scene.add.image(x, y, 'player', 0).setScale(0.48);
   const gid = nextGid();
   spriteMap.set(gid, sprite);
   SpriteRef.gid[eid] = gid;

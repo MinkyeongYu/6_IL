@@ -78,7 +78,7 @@ export class VillageScene extends Phaser.Scene {
       Position.x[peid] = (VILLAGE_GRID_SIZE * TILE_SIZE) / 2;
       Position.y[peid] = (VILLAGE_GRID_SIZE * TILE_SIZE) / 2;
       const gid = this.nextGid();
-      const spr = this.add.image(Position.x[peid], Position.y[peid], 'player');
+      const spr = this.add.image(Position.x[peid], Position.y[peid], 'player', 0).setScale(0.48);
       this.spriteMap.set(gid, spr);
       SpriteRef.gid[peid] = gid;
     }

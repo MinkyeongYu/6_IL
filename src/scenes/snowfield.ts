@@ -104,7 +104,8 @@ export class SnowfieldScene extends Phaser.Scene {
         Position.x[existingPlayerEid] ?? 0,
         Position.y[existingPlayerEid] ?? 0,
         'player',
-      );
+        0,
+      ).setScale(0.48);
       const gid = this.nextGid();
       this.spriteMap.set(gid, playerSprite);
       SpriteRef.gid[existingPlayerEid] = gid;

@@ -2,7 +2,7 @@
 
 This pass adds the requested weapon variants and mecha zombie direction.
 
-Important correction: the protagonist direction is a red-haired girl. Runtime candidates now use the existing red-haired girl sheets in `public/assets/characters/player_survivor_axe.png` and `public/assets/characters/player_survivor_bow.png`.
+Important correction: the protagonist direction is a red-haired girl. Runtime candidates now use the red-haired girl sheets in `public/assets/characters/`: `player_survivor_axe_onehand.png` for the current playable character, plus `player_survivor_unarmed.png`, `player_survivor_bow.png`, and the older large-axe `player_survivor_axe.png`.
 
 ## Files
 
