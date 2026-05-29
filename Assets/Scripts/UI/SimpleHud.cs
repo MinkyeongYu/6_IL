@@ -1470,8 +1470,8 @@ namespace IL6
             string label = canAfford
                 ? $"🔨 수리  +{healAmount} HP  ({Cost} Wood)"
                 : $"🔨 수리  Wood 부족";
-            var rect = new Rect(sp.x - 130, guiY - 26, 260, 56);
-            var bigBtn = new GUIStyle(_btn) { fontSize = 18, fontStyle = FontStyle.Bold };
+            var rect = new Rect(sp.x - 80, guiY - 14, 160, 28);
+            var bigBtn = new GUIStyle(_btn) { fontSize = 12, fontStyle = FontStyle.Bold };
             if (UiTheme.Button(rect, label, bigBtn, canAfford))
             {
                 if (session.Resources.Spend(ResourceKind.Wood, Cost))
@@ -1513,8 +1513,8 @@ namespace IL6
             int fuelPct = Mathf.RoundToInt(best.Fuel / best.MaxFuel * 100f);
             string label = ok ? $"🔥 장작 +{(int)FuelAdd} ({Cost}W)  연료 {fuelPct}%"
                               : $"🔥 Wood 부족  연료 {fuelPct}%";
-            var rect = new Rect(sp.x - 130, guiY - 26, 260, 56);
-            var bigBtn = new GUIStyle(_btn) { fontSize = 17, fontStyle = FontStyle.Bold };
+            var rect = new Rect(sp.x - 80, guiY - 14, 160, 28);
+            var bigBtn = new GUIStyle(_btn) { fontSize = 12, fontStyle = FontStyle.Bold };
             if (UiTheme.Button(rect, label, bigBtn, ok))
             {
                 if (session.Resources.Spend(ResourceKind.Wood, Cost))
@@ -1565,8 +1565,8 @@ namespace IL6
                 ? (nearbyCompanions.Count > 0 ? $"나 + 동료 {nearbyCompanions.Count}" : "나")
                 : $"동료 {nearbyCompanions.Count}";
             string label = $"{verb} ({who})";
-            var rect = new Rect(sp.x - 130, guiY - 26, 260, 56);
-            var bigBtn = new GUIStyle(_btn) { fontSize = 18, fontStyle = FontStyle.Bold };
+            var rect = new Rect(sp.x - 80, guiY - 14, 160, 28);
+            var bigBtn = new GUIStyle(_btn) { fontSize = 12, fontStyle = FontStyle.Bold };
             if (UiTheme.Button(rect, label, bigBtn))
             {
                 // 거리순 정렬, 동료는 최대 2명까지만 (요청)
@@ -1632,12 +1632,12 @@ namespace IL6
                 if (farm.HarvestReady)
                 {
                     int yield = farm.BaseYield + farm.Workers.Count * farm.PerWorkerBonus;
-                    var rect = new Rect(guiX - 75, guiY - 36, 150, 28);
+                    var rect = new Rect(guiX - 60, guiY - 26, 120, 22);
                     if (UiTheme.Button(rect, $"🌾 수확 +{yield}", _smallBtn)) farm.Harvest();
                 }
                 else
                 {
-                    GUI.Label(new Rect(guiX - 75, guiY - 36, 150, 22),
+                    GUI.Label(new Rect(guiX - 60, guiY - 26, 120, 18),
                         $"성장중 {farm.NightsPassed}/{farm.NightsToRipe}", _labelSubtle);
                 }
 
@@ -1645,7 +1645,7 @@ namespace IL6
                 {
                     if (Vector2.Distance(Player.transform.position, farm.transform.position) < 3f)
                     {
-                        var rect2 = new Rect(guiX - 75, guiY - 8, 150, 26);
+                        var rect2 = new Rect(guiX - 60, guiY - 4, 120, 20);
                         if (UiTheme.Button(rect2, $"동료 배치 {farm.Workers.Count}/{farm.MaxWorkers}", _smallBtn))
                         {
                             var c = FindNearestFreeCompanion(farm.transform.position);
@@ -1665,52 +1665,39 @@ namespace IL6
             var npc = FindNearestRecruitable(Player.transform.position, 2.2f);
             if (npc == null) return;
 
-            const int W = 540;
-            const int H = 160;
-            var panel = new Rect(Screen.width / 2 - W / 2, Screen.height - H - 20, W, H);
+            const int W = 380;
+            const int H = 110;
+            var panel = new Rect(Screen.width / 2 - W / 2, Screen.height - H - 16, W, H);
             UiTheme.Panel(panel);
 
-            // 초상 (스프라이트 색 사각형 + 굵은 골드 보더)
+            // 초상 (스프라이트 색 사각형)
             var sr = npc.GetComponent<SpriteRenderer>();
             var col = sr != null ? sr.color : Color.white;
-            var portrait = new Rect(panel.x + 14, panel.y + 14, 132, 132);
-            UiTheme.Rect(new Rect(portrait.x - 2, portrait.y - 2, portrait.width + 4, portrait.height + 4), UiTheme.PanelBorder);
+            var portrait = new Rect(panel.x + 10, panel.y + 10, 88, 88);
+            UiTheme.Rect(new Rect(portrait.x - 1, portrait.y - 1, portrait.width + 2, portrait.height + 2), UiTheme.PanelBorder);
             UiTheme.Rect(portrait, col);
-            // 안쪽 인셋 하이라이트
-            UiTheme.Rect(new Rect(portrait.x + 2, portrait.y + 2, portrait.width - 4, 2), new Color(1f, 1f, 1f, 0.25f));
 
-            int tx = (int)panel.x + 160;
-            int tw = (int)panel.width - 174;
+            int tx = (int)panel.x + 106;
+            int tw = (int)panel.width - 116;
 
-            GUI.Label(new Rect(tx, panel.y + 14, tw, 24), $"{npc.DisplayNamePublic}", _title);
-            GUI.Label(new Rect(tx, panel.y + 38, tw, 20), $"({npc.Role}{(npc.IsCombat ? "" : " · 비전투")})", _labelSubtle);
+            GUI.Label(new Rect(tx, panel.y + 8, tw, 20), $"{npc.DisplayNamePublic}  ({npc.Role})", _section);
+            GUI.Label(new Rect(tx, panel.y + 28, tw, 32), $"\"{npc.DialogText}\"", _labelSubtle);
+            GUI.Label(new Rect(tx, panel.y + 60, tw, 16),
+                $"전투 {Stars(npc.CombatRating)}  농사 {Stars(npc.FarmRating)}", _labelSubtle);
 
-            GUI.Label(new Rect(tx, panel.y + 60, tw, 40), $"\"{npc.DialogText}\"", _label);
-
-            GUI.Label(new Rect(tx, panel.y + 100, 60, 18), "전투", _labelSubtle);
-            GUI.Label(new Rect(tx + 60, panel.y + 100, 120, 18), Stars(npc.CombatRating), _label);
-            GUI.Label(new Rect(tx, panel.y + 120, 60, 18), "농사", _labelSubtle);
-            GUI.Label(new Rect(tx + 60, panel.y + 120, 120, 18), Stars(npc.FarmRating), _label);
-
-            // 마을 수용 한도 체크 — 건물 수만큼만 영입 가능 (초반 12명까지는 무료)
             int cap = RecruitableNpc.VillageCapacity();
             int have = RecruitableNpc.CurrentCompanionCount();
             bool canRecruit = have < cap;
 
-            // 수용 인원 표시
-            var capStyle = new GUIStyle(_labelSubtle) { fontSize = 14 };
             var oldC = GUI.contentColor;
             GUI.contentColor = canRecruit ? UiTheme.TextSubtle : UiTheme.TextDanger;
-            GUI.Label(new Rect(tx, panel.y + panel.height - 60, 200, 18),
-                $"마을 수용  {have} / {cap}", capStyle);
+            GUI.Label(new Rect(tx, panel.y + H - 36, 120, 14), $"수용 {have}/{cap}", _labelSubtle);
             GUI.contentColor = oldC;
 
-            string label = canRecruit ? "영입 (F)" : "건물 더 필요";
-            if (UiTheme.Button(new Rect(tx + 200, panel.y + panel.height - 38, 130, 28), label, _btn, canRecruit))
-            {
+            string label = canRecruit ? "영입 (F)" : "건물 부족";
+            if (UiTheme.Button(new Rect(panel.x + W - 180, panel.y + H - 34, 84, 24), label, _smallBtn, canRecruit))
                 npc.Recruit();
-            }
-            if (UiTheme.Button(new Rect(tx + 338, panel.y + panel.height - 38, 90, 28), "거절", _smallBtn))
+            if (UiTheme.Button(new Rect(panel.x + W - 90, panel.y + H - 34, 76, 24), "거절", _smallBtn))
             {
                 // 범위 벗어나면 자동 닫힘
             }
