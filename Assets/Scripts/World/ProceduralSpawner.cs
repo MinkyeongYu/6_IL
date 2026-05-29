@@ -163,14 +163,14 @@ namespace IL6
 
             var sr = go.AddComponent<SpriteRenderer>();
             sr.sortingOrder = 4;
-            // 스프라이트 없으면 ColorFallback 폴백
             var col = go.AddComponent<CircleCollider2D>();
             col.radius = 0.35f;
 
+            var b = BalanceConfig.Instance;
             var gat = go.AddComponent<Gatherable>();
             gat.YieldKind = ResourceKind.Stone;
-            gat.YieldAmount = 3;
-            gat.DurationSec = 12f;
+            gat.YieldAmount = b != null ? b.RockStoneYield : 2;
+            gat.DurationSec  = b != null ? b.RockDurationSec : 6f;
             gat.DestroyOnGather = true;
 
             var cf = go.AddComponent<ColorFallback>();
@@ -200,10 +200,11 @@ namespace IL6
             var col = go.AddComponent<CircleCollider2D>();
             col.radius = 0.4f;
 
+            var b = BalanceConfig.Instance;
             var gat = go.AddComponent<Gatherable>();
             gat.YieldKind = ResourceKind.Wood;
-            gat.YieldAmount = 4;
-            gat.DurationSec = 9f;
+            gat.YieldAmount = b != null ? b.TreeWoodYield : 3;
+            gat.DurationSec  = b != null ? b.TreeDurationSec : 4f;
             gat.DestroyOnGather = true;
 
             var cf = go.AddComponent<ColorFallback>();

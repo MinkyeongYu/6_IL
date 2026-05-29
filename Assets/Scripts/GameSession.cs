@@ -34,6 +34,7 @@ namespace IL6
             // 시작 자원 (세이브가 없을 때)
             var b = BalanceConfig.Instance;
             Resources.Add(ResourceKind.Wood, b.StartingWood);
+            Resources.Add(ResourceKind.Stone, b.StartingStone);
             Resources.Add(ResourceKind.Meat, b.StartingMeat);
             Resources.Add(ResourceKind.Food, b.StartingFood);
             Resources.Add(ResourceKind.Frostbloom, b.StartingFrostbloom);
