@@ -33,6 +33,9 @@ namespace IL6
                 var spr = SpriteBank.Player();
                 if (spr != null) sr.sprite = spr;
             }
+            // Phaser player: ~30px = 0.94 Unity units → scale 1.47
+            if (transform.localScale == Vector3.one)
+                transform.localScale = Vector3.one * 1.5f;
             _rb.gravityScale = 0f;
             _rb.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
             _rb.freezeRotation = true;

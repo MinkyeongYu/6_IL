@@ -25,6 +25,27 @@ namespace IL6
         private void Start()
         {
             var sr = GetComponent<SpriteRenderer>();
+
+            // 이름 기반 자동 스프라이트 로드 — 씬에 수동 배치된 오브젝트도 적용
+            if (sr.sprite == null)
+            {
+                string n = gameObject.name.ToLowerInvariant();
+                Sprite auto =
+                    (n.Contains("pine") || (n.Contains("tree") && !n.Contains("bare"))) ? SpriteBank.PineTree() :
+                    n.Contains("bare") ? SpriteBank.BareTree() :
+                    (n.Contains("rock") || n.Contains("stone")) ? SpriteBank.SnowRocks() :
+                    n.Contains("campfire") ? SpriteBank.Campfire() :
+                    n.Contains("fence") ? SpriteBank.FenceVertical() :
+                    (n.Contains("barricade") || n.Contains("wood_bar")) ? SpriteBank.WoodBarricade() :
+                    n.Contains("watchtower") ? SpriteBank.Watchtower() :
+                    n.Contains("cabin") || n.Contains("house") ? SpriteBank.Cabin() :
+                    n.Contains("stump") ? SpriteBank.Stump() :
+                    n.Contains("bush") ? SpriteBank.SnowBush() :
+                    n.Contains("log") ? SpriteBank.Logs() :
+                    null;
+                if (auto != null) sr.sprite = auto;
+            }
+
             if (sr.sprite != null) return;
 
             var shape = Shape;

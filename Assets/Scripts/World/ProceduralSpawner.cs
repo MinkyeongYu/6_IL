@@ -160,6 +160,7 @@ namespace IL6
         {
             var go = new GameObject("Rock_proc");
             go.transform.position = new Vector3(x, y, 0);
+            go.transform.localScale = Vector3.one * 1.8f; // Phaser snow_rocks: 97x73@0.78 = ~2.4 Unity units
 
             var sr = go.AddComponent<SpriteRenderer>();
             sr.sortingOrder = 4;
@@ -196,6 +197,7 @@ namespace IL6
         {
             var go = new GameObject("Tree_proc");
             go.transform.position = new Vector3(x, y, 0);
+            go.transform.localScale = Vector3.one * 2.2f; // Phaser pine_tree: 104x185@0.72 = ~2.3 Unity units wide
 
             var sr = go.AddComponent<SpriteRenderer>();
             sr.sortingOrder = 5;
@@ -256,7 +258,7 @@ namespace IL6
                 Name = "Rabbit_proc", MeatMin = 1, MeatMax = 1, MeatDropChance = 1f,
                 DurationSec = 1.5f, Hp = 12,
                 FleeRadius = 5.5f, FleeSpeed = 5.5f,
-                Scale = 0.5f, ColliderRadius = 0.25f,
+                Scale = 0.75f, ColliderRadius = 0.25f,
                 Tint = new Color(0.92f, 0.88f, 0.82f),
                 Shape = FallbackShape.Circle,
                 Outline = new Color(0.4f, 0.3f, 0.2f, 1f),
@@ -267,7 +269,7 @@ namespace IL6
                 Name = "Fox_proc", MeatMin = 2, MeatMax = 2, MeatDropChance = 1f,
                 DurationSec = 2.5f, Hp = 24,
                 FleeRadius = 4.5f, FleeSpeed = 4.5f,
-                Scale = 0.7f, ColliderRadius = 0.3f,
+                Scale = 1.05f, ColliderRadius = 0.3f,
                 Tint = new Color(0.85f, 0.45f, 0.18f),
                 Shape = FallbackShape.Triangle,
                 Outline = new Color(0.4f, 0.18f, 0.05f, 1f),
@@ -278,7 +280,7 @@ namespace IL6
                 Name = "Boar_proc", MeatMin = 3, MeatMax = 5, MeatDropChance = 1f,
                 DurationSec = 4.5f, Hp = 480,
                 FleeRadius = 2.5f, FleeSpeed = 2.2f,
-                Scale = 1.25f, ColliderRadius = 0.5f,
+                Scale = 1.9f, ColliderRadius = 0.5f,
                 Tint = new Color(0.35f, 0.25f, 0.18f),
                 Shape = FallbackShape.Rounded,
                 Outline = new Color(0.1f, 0.05f, 0.02f, 1f),
@@ -289,7 +291,7 @@ namespace IL6
                 Name = "Wolf_proc", MeatMin = 1, MeatMax = 1, MeatDropChance = 0.25f,
                 DurationSec = 1.5f, Hp = 120,
                 FleeRadius = 0f, FleeSpeed = 0f, // 안 도망감
-                Scale = 0.85f, ColliderRadius = 0.35f,
+                Scale = 1.3f, ColliderRadius = 0.35f,
                 Tint = new Color(0.45f, 0.45f, 0.5f),
                 Shape = FallbackShape.Triangle,
                 Outline = new Color(0.15f, 0.15f, 0.18f, 1f),
@@ -302,7 +304,7 @@ namespace IL6
                 Name = "Deer_proc", MeatMin = 2, MeatMax = 2, MeatDropChance = 1f,
                 DurationSec = 3f, Hp = 320,
                 FleeRadius = 3.5f, FleeSpeed = 3f,
-                Scale = 1f, ColliderRadius = 0.4f,
+                Scale = 1.5f, ColliderRadius = 0.4f,
                 Tint = new Color(0.55f, 0.4f, 0.25f),
                 Shape = FallbackShape.Circle,
                 Outline = new Color(0.2f, 0.12f, 0.05f, 1f),
@@ -313,7 +315,7 @@ namespace IL6
                 Name = "SnowHare_proc", MeatMin = 1, MeatMax = 1, MeatDropChance = 1f,
                 DurationSec = 1.8f, Hp = 14,
                 FleeRadius = 6f, FleeSpeed = 6.5f,
-                Scale = 0.45f, ColliderRadius = 0.25f,
+                Scale = 0.7f, ColliderRadius = 0.25f,
                 Tint = new Color(0.95f, 0.97f, 1f),
                 Shape = FallbackShape.Circle,
                 Outline = new Color(0.45f, 0.6f, 0.85f, 1f),
@@ -324,7 +326,7 @@ namespace IL6
                 Name = "Bear_proc", MeatMin = 6, MeatMax = 10, MeatDropChance = 1f,
                 DurationSec = 6f, Hp = 700,
                 FleeRadius = 0f, FleeSpeed = 0f,
-                Scale = 1.5f, ColliderRadius = 0.55f,
+                Scale = 2.25f, ColliderRadius = 0.55f,
                 Tint = new Color(0.30f, 0.20f, 0.12f),
                 Shape = FallbackShape.Rounded,
                 Outline = new Color(0.10f, 0.06f, 0.02f, 1f),
@@ -341,7 +343,7 @@ namespace IL6
                 Name = "Mammoth_proc", MeatMin = 30, MeatMax = 50, MeatDropChance = 1f,
                 DurationSec = 12f, Hp = 2000,
                 FleeRadius = 0f, FleeSpeed = 0f, // flee 안 함 — predator
-                Scale = 2.2f, ColliderRadius = 0.85f,
+                Scale = 3.3f, ColliderRadius = 0.85f,
                 Tint = new Color(0.45f, 0.32f, 0.22f),
                 Shape = FallbackShape.Rounded,
                 Outline = new Color(0.15f, 0.08f, 0.02f, 1f),
