@@ -141,6 +141,16 @@ namespace IL6
             zombie.MoveSpeedMul = 1f + Mathf.Min((day - 1) * 0.02f, 0.5f);
             _tracked.Add(zombie);
 
+            // 보스는 일자에 따라 다른 스프라이트
+            var bossSpr = day switch
+            {
+                1 => SpriteBank.BossFrostZombie(),
+                2 => SpriteBank.BossWinterKnight(),
+                3 => SpriteBank.BossIronGiant(),
+                _ => SpriteBank.BossFrostLich(),
+            };
+            if (bossSpr != null) { sr.sprite = bossSpr; sr.color = Color.white; }
+
             var cf = go.AddComponent<ColorFallback>();
             cf.Tint = new Color(0.4f, 0.1f, 0.5f);
             cf.Shape = FallbackShape.Circle;
@@ -357,6 +367,9 @@ namespace IL6
                     break;
             }
             go.transform.localScale = Vector3.one * scale;
+
+            var zombieSpr = SpriteBank.Zombie();
+            if (zombieSpr != null) { sr.sprite = zombieSpr; sr.color = tint; }
 
             var cf = go.AddComponent<ColorFallback>();
             cf.Tint = tint;

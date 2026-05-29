@@ -26,6 +26,13 @@ namespace IL6
             _progression = GetComponent<PlayerProgression>();
             MaxHp = _balance.PlayerMaxHp;
             CurrentHp = MaxHp;
+
+            var sr = GetComponent<SpriteRenderer>();
+            if (sr != null && sr.sprite == null)
+            {
+                var spr = SpriteBank.Player();
+                if (spr != null) sr.sprite = spr;
+            }
             _rb.gravityScale = 0f;
             _rb.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
             _rb.freezeRotation = true;

@@ -163,7 +163,7 @@ namespace IL6
 
             var sr = go.AddComponent<SpriteRenderer>();
             sr.sortingOrder = 4;
-
+            // 스프라이트 없으면 ColorFallback 폴백
             var col = go.AddComponent<CircleCollider2D>();
             col.radius = 0.35f;
 
@@ -401,7 +401,9 @@ namespace IL6
 
             var sr = go.AddComponent<SpriteRenderer>();
             sr.sortingOrder = 8;
-            sr.color = a.Tint;
+            var spr = SpriteBank.AnimalByName(a.Name);
+            if (spr != null) { sr.sprite = spr; sr.color = Color.white; }
+            else sr.color = a.Tint;
 
             var rb = go.AddComponent<Rigidbody2D>();
             rb.gravityScale = 0f;
@@ -561,6 +563,8 @@ namespace IL6
             go.transform.position = pos;
             var sr = go.AddComponent<SpriteRenderer>();
             sr.sortingOrder = 7;
+            var spr = SpriteBank.CompanionByRole(arch.Role);
+            if (spr != null) sr.sprite = spr;
             var npc = go.AddComponent<RecruitableNpc>();
             npc.DisplayName = displayName;
             npc.Role = arch.Role;
@@ -592,6 +596,8 @@ namespace IL6
 
             var sr = go.AddComponent<SpriteRenderer>();
             sr.sortingOrder = 7;
+            var spr = SpriteBank.CompanionByRole(arch.Role);
+            if (spr != null) sr.sprite = spr;
 
             var npc = go.AddComponent<RecruitableNpc>();
             npc.DisplayName = nm;
