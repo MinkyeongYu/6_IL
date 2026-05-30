@@ -104,8 +104,90 @@ namespace IL6
             }
 
             FillGroundTiles(cx, cy);
+            SpawnSnowPatches(cx, cy, rng, data);
 
             _loaded[(cx, cy)] = data;
+        }
+
+        /// <summary>
+        /// 청크 경계가 뚝뚝 끊겨 보이는 현상 완화.
+        /// 반투명 흰 원(snow_patch)을 청크 전체에 8-12개 랜덤 배치하고,
+        /// 경계 가장자리(폭 ChunkSize/4)에 4개 추가해 인접 청크와 자연스럽게 혼합되게 함.
+        /// sortingOrder = -1 로 타일 아래에 깔림. 청크 언로드 시 data.Spawned 로 같이 제거.
+        /// </summary>
+        private void SpawnSnowPatches(int cx, int cy, SeededRng rng, ChunkData data)
+        {
+            float baseX = cx * ChunkSize;
+            float baseY = cy * ChunkSize;
+            float edgeBand = ChunkSize * 0.25f; // 경계 가장자리 범위
+
+            // 청크 내부 전체 — 8-12개
+            int patchCount = rng.IntRange(8, 12);
+            for (int i = 0; i < patchCount; i++)
+            {
+                float x = baseX + rng.Next() * ChunkSize;
+                float y = baseY + rng.Next() * ChunkSize;
+                float scale = 2.5f + rng.Next() * 2.0f; // 2.5 ~ 4.5
+                float alpha = 0.15f + rng.Next() * 0.20f; // 0.15 ~ 0.35
+                data.Spawned.Add(CreateSnowPatch(x, y, scale, alpha));
+            }
+
+            // 4방향 가장자리에 각 2-3개 추가 — 인접 청크 경계 블렌딩
+            int edgeCount = rng.IntRange(2, 3);
+            // 하단 경계
+            for (int i = 0; i < edgeCount; i++)
+            {
+                float x = baseX + rng.Next() * ChunkSize;
+                float y = baseY + rng.Next() * edgeBand;
+                float scale = 3.0f + rng.Next() * 1.5f;
+                float alpha = 0.20f + rng.Next() * 0.15f;
+                data.Spawned.Add(CreateSnowPatch(x, y, scale, alpha));
+            }
+            // 상단 경계
+            for (int i = 0; i < edgeCount; i++)
+            {
+                float x = baseX + rng.Next() * ChunkSize;
+                float y = baseY + ChunkSize - rng.Next() * edgeBand;
+                float scale = 3.0f + rng.Next() * 1.5f;
+                float alpha = 0.20f + rng.Next() * 0.15f;
+                data.Spawned.Add(CreateSnowPatch(x, y, scale, alpha));
+            }
+            // 좌측 경계
+            for (int i = 0; i < edgeCount; i++)
+            {
+                float x = baseX + rng.Next() * edgeBand;
+                float y = baseY + rng.Next() * ChunkSize;
+                float scale = 3.0f + rng.Next() * 1.5f;
+                float alpha = 0.20f + rng.Next() * 0.15f;
+                data.Spawned.Add(CreateSnowPatch(x, y, scale, alpha));
+            }
+            // 우측 경계
+            for (int i = 0; i < edgeCount; i++)
+            {
+                float x = baseX + ChunkSize - rng.Next() * edgeBand;
+                float y = baseY + rng.Next() * ChunkSize;
+                float scale = 3.0f + rng.Next() * 1.5f;
+                float alpha = 0.20f + rng.Next() * 0.15f;
+                data.Spawned.Add(CreateSnowPatch(x, y, scale, alpha));
+            }
+        }
+
+        private static GameObject CreateSnowPatch(float x, float y, float scale, float alpha)
+        {
+            var go = new GameObject("snow_patch");
+            go.transform.position = new Vector3(x, y, 0);
+            go.transform.localScale = Vector3.one * scale;
+
+            var sr = go.AddComponent<SpriteRenderer>();
+            sr.sortingOrder = -1; // 타일맵 아래에 깔림
+
+            var cf = go.AddComponent<ColorFallback>();
+            cf.Tint = new Color(1f, 1f, 1f, alpha);
+            cf.Shape = FallbackShape.Circle;
+            cf.Circle = true;
+            cf.PixelSize = 64;
+            cf.OutlineWidth = 0; // 외곽선 없음 — 부드럽게 녹아들도록
+            return go;
         }
 
         private void FillGroundTiles(int cx, int cy)
