@@ -80,7 +80,7 @@ namespace IL6
 
             // 화면 가운데 안내 텍스트
             var bannerStyle = new GUIStyle(GUI.skin.label) {
-                fontSize = 22, fontStyle = FontStyle.Bold,
+                fontSize = 15, fontStyle = FontStyle.Bold,
                 alignment = TextAnchor.MiddleCenter,
                 normal = { textColor = UiTheme.TextGold }
             };
@@ -238,7 +238,7 @@ namespace IL6
             if (_dawnStyle == null)
             {
                 _dawnStyle = new GUIStyle(GUI.skin.label) {
-                    fontSize = 36, fontStyle = FontStyle.Bold,
+                    fontSize = 24, fontStyle = FontStyle.Bold,
                     alignment = TextAnchor.MiddleCenter,
                     normal = { textColor = new Color(1f, 0.95f, 0.7f) }
                 };
@@ -280,7 +280,7 @@ namespace IL6
             if (_fadeStyle == null)
             {
                 _fadeStyle = new GUIStyle(GUI.skin.label) {
-                    fontSize = 28, fontStyle = FontStyle.Bold,
+                    fontSize = 18, fontStyle = FontStyle.Bold,
                     alignment = TextAnchor.MiddleCenter,
                     normal = { textColor = new Color(1f, 0.86f, 0.45f, 1f) }
                 };
@@ -446,7 +446,7 @@ namespace IL6
             {
                 _bannerStyle = new GUIStyle(GUI.skin.label)
                 {
-                    fontSize = 32, fontStyle = FontStyle.Bold,
+                    fontSize = 20, fontStyle = FontStyle.Bold,
                     alignment = TextAnchor.MiddleCenter,
                     normal = { textColor = UiTheme.TextGold },
                 };
@@ -797,7 +797,7 @@ namespace IL6
             {
                 _bossWarnStyle = new GUIStyle(GUI.skin.label)
                 {
-                    fontSize = 38, fontStyle = FontStyle.Bold,
+                    fontSize = 24, fontStyle = FontStyle.Bold,
                     alignment = TextAnchor.MiddleCenter,
                     normal = { textColor = new Color(0.95f, 0.3f, 0.6f) },
                 };
@@ -1891,14 +1891,14 @@ namespace IL6
         private void EnsureStyles()
         {
             if (_label != null) return;
-            _label = new GUIStyle(GUI.skin.label) { fontSize = 20, normal = { textColor = UiTheme.TextCream } };
-            _labelSubtle = new GUIStyle(GUI.skin.label) { fontSize = 17, normal = { textColor = UiTheme.TextSubtle } };
-            _section = new GUIStyle(GUI.skin.label) { fontSize = 22, fontStyle = FontStyle.Bold, normal = { textColor = UiTheme.TextCream } };
-            _title = new GUIStyle(GUI.skin.label) { fontSize = 24, fontStyle = FontStyle.Bold, alignment = TextAnchor.MiddleCenter, normal = { textColor = UiTheme.TextGold } };
-            _weapon = new GUIStyle(GUI.skin.label) { fontSize = 22, fontStyle = FontStyle.Bold, normal = { textColor = new Color(0.7f, 0.95f, 1f) } };
-            _bigDeath = new GUIStyle(GUI.skin.label) { fontSize = 88, fontStyle = FontStyle.Bold, alignment = TextAnchor.MiddleCenter, normal = { textColor = UiTheme.TextDanger } };
-            _btn = new GUIStyle(GUI.skin.button) { fontSize = 20, fontStyle = FontStyle.Bold };
-            _smallBtn = new GUIStyle(GUI.skin.button) { fontSize = 18 };
+            _label = new GUIStyle(GUI.skin.label) { fontSize = 13, normal = { textColor = UiTheme.TextCream } };
+            _labelSubtle = new GUIStyle(GUI.skin.label) { fontSize = 11, normal = { textColor = UiTheme.TextSubtle } };
+            _section = new GUIStyle(GUI.skin.label) { fontSize = 14, fontStyle = FontStyle.Bold, normal = { textColor = UiTheme.TextCream } };
+            _title = new GUIStyle(GUI.skin.label) { fontSize = 16, fontStyle = FontStyle.Bold, alignment = TextAnchor.MiddleCenter, normal = { textColor = UiTheme.TextGold } };
+            _weapon = new GUIStyle(GUI.skin.label) { fontSize = 14, fontStyle = FontStyle.Bold, normal = { textColor = new Color(0.7f, 0.95f, 1f) } };
+            _bigDeath = new GUIStyle(GUI.skin.label) { fontSize = 72, fontStyle = FontStyle.Bold, alignment = TextAnchor.MiddleCenter, normal = { textColor = UiTheme.TextDanger } };
+            _btn = new GUIStyle(GUI.skin.button) { fontSize = 13, fontStyle = FontStyle.Bold };
+            _smallBtn = new GUIStyle(GUI.skin.button) { fontSize = 11 };
         }
 
         private static Companion FindNearestFreeCompanion(Vector3 center)
