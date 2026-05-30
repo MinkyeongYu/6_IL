@@ -67,6 +67,8 @@ namespace IL6
         public float BonfireDamagePerSec = 5f;
         public float BonfireRadius = 128f;
         public float BonfireAttackBuff = 0.15f;
+        /// <summary>밤마다 모닥불 HP가 소모되는 초당 속도. MaxHp=280 기준 약 9분마다 재충전 필요.</summary>
+        public float CampfireHpDrainPerSec = 0.5f;
 
         // 싱글톤 접근 (Resources에서 자동 로드)
         private static BalanceConfig _instance;
