@@ -1071,7 +1071,7 @@ namespace IL6
             var session = GameSession.Instance;
             if (session == null) return;
 
-            const int W = 280, H = 50;
+            const int W = 280, H = 70;
             // ResourceBar(63+24+4=91) 아래
             var panel = new Rect(12, 91, W, H);
             UiTheme.Panel(panel);
@@ -1110,6 +1110,17 @@ namespace IL6
             {
                 GUI.Label(new Rect(innerX, y, innerW, 22), "☀ 평온한 낮", _labelSubtle);
                 y += 24;
+            }
+
+            // 인구 표시 (현재 동료 수 / 최대 수용)
+            {
+                int have = RecruitableNpc.CurrentCompanionCount();
+                int cap  = RecruitableNpc.VillageCapacity();
+                var oldC = GUI.contentColor;
+                GUI.contentColor = (have >= cap) ? UiTheme.TextDanger : UiTheme.TextCream;
+                GUI.Label(new Rect(innerX, y, innerW, 20), $"👥 {have}/{cap}", _section);
+                GUI.contentColor = oldC;
+                y += 22;
             }
 
             // 동료 스탠스 토글 (하단 줄)
