@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 
 namespace IL6
 {
@@ -9,15 +9,36 @@ namespace IL6
     [RequireComponent(typeof(SpriteRenderer))]
     public sealed class YSort : MonoBehaviour
     {
-        private SpriteRenderer _sr;
+        [SerializeField] private int orderOffset = 0;
+        [SerializeField] private bool updateEveryFrame = true;
+
+        private SpriteRenderer[] _renderers;
 
         public static int ComputeOrder(float y) => Mathf.RoundToInt(-y * 100f);
 
-        private void Awake() { _sr = GetComponent<SpriteRenderer>(); }
+        private void Awake() { _renderers = GetComponentsInChildren<SpriteRenderer>(); }
+
+        private void Start()
+        {
+            UpdateSortingOrder();
+        }
 
         private void LateUpdate()
         {
-            _sr.sortingOrder = ComputeOrder(transform.position.y);
+            if (updateEveryFrame)
+            {
+                UpdateSortingOrder();
+            }
+        }
+
+        public void UpdateSortingOrder()
+        {
+            int order = ComputeOrder(transform.position.y) + orderOffset;
+
+            foreach(SpriteRenderer renderer in _renderers)
+            {
+                renderer.sortingOrder = order;
+            }
         }
     }
 }
