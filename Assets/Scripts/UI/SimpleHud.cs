@@ -174,6 +174,14 @@ namespace IL6
                     case BuildingKind.Blacksmith: SpawnBlacksmith(p); break;
                     case BuildingKind.SeedStorage: SpawnSeedStorage(p); break;
                     case BuildingKind.Carpenter: SpawnCarpenter(p); break;
+                    case BuildingKind.TrainingCamp: SpawnTrainingCamp(p); break;
+                    case BuildingKind.FoodStorage:
+                        SpawnFoodStorage(p);
+                        var foodSes = GameSession.Instance;
+                        if (foodSes != null) foodSes.Resources.IncreaseCap(ResourceKind.Food, BuildingUpgradeRules.FoodStorageCapPerLevel);
+                        break;
+                    case BuildingKind.LookoutPost: SpawnLookoutPost(p); break;
+                    case BuildingKind.Sawmill: SpawnSawmill(p); break;
                     case BuildingKind.House: SpawnHouse(p); break;
                     case BuildingKind.Fence: VillageStarter.SpawnFence(p, 0f); break;
                     case BuildingKind.Storage:
@@ -1244,18 +1252,45 @@ namespace IL6
                     CostStone = BuildCost(BuildingKind.Blacksmith).Stone,
                     Kind = BuildingKind.Blacksmith, Available = true,
                     Color = new Color(0.9f, 0.3f, 0.15f) },
+                new BuildSlot { Icon = "⚔", Name = "훈련소",
+                    CostWood = BuildCost(BuildingKind.TrainingCamp).Wood,
+                    CostStone = BuildCost(BuildingKind.TrainingCamp).Stone,
+                    Kind = BuildingKind.TrainingCamp, Available = true,
+                    Color = new Color(0.9f, 0.42f, 0.22f) },
+                new BuildSlot { Icon = "🍖", Name = "식량고",
+                    CostWood = BuildCost(BuildingKind.FoodStorage).Wood,
+                    CostStone = BuildCost(BuildingKind.FoodStorage).Stone,
+                    Kind = BuildingKind.FoodStorage, Available = true,
+                    Color = new Color(0.95f, 0.78f, 0.4f) },
+                new BuildSlot { Icon = "👁", Name = "감시초소",
+                    CostWood = BuildCost(BuildingKind.LookoutPost).Wood,
+                    CostStone = BuildCost(BuildingKind.LookoutPost).Stone,
+                    Kind = BuildingKind.LookoutPost, Available = true,
+                    Color = new Color(0.55f, 0.8f, 1f) },
+                new BuildSlot { Icon = "🪵", Name = "제재소",
+                    CostWood = BuildCost(BuildingKind.Sawmill).Wood,
+                    CostStone = BuildCost(BuildingKind.Sawmill).Stone,
+                    Kind = BuildingKind.Sawmill, Available = true,
+                    Color = new Color(0.55f, 0.36f, 0.18f) },
             };
 
             const int CellH = 72, Gap = 4;
-            int cellW = Mathf.Clamp((Screen.width - 24 - Gap * (slots.Length - 1)) / slots.Length, 58, 72);
-            int totalW = cellW * slots.Length + Gap * (slots.Length - 1);
-            int startX = Screen.width / 2 - totalW / 2;
-            int y = Screen.height - CellH - 12;
+            int maxPerRow = Mathf.Clamp((Screen.width - 24 + Gap) / (58 + Gap), 1, slots.Length);
+            int columns = Mathf.Min(slots.Length, maxPerRow);
+            int cellW = Mathf.Clamp((Screen.width - 24 - Gap * (columns - 1)) / columns, 58, 72);
+            int rows = Mathf.CeilToInt(slots.Length / (float)columns);
+            int y0 = Screen.height - rows * CellH - (rows - 1) * Gap - 12;
 
             for (int i = 0; i < slots.Length; i++)
             {
                 var s = slots[i];
-                int cx = startX + i * (cellW + Gap);
+                int row = i / columns;
+                int col = i % columns;
+                int countInRow = Mathf.Min(columns, slots.Length - row * columns);
+                int totalW = cellW * countInRow + Gap * (countInRow - 1);
+                int startX = Screen.width / 2 - totalW / 2;
+                int cx = startX + col * (cellW + Gap);
+                int y = y0 + row * (CellH + Gap);
                 var r = new Rect(cx, y, cellW, CellH);
                 bool ok = s.Available && wood >= s.CostWood && stone >= s.CostStone;
 
@@ -2027,5 +2062,9 @@ namespace IL6
         private void SpawnBlacksmith(Vector3 p) => BuildingFactory.SpawnBlacksmith(p);
         private void SpawnSeedStorage(Vector3 p) => BuildingFactory.SpawnSeedStorage(p);
         private void SpawnCarpenter(Vector3 p) => BuildingFactory.SpawnCarpenter(p);
+        private void SpawnTrainingCamp(Vector3 p) => BuildingFactory.SpawnTrainingCamp(p);
+        private void SpawnFoodStorage(Vector3 p) => BuildingFactory.SpawnFoodStorage(p);
+        private void SpawnLookoutPost(Vector3 p) => BuildingFactory.SpawnLookoutPost(p);
+        private void SpawnSawmill(Vector3 p) => BuildingFactory.SpawnSawmill(p);
     }
 }

@@ -205,5 +205,73 @@ namespace IL6
             go.AddComponent<Building>().Initialize(BuildingKind.Blacksmith);
             return go;
         }
+
+        public static GameObject SpawnTrainingCamp(Vector3 pos)
+        {
+            var go = new GameObject("TrainingCamp");
+            go.transform.position = pos;
+            go.transform.localScale = new Vector3(1.1f, 0.9f, 1f);
+            var sr = go.AddComponent<SpriteRenderer>();
+            sr.sortingOrder = 3;
+            ApplySprite(sr, SpriteBank.WoodBarricade());
+            var col = go.AddComponent<BoxCollider2D>(); col.size = Vector2.one;
+            var cf = go.AddComponent<ColorFallback>();
+            cf.Tint = new Color(0.62f, 0.28f, 0.18f);
+            cf.Shape = FallbackShape.Square; cf.Circle = false; cf.PixelSize = 48;
+            cf.OutlineWidth = 2; cf.OutlineColor = new Color(0.25f, 0.08f, 0.04f, 1f);
+            go.AddComponent<Building>().Initialize(BuildingKind.TrainingCamp);
+            return go;
+        }
+
+        public static GameObject SpawnFoodStorage(Vector3 pos)
+        {
+            var go = new GameObject("FoodStorage");
+            go.transform.position = pos;
+            go.transform.localScale = new Vector3(1.0f, 0.9f, 1f);
+            var sr = go.AddComponent<SpriteRenderer>();
+            sr.sortingOrder = 3;
+            ApplySprite(sr, SpriteBank.Logs());
+            var col = go.AddComponent<BoxCollider2D>(); col.size = Vector2.one;
+            var cf = go.AddComponent<ColorFallback>();
+            cf.Tint = new Color(0.82f, 0.62f, 0.28f);
+            cf.Shape = FallbackShape.Rounded; cf.Circle = false; cf.PixelSize = 48;
+            cf.OutlineWidth = 2; cf.OutlineColor = new Color(0.32f, 0.2f, 0.08f, 1f);
+            go.AddComponent<Building>().Initialize(BuildingKind.FoodStorage);
+            return go;
+        }
+
+        public static GameObject SpawnLookoutPost(Vector3 pos)
+        {
+            var go = new GameObject("LookoutPost");
+            go.transform.position = pos;
+            go.transform.localScale = new Vector3(0.65f, 1.25f, 1f);
+            var sr = go.AddComponent<SpriteRenderer>();
+            sr.sortingOrder = 4;
+            ApplySprite(sr, SpriteBank.Watchtower());
+            var col = go.AddComponent<BoxCollider2D>(); col.size = Vector2.one;
+            var cf = go.AddComponent<ColorFallback>();
+            cf.Tint = new Color(0.42f, 0.52f, 0.58f);
+            cf.Shape = FallbackShape.Square; cf.Circle = false; cf.PixelSize = 48;
+            cf.OutlineWidth = 2; cf.OutlineColor = new Color(0.12f, 0.18f, 0.22f, 1f);
+            go.AddComponent<Building>().Initialize(BuildingKind.LookoutPost);
+            return go;
+        }
+
+        public static GameObject SpawnSawmill(Vector3 pos)
+        {
+            var go = new GameObject("Sawmill");
+            go.transform.position = pos;
+            go.transform.localScale = new Vector3(1.15f, 0.9f, 1f);
+            var sr = go.AddComponent<SpriteRenderer>();
+            sr.sortingOrder = 3;
+            ApplySprite(sr, SpriteBank.Logs());
+            var col = go.AddComponent<BoxCollider2D>(); col.size = Vector2.one;
+            var cf = go.AddComponent<ColorFallback>();
+            cf.Tint = new Color(0.5f, 0.32f, 0.16f);
+            cf.Shape = FallbackShape.Square; cf.Circle = false; cf.PixelSize = 48;
+            cf.OutlineWidth = 2; cf.OutlineColor = new Color(0.2f, 0.1f, 0.04f, 1f);
+            go.AddComponent<Building>().Initialize(BuildingKind.Sawmill);
+            return go;
+        }
     }
 }

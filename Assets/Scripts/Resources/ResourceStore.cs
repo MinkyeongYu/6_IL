@@ -58,6 +58,11 @@ namespace IL6
         public int Get(ResourceKind k) => _totals.Get(k);
         public int GetCap(ResourceKind k) => _caps.TryGetValue(k, out var v) ? v : 100;
         public void IncreaseCap(int delta) { foreach (var k in new[] { ResourceKind.Wood, ResourceKind.Stone, ResourceKind.Meat, ResourceKind.Food }) _caps[k] += delta; }
+        public void IncreaseCap(ResourceKind kind, int delta)
+        {
+            if (!_caps.ContainsKey(kind)) _caps[kind] = 100;
+            _caps[kind] += delta;
+        }
 
         public void Add(ResourceKind k, int amount)
         {

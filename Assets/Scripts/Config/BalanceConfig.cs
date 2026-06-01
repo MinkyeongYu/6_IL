@@ -59,6 +59,10 @@ namespace IL6
         public int BlacksmithHp = 360;
         public int SeedStorageHp = 180;
         public int CarpenterHp = 220;
+        public int TrainingCampHp = 240;
+        public int FoodStorageHp = 220;
+        public int LookoutPostHp = 180;
+        public int SawmillHp = 260;
         public int BarricadeHp = 280;
         public int FenceHp = 14;
 
@@ -69,6 +73,10 @@ namespace IL6
         public int BlacksmithCost = 10;
         public int SeedStorageCost = 8;
         public int CarpenterCost = 12;
+        public int TrainingCampCost = 12;
+        public int FoodStorageCost = 10;
+        public int LookoutPostCost = 9;
+        public int SawmillCost = 14;
 
         [Header("Campfire Aura")]
         public float BonfireDamagePerSec = 5f;

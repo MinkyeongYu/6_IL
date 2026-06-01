@@ -93,6 +93,17 @@ namespace IL6
                 if (a == null || !a.IsActive) continue;
                 DrawVisionHole(a.transform.position, a.VisionRadius);
             }
+
+            float lookoutRadius = BuildingUpgradeRules.LookoutVisionRadius();
+            if (lookoutRadius > 0f)
+            {
+                var buildings = Object.FindObjectsByType<Building>(FindObjectsSortMode.None);
+                foreach (var b in buildings)
+                {
+                    if (b == null || b.CurrentHp <= 0 || b.Kind != BuildingKind.LookoutPost) continue;
+                    DrawVisionHole(b.transform.position, lookoutRadius);
+                }
+            }
         }
 
         /// <summary>

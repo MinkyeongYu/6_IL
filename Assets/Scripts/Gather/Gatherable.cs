@@ -16,10 +16,16 @@ namespace IL6
         public void OnGathered(ResourceStore store)
         {
             Color tint = ResourceTint(YieldKind);
-            if (YieldAmount > 0)
+            int yield = YieldAmount;
+            if (YieldKind == ResourceKind.Wood)
             {
-                store.Add(YieldKind, YieldAmount);
-                GameFeel.FloatText(transform.position, $"+{YieldAmount} {YieldKind}", tint);
+                yield = Mathf.Max(1, Mathf.RoundToInt(yield * BuildingUpgradeRules.SawmillWoodYieldMultiplier()));
+            }
+
+            if (yield > 0)
+            {
+                store.Add(YieldKind, yield);
+                GameFeel.FloatText(transform.position, $"+{yield} {YieldKind}", tint);
                 Sfx.Pickup();
             }
             else

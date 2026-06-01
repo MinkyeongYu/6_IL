@@ -18,7 +18,11 @@ namespace IL6
         Brazier,
         Blacksmith,
         SeedStorage,
-        Carpenter
+        Carpenter,
+        TrainingCamp,
+        FoodStorage,
+        LookoutPost,
+        Sawmill
     }
 
     public sealed class Building : MonoBehaviour
@@ -71,6 +75,7 @@ namespace IL6
             Level++;
             RecalculateStats(false);
             ApplyLevelEffects();
+            ApplyUpgradeSideEffects(store);
             RecalculateAllBuildings();
             GameFeel.FloatText(transform.position, $"{Kind} Lv.{Level}", new Color(1f, 0.86f, 0.45f));
             return true;
@@ -164,6 +169,10 @@ namespace IL6
                 BuildingKind.Campfire => new Color(1f, 0.55f, 0.2f),
                 BuildingKind.Brazier => new Color(1f, 0.72f, 0.22f),
                 BuildingKind.Blacksmith => new Color(1f, 0.35f, 0.18f),
+                BuildingKind.TrainingCamp => new Color(0.9f, 0.42f, 0.22f),
+                BuildingKind.FoodStorage => new Color(0.95f, 0.78f, 0.4f),
+                BuildingKind.LookoutPost => new Color(0.55f, 0.8f, 1f),
+                BuildingKind.Sawmill => new Color(0.55f, 0.36f, 0.18f),
                 BuildingKind.Barricade => new Color(0.6f, 0.4f, 0.2f),
                 _ => new Color(0.5f, 0.85f, 0.5f),
             };
@@ -173,6 +182,15 @@ namespace IL6
         {
             var aura = GetComponent<CampfireAura>();
             if (aura != null) aura.ApplyBuildingLevel(Kind, Level);
+        }
+
+        private void ApplyUpgradeSideEffects(ResourceStore store)
+        {
+            if (store == null) return;
+            if (Kind == BuildingKind.FoodStorage)
+            {
+                store.IncreaseCap(ResourceKind.Food, BuildingUpgradeRules.FoodStorageCapPerLevel);
+            }
         }
 
         private static void RecalculateAllBuildings()

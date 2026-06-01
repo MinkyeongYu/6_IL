@@ -72,6 +72,10 @@ namespace IL6
             BuildingKind.Blacksmith => 10,
             BuildingKind.SeedStorage => 8,
             BuildingKind.Carpenter => 12,
+            BuildingKind.TrainingCamp => 12,
+            BuildingKind.FoodStorage => 10,
+            BuildingKind.LookoutPost => 9,
+            BuildingKind.Sawmill => 14,
             _ => 5,
         };
 
@@ -82,6 +86,10 @@ namespace IL6
             BuildingKind.Blacksmith => 8,
             BuildingKind.SeedStorage => 2,
             BuildingKind.Carpenter => 6,
+            BuildingKind.TrainingCamp => 5,
+            BuildingKind.FoodStorage => 3,
+            BuildingKind.LookoutPost => 6,
+            BuildingKind.Sawmill => 8,
             _ => 0,
         };
 
@@ -117,6 +125,8 @@ namespace IL6
             BuildingKind.Barricade => 1,
             BuildingKind.Campfire => 1,
             BuildingKind.Farm => 1,
+            BuildingKind.FoodStorage => 1,
+            BuildingKind.Sawmill => 2,
             _ => 0,
         };
 
@@ -127,6 +137,10 @@ namespace IL6
             BuildingKind.Blacksmith => b.BlacksmithHp,
             BuildingKind.SeedStorage => b.SeedStorageHp,
             BuildingKind.Carpenter => b.CarpenterHp,
+            BuildingKind.TrainingCamp => b.TrainingCampHp,
+            BuildingKind.FoodStorage => b.FoodStorageHp,
+            BuildingKind.LookoutPost => b.LookoutPostHp,
+            BuildingKind.Sawmill => b.SawmillHp,
             BuildingKind.Barricade => b.BarricadeHp,
             BuildingKind.Fence => b.FenceHp,
             BuildingKind.House => 140,
@@ -162,12 +176,48 @@ namespace IL6
             return 1f + 0.15f * seedStorage;
         }
 
+        public const int FoodStorageCapPerLevel = 40;
+
+        public static float TrainingDamageMultiplier()
+        {
+            int training = HighestLevel(BuildingKind.TrainingCamp);
+            return 1f + 0.10f * training;
+        }
+
+        public static int FoodStorageCapBonus()
+        {
+            int total = 0;
+            var all = Object.FindObjectsByType<Building>(FindObjectsSortMode.None);
+            foreach (var b in all)
+            {
+                if (b == null || b.CurrentHp <= 0 || b.Kind != BuildingKind.FoodStorage) continue;
+                total += Mathf.Max(1, b.Level) * FoodStorageCapPerLevel;
+            }
+            return total;
+        }
+
+        public static float LookoutVisionRadius()
+        {
+            int lookout = HighestLevel(BuildingKind.LookoutPost);
+            return lookout <= 0 ? 0f : 4.5f + 0.6f * (lookout - 1);
+        }
+
+        public static float SawmillWoodYieldMultiplier()
+        {
+            int sawmill = HighestLevel(BuildingKind.Sawmill);
+            return 1f + 0.15f * sawmill;
+        }
+
         public static string UpgradeSummary(BuildingKind kind, int nextLevel) => kind switch
         {
             BuildingKind.SeedStorage => $"작물 해금/수확 +{nextLevel * 15}%",
             BuildingKind.Carpenter => $"울타리 HP +{nextLevel * 50}%",
             BuildingKind.Brazier => "열/시야/화염 피해 증가",
             BuildingKind.Blacksmith => "열원 강화 + 장비 테크 기반",
+            BuildingKind.TrainingCamp => $"동료 공격력 +{nextLevel * 10}%",
+            BuildingKind.FoodStorage => $"+{FoodStorageCapPerLevel} Food 보관",
+            BuildingKind.LookoutPost => "밤 시야 반경 증가",
+            BuildingKind.Sawmill => $"목재 채집 +{nextLevel * 15}%",
             BuildingKind.Farm => "수확량 증가",
             BuildingKind.Fence => "내구도 증가",
             BuildingKind.Campfire => "열/시야/연료량 증가",

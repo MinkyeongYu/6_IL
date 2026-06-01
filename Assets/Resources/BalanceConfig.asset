@@ -47,6 +47,10 @@ MonoBehaviour:
   BlacksmithHp: 360
   SeedStorageHp: 180
   CarpenterHp: 220
+  TrainingCampHp: 240
+  FoodStorageHp: 220
+  LookoutPostHp: 180
+  SawmillHp: 260
   BarricadeHp: 280
   FenceHp: 14
   CampfireCost: 5
@@ -54,4 +58,8 @@ MonoBehaviour:
   BlacksmithCost: 10
   SeedStorageCost: 8
   CarpenterCost: 12
+  TrainingCampCost: 12
+  FoodStorageCost: 10
+  LookoutPostCost: 9
+  SawmillCost: 14
   BarricadeCost: 5

@@ -46,6 +46,7 @@ namespace IL6
             float mul = 1f + (Level - 1) * 0.10f; // 레벨당 +10%
             if (Equipped == Equip.SharpenedBlade) mul *= 1.30f; // 근접용
             if (Equipped == Equip.Crossbow) mul *= 1.20f; // 원거리용
+            mul *= BuildingUpgradeRules.TrainingDamageMultiplier();
             return Mathf.RoundToInt(Damage * mul);
         }
 
