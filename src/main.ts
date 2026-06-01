@@ -2,8 +2,9 @@ import Phaser from 'phaser';
 import { GAME_WIDTH, GAME_HEIGHT } from '@/config/constants';
 import { BootScene } from '@/scenes/boot';
 import { PreloadScene } from '@/scenes/preload';
-import { OnboardingScene } from '@/scenes/onboarding';
-import { GameScene } from '@/scenes/game';
+import { SnowfieldScene } from '@/scenes/snowfield';
+import { VillageScene } from '@/scenes/village';
+import { HudScene } from '@/scenes/hud';
 
 const config: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
@@ -16,7 +17,7 @@ const config: Phaser.Types.Core.GameConfig = {
     mode: Phaser.Scale.FIT,
     autoCenter: Phaser.Scale.CENTER_BOTH,
   },
-  scene: [BootScene, PreloadScene, OnboardingScene, GameScene],
+  scene: [BootScene, PreloadScene, SnowfieldScene, VillageScene, HudScene],
 };
 
 new Phaser.Game(config);

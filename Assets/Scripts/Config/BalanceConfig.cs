@@ -1,0 +1,92 @@
+using UnityEngine;
+
+namespace IL6
+{
+    /// <summary>
+    /// 게임 밸런스 단일 소스. ScriptableObject로 만들어 Inspector에서 수정 가능.
+    /// 메뉴: Assets > Create > 6IL > Balance Config
+    /// </summary>
+    [CreateAssetMenu(fileName = "BalanceConfig", menuName = "6IL/Balance Config")]
+    public sealed class BalanceConfig : ScriptableObject
+    {
+        [Header("Day/Night Cycle (seconds)")]
+        public float DayDurationSec = 540f;
+        public float NightDurationSec = 360f;
+        public float EveningTransitionSec = 30f;
+        public float DawnTransitionSec = 30f;
+
+        [Header("Vision (tiles)")]
+        public int DayRadiusTiles = 10;
+        public int NightRadiusTiles = 6;
+        public int MegaBlizzardRadiusTiles = 3;
+
+        [Header("Resources (starting)")]
+        public int StartingWood = 15;
+        public int StartingStone = 5;
+        public int StartingMeat = 0;
+        public int StartingFood = 5;
+        public int StartingFrostbloom = 0;
+
+        [Header("Gather (seconds + yield)")]
+        public float TreeDurationSec = 4f;
+        public float RockDurationSec = 6f;
+        public float DeerDurationSec = 3f;
+        public int TreeWoodYield = 3;
+        public int RockStoneYield = 2;
+        public int DeerMeatYield = 2;
+
+        [Header("Player")]
+        public int PlayerMaxHp = 100;
+        public float PlayerMoveSpeed = 180f;
+        public float PlayerRespawnSec = 3f;
+        public int PlayerArmor = 0;
+
+        [Header("Zombie")]
+        public int ZombieMaxHp = 20;
+        public float ZombieMoveSpeed = 60f;
+        public int ZombieAttackDamage = 8;
+        public float ZombieAttackCooldownSec = 1f;
+        public float ZombieAttackRange = 36f;
+        public int ZombieArmor = 0;
+
+        [Header("Wave")]
+        public int WaveBaseCount = 8;
+        public int WavePerDay = 4;
+        public int WaveMaxCount = 300;
+
+        [Header("Building HP")]
+        public int CampfireHp = 280;   // 400→280, 너무 탱키하던 거 다운
+        public int BarricadeHp = 280;  // 200→280, 메인 방어 벽
+        public int FenceHp = 14;       // 4→14, 실수 한 방엔 안 부서짐
+
+        [Header("Building Cost (wood)")]
+        public int CampfireCost = 5;
+        public int BarricadeCost = 5;
+
+        [Header("Campfire Aura")]
+        public float BonfireDamagePerSec = 5f;
+        public float BonfireRadius = 128f;
+        public float BonfireAttackBuff = 0.15f;
+        /// <summary>밤마다 모닥불 HP가 소모되는 초당 속도. MaxHp=280 기준 약 9분마다 재충전 필요.</summary>
+        public float CampfireHpDrainPerSec = 0.5f;
+
+        // 싱글톤 접근 (Resources에서 자동 로드)
+        private static BalanceConfig _instance;
+        public static BalanceConfig Instance
+        {
+            get
+            {
+                if (_instance == null)
+                {
+                    _instance = Resources.Load<BalanceConfig>("BalanceConfig");
+                    if (_instance == null)
+                    {
+                        Debug.LogWarning("[BalanceConfig] Resources/BalanceConfig.asset not found, using defaults.");
+                        _instance = ScriptableObject.CreateInstance<BalanceConfig>();
+                    }
+                }
+                return _instance;
+            }
+        }
+    }
+}

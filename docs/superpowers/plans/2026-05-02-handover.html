@@ -1,0 +1,786 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <title>6_IL 인수인계서 — 2026-05-02</title>
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+        max-width: 1100px;
+        margin: 2em auto;
+        padding: 0 1.4em;
+        line-height: 1.65;
+        color: #222;
+      }
+      h1 { border-bottom: 2px solid #333; padding-bottom: 0.3em; }
+      h2 { border-bottom: 1px solid #ccc; padding-bottom: 0.25em; margin-top: 2em; color: #1a3a6e; }
+      h3 { margin-top: 1.6em; color: #2a4e8e; }
+      h4 { margin-top: 1.2em; color: #555; }
+      code {
+        background: #f3f3f3;
+        padding: 2px 6px;
+        border-radius: 3px;
+        font-family: ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+        font-size: 0.92em;
+      }
+      pre {
+        background: #1e1e1e;
+        color: #eaeaea;
+        padding: 0.9em 1.2em;
+        border-radius: 6px;
+        overflow-x: auto;
+        line-height: 1.4;
+      }
+      pre code { background: none; padding: 0; color: inherit; font-size: 0.85em; }
+      table { border-collapse: collapse; width: 100%; margin: 0.8em 0; font-size: 0.92em; }
+      th, td { border: 1px solid #ddd; padding: 5px 9px; text-align: left; vertical-align: top; }
+      th { background: #f0f4fa; }
+      td.num { text-align: right; font-variant-numeric: tabular-nums; }
+      .meta {
+        background: #fafafa;
+        padding: 0.6em 1em;
+        border-left: 3px solid #4a90e2;
+        margin: 1em 0;
+        font-size: 0.92em;
+      }
+      .file {
+        background: #fff8e1;
+        padding: 0.5em 0.8em;
+        border-left: 3px solid #d49b1f;
+        margin: 0.6em 0;
+        font-family: ui-monospace, monospace;
+        font-size: 0.93em;
+      }
+      .gotcha {
+        background: #ffeaea;
+        padding: 0.6em 1em;
+        border-left: 3px solid #d44a4a;
+        margin: 0.6em 0;
+        font-size: 0.93em;
+      }
+      .gotcha::before { content: "⚠ "; }
+      .toc { columns: 2; column-gap: 2em; margin-bottom: 2em; }
+      .toc a { text-decoration: none; }
+      .pill {
+        display: inline-block; padding: 1px 7px; border-radius: 10px; font-size: 0.78em;
+        background: #eef5ff; color: #2a4e8e; margin-right: 4px;
+      }
+      .pill.dead { background: #f0f0f0; color: #888; }
+      ul.tight li { margin: 2px 0; }
+      .small { font-size: 0.85em; color: #666; }
+    </style>
+  </head>
+  <body>
+    <h1>6_IL — 인수인계서</h1>
+    <div class="meta">
+      <strong>날짜:</strong> 2026-05-02 ·
+      <strong>브랜치:</strong> art-upgrade · <strong>HEAD:</strong> 31e114c<br />
+      <strong>대상:</strong> 새로 합류한 개발자가 코드베이스 구조와 각 스크립트의
+      역할을 빠르게 파악하기 위한 문서.<br />
+      <strong>같이 보면 좋은 문서:</strong>
+      <a href="2026-05-01-il6-current-state.html">2026-05-01 — 게임 시스템 현황</a>
+      (밸런스/UX/콘텐츠 위주, 이 문서는 코드 구조 위주).
+    </div>
+
+    <h2>목차</h2>
+    <div class="toc">
+      <ul class="tight">
+        <li><a href="#arch">A. 아키텍처 개요 + 진입점</a></li>
+        <li><a href="#core">B. 코어 — Session/Cycle/Config</a></li>
+        <li><a href="#player">C. 플레이어 + 입력</a></li>
+        <li><a href="#combat">D. 전투 — 무기/투사체/룬/펫</a></li>
+        <li><a href="#companions">E. 동료 — Companion + RecruitableNpc</a></li>
+        <li><a href="#enemies">F. 적 — Zombie + NightController + 보스</a></li>
+        <li><a href="#animals">G. 야생 동물 — AnimalAi 계열</a></li>
+        <li><a href="#village">H. 마을 + 건물 (10종)</a></li>
+        <li><a href="#world">I. 월드 — ProceduralSpawner + Chunk</a></li>
+        <li><a href="#gather">J. 채집</a></li>
+        <li><a href="#ui">K. UI / 시청각</a></li>
+        <li><a href="#resource">L. 자원 / 영속 / 업적</a></li>
+        <li><a href="#util">M. 유틸리티</a></li>
+        <li><a href="#events">N. 이벤트 버스</a></li>
+        <li><a href="#editor">O. 에디터 도구 (빌드/프리팹)</a></li>
+        <li><a href="#recipes">P. "어떻게 추가하나?" 레시피</a></li>
+        <li><a href="#dead">Q. 사용 안 하는/레거시 파일</a></li>
+      </ul>
+    </div>
+
+    <h2 id="arch">A. 아키텍처 개요 + 진입점</h2>
+    <pre><code>BootScene (Unity scene)
+  └─ BootController (MonoBehaviour, DefaultExecutionOrder=-100)
+       ├─ creates GameObject "GameSession" + adds GameSession component
+       │   └─ GameSession.Awake → ResourceStore + DayNightController + AchievementManager
+       └─ SceneManager.LoadScene("SnowfieldScene")
+
+SnowfieldScene
+  └─ SnowfieldController (MonoBehaviour)
+       ├─ Player(PlayerController) reference 인스펙터 연결
+       ├─ ChunkManager / VisionMask / Camera 인스펙터 연결
+       ├─ Start: VillageStarter.SpawnStarterVillage(center)
+       ├─ Start: 마을 14u 안의 잔여 동료/NPC/동물 정리
+       ├─ Start: DayStartedPayload 구독 → ProceduralSpawner.SpawnDailyVillageNpc
+       └─ Update: Cycle.Update(dt) + 마을 한기 데미지 4s 마다
+
+GameSession (DontDestroyOnLoad 싱글톤)
+  ├─ Resources : ResourceStore
+  ├─ Cycle     : DayNightController
+  └─ AchievementManager 동일 GameObject 에 자동 부착</code></pre>
+    <p>
+      모든 게임 상태는 <strong>GameSession.Instance</strong> 싱글톤 1개를 통한다.
+      페이즈 전환은 <strong>EventBus</strong> 의 <code>DayStartedPayload /
+      EveningStartedPayload / NightStartedPayload / DawnStartedPayload</code> 4종
+      이벤트로 모든 시스템이 동기화된다.
+    </p>
+
+    <h2 id="core">B. 코어 — Session / Cycle / Config</h2>
+
+    <div class="file">Assets/Scripts/<strong>BootController.cs</strong></div>
+    <ul class="tight">
+      <li>Boot 씬에 단 한 번 부착. <code>DefaultExecutionOrder(-100)</code> 으로
+        다른 어떤 Awake 보다 먼저 실행.</li>
+      <li>역할: GameSession GameObject 생성 + SnowfieldScene 로드.</li>
+      <li>의존: 없음 (가장 진입 시점).</li>
+    </ul>
+
+    <div class="file">Assets/Scripts/<strong>GameSession.cs</strong></div>
+    <ul class="tight">
+      <li>씬 간 영속 싱글톤. <code>GameSession.Instance</code>로 어디서나 접근.</li>
+      <li>주요 멤버: <code>Resources</code> (ResourceStore), <code>Cycle</code>
+        (DayNightController), <code>TotalKills</code>, <code>CompanionsLost</code>,
+        <code>MaxCompanionsAtOnce</code>, <code>Score</code>.</li>
+      <li><code>OnDayStarted(int day)</code>: 식량 소비, 동료 사기 데미지, 새벽
+        풀 회복, 자동 저장.</li>
+      <li><code>OnZombieKilled()</code>: 킬 카운트 + NightController 알림 + 가장
+        가까운 동료에 +1 XP 분배.</li>
+      <li><code>HardReset()</code>: 세이브 삭제 + 씬 리로드.</li>
+    </ul>
+
+    <div class="file">Assets/Scripts/Cycle/<strong>DayNightController.cs</strong></div>
+    <ul class="tight">
+      <li>4 페이즈(Day/Evening/Night/Dawn) 머신. 외부 dt 입력 받아 진행.</li>
+      <li><code>_phaseLockedDuration</code> 캐싱 — 페이즈 진입 시점 길이가 고정,
+        진행 중 LevelDurationMul 변경되어도 현재 페이즈 길이 안 변함.</li>
+      <li>페이즈 끝나면 EventBus 로 페이로드 emit.</li>
+      <li><code>LevelDurationMul = 1 + 0.25 * (Level-1)</code> — Day/Night 만 적용.</li>
+    </ul>
+    <div class="gotcha">
+      DurationOf 가 NaN 또는 0 이 되면 cycle.Update 안 while 루프가 무한 돌 수 있음.
+      <code>Mathf.Max(1f, LevelDurationMul)</code> 로 클램프 되어 있으니 안전.
+    </div>
+
+    <div class="file">Assets/Scripts/Config/<strong>BalanceConfig.cs</strong></div>
+    <ul class="tight">
+      <li>ScriptableObject — 모든 밸런스 수치 단일 소스.</li>
+      <li><strong>주의:</strong> 코드의 default 값과 <code>Resources/BalanceConfig.asset</code>
+        값이 다를 수 있음. 런타임에는 <strong>asset 이 우선</strong>. 새 필드 추가
+        시 <strong>두 곳 다</strong> 업데이트.</li>
+    </ul>
+
+    <div class="file">Assets/Scripts/Config/<strong>GameConstants.cs</strong></div>
+    <ul class="tight">
+      <li><code>VillageCenterX/Y</code>, <code>VillageGridSize</code>,
+        <code>TileSize</code> 등 컴파일 타임 상수.</li>
+    </ul>
+
+    <h2 id="player">C. 플레이어 + 입력</h2>
+
+    <div class="file">Assets/Scripts/Player/<strong>InputReader.cs</strong></div>
+    <ul class="tight">
+      <li>Unity 기본 Input 모듈 래퍼 — WASD/방향키/E(InteractPressed)/B(BuildPressed).</li>
+      <li><strong>Y 축 부호:</strong> W = +1 (위), S = -1 (아래). 한 번 버그 있었음
+        (반전), 현재는 정상.</li>
+    </ul>
+
+    <div class="file">Assets/Scripts/Player/<strong>PlayerController.cs</strong></div>
+    <ul class="tight">
+      <li>HP 100, MoveSpeed 5 (BalanceConfig), Rigidbody2D.velocity 로 이동.</li>
+      <li><code>TakeDamage(int)</code>: HP 차감 + HitFlash + 카메라 셰이크 + Thorns
+        반사 (PlayerProgression.ThornsDmg 적용).</li>
+      <li><code>Heal(int)</code>: 클램프 회복.</li>
+      <li>HP 회복: 매 4초 +1 (Update 내 timer).</li>
+      <li>이동 시 0.16s 마다 SnowPuff 발자국.</li>
+      <li>HpUp 룬 적용 시 MaxHp 갱신 (구 룬 호환).</li>
+    </ul>
+
+    <h2 id="combat">D. 전투 — 무기 / 투사체 / 룬 / 펫</h2>
+
+    <div class="file">Assets/Scripts/Combat/<strong>WeaponDefinition.cs</strong> +
+      <strong>WeaponCatalog.cs</strong></div>
+    <ul class="tight">
+      <li>Weapon = ScriptableObject. <strong>Catalog</strong> 가 런타임에 2종 생성:
+        Longsword(28dmg/1.0s/근접) + Bow(6dmg/0.55s/원거리).</li>
+      <li>SimpleHud의 모드 탭 [1]/[2] 로 SwitchToWeapon(0|1).</li>
+    </ul>
+
+    <div class="file">Assets/Scripts/Combat/<strong>PlayerAttackController.cs</strong></div>
+    <ul class="tight">
+      <li>매 프레임 사거리 안 가장 가까운 적(Zombie + AnimalAi) 자동 검색 후 공격.</li>
+      <li>근접(ProjectileSpeed=0)이면 즉시 데미지 + Slash VFX, 아니면 Projectile 스폰.</li>
+      <li>룬 효과 적용: PoisonBlade/IceArrow/Lightning/Detonator/Vampirism/MultiShot.</li>
+      <li><code>_rng = SeededRng</code> 로 결정적 크리티컬 롤.</li>
+    </ul>
+
+    <div class="file">Assets/Scripts/Combat/<strong>Projectile.cs</strong></div>
+    <ul class="tight">
+      <li>발사체 본체. <strong>자체 sprite 생성</strong> (ColorFallback 없이) — 큰
+        흰 원 + 1.7~2.4× soft glow halo 자식 + 0.025s 트레일 ghost.</li>
+      <li>Pierce 룬 시 +1/+2/+4 추가 적중. <code>_hitOnce HashSet</code> 로 중복 방지.</li>
+      <li>Detonate / ChainLightning 정적 메서드 — 외부에서도 호출.</li>
+    </ul>
+    <div class="gotcha">
+      ColorFallback.Start 와 Projectile.Awake 의 실행 순서가 비결정적이라, sr.color 가
+      ColorFallback 보다 먼저 세팅되도록 spawner 에서 명시 세팅.
+    </div>
+
+    <div class="file">Assets/Scripts/Combat/<strong>PlayerProgression.cs</strong></div>
+    <ul class="tight">
+      <li>Player 의 XP/Level/룬 스택. RuneKind enum 14 종 (구 5 + 신규 9).</li>
+      <li>레벨업 시 <code>LevelUpPending = true</code> → SimpleHud 가 RuneModal 표시.</li>
+      <li><code>PickThreeOffer(seed)</code> — 가중치 풀에서 마스터 안 된 룬 3장
+        결정적 추첨.</li>
+      <li><code>ApplyRune(kind)</code>: 스택 +1 + Recompute() (DamageMul/HpBonus 갱신)
+        + 즉시 효과 (펫 소환/자원 보급).</li>
+      <li>같은 원소 2개 마스터 시 <code>SynergyMul = 1.5</code>.</li>
+      <li>레벨업마다 <code>GameSession.Cycle.LevelDurationMul = 1 + 0.25*(Level-1)</code>
+        세팅.</li>
+    </ul>
+
+    <div class="file">Assets/Scripts/Combat/<strong>DamageCalc.cs</strong></div>
+    <ul class="tight">
+      <li>정적 함수 <code>Compute(in Input) → int</code>. 결정적 (RNG 외부 주입).
+        크리티컬 + 방어력 적용.</li>
+    </ul>
+
+    <div class="file">Assets/Scripts/Combat/<strong>Pet.cs</strong></div>
+    <ul class="tight">
+      <li>펫 — Dog (근접 갈색) + Hawk (근접 노랑, 더 빠름).</li>
+      <li>둘 다 RB2D Dynamic + collider — 다른 유닛처럼 충돌. Player 주변 궤도, 좀비
+        자동 추격해 슬래시 공격.</li>
+      <li><strong>정적 팩토리:</strong> <code>Pet.Spawn(kind, player, level)</code>.</li>
+    </ul>
+
+    <div class="file">Assets/Scripts/Combat/<strong>Watchtower.cs</strong></div>
+    <ul class="tight">
+      <li>야간에만 8u 사거리 안 좀비 자동 사격 (1.2s 간격, Projectile).</li>
+      <li>3.5u 안 동료 데미지 ×1.5 — Companion.SpawnProjectile 가 GetWatchtowerBoost 읽음.</li>
+    </ul>
+
+    <div class="file">Assets/Scripts/Combat/<strong>CampfireAura.cs</strong></div>
+    <ul class="tight">
+      <li>모닥불의 좀비 화상 오라 + <strong>연료 시스템</strong>.</li>
+      <li><code>Fuel</code> (max 100, 1/s 감소). 0 이면 비활성 — 오라 OFF + 스프라이트
+        35% 어두워짐. 외부 <code>AddFuel(amount)</code> 로 보충.</li>
+      <li>정적 <code>VillageHasHeat(center, halfSize)</code> — SnowfieldController 가
+        한기 데미지 판정에 사용.</li>
+    </ul>
+
+    <div class="file">Assets/Scripts/Combat/<strong>HealingShrine.cs</strong></div>
+    <ul class="tight">
+      <li>의무실 회복 오라. 매 3s 4u 안 Player + Companion 에 +2 HP.</li>
+    </ul>
+
+    <div class="file">Assets/Scripts/Combat/<strong>WeaponVisual.cs</strong></div>
+    <ul class="tight">
+      <li class="small">현재 미사용 (legacy, weapon 아이콘 hover 표시 용도였음).</li>
+    </ul>
+
+    <h2 id="companions">E. 동료</h2>
+
+    <div class="file">Assets/Scripts/Companions/<strong>Companion.cs</strong></div>
+    <ul class="tight">
+      <li>Mode enum: Follow / Working / Farming / Hiding / Fleeing.</li>
+      <li>Stance enum: Follow / Hold / Aggressive (HUD 토글).</li>
+      <li>HP 50, IsCombat 따라 자동 공격. Sight 9u, Attack 5u.</li>
+      <li><strong>follow 우선순위</strong> (ComputeFollowVelocity):
+        ① Hold 스탠스 → 앵커 / ② 플레이어 시야 밖 → 따라옴 (적 무시) / ③ 시야 안
+        + 적 → 추격 / ④ 둘 다 마을 안 → 자리 지킴 / ⑤ 다른 쪽 → 문 통과 2단계.</li>
+      <li><strong>채집 중엔 전투 X</strong>, 단 TakeDamage 시 즉시 Working/Farming
+        탈출 후 반격.</li>
+      <li><code>TryAutoHide</code> 1초 폴링 — 눈보라 또는 비전투+적 시야 → 가까운
+        비-펜스/바리게이트 건물에 숨음.</li>
+      <li><strong>개별 XP/장비:</strong> <code>Xp / Level / XpToNext = 4 + L*3</code>,
+        EffectiveDamage = Damage × (1+0.10×(L-1)) × 장비 배수. 장비 enum:
+        SharpenedBlade/Crossbow/ThickFur/ToolKit. 부착 UI 미구현.</li>
+      <li>망루 부스트 ×1.5, AllyBoost 룬 부스트 둘 다 데미지에 곱연산.</li>
+      <li>플레이어와 8u 이상 떨어지면 collider 비활성 (정체 방지).</li>
+    </ul>
+
+    <div class="file">Assets/Scripts/Companions/<strong>RecruitableNpc.cs</strong></div>
+    <ul class="tight">
+      <li>F키 또는 영입 다이얼로그 → <code>Recruit()</code> 가 같은 GameObject 에
+        Companion 컴포넌트 추가.</li>
+      <li>마을 수용 한도: <code>FreeCapacity(12) + Houses × 4</code>. 일일 한도 X.</li>
+      <li>아키타입 5종 (사냥꾼/전사/농부/아이/노인) 은 ProceduralSpawner._npcArchetypes 에 정의.</li>
+    </ul>
+
+    <h2 id="enemies">F. 적</h2>
+
+    <div class="file">Assets/Scripts/Enemies/<strong>Zombie.cs</strong></div>
+    <ul class="tight">
+      <li>FindNearestTarget — Player → Companion → Building 우선순위.</li>
+      <li><strong>경로 차단 시 건물 부수기:</strong> Linecast 로 타겟까지 경로 검사,
+        Building 콜라이더 있으면 그 건물을 우선 공격.</li>
+      <li>상태이상: PoisonRemainingSec/Dps, SlowRemainingSec.</li>
+      <li><strong>IsRanged + RangedRange/Damage/Cooldown</strong> — Archer 변종이
+        세팅, 사거리 안 들어오면 정지 + ZombieProjectile 발사.</li>
+      <li>낮 안전망: <code>NightController.CurrentPhase != Night</code> 면 자폭.</li>
+    </ul>
+
+    <div class="file">Assets/Scripts/Enemies/<strong>ZombieProjectile.cs</strong></div>
+    <ul class="tight">
+      <li>좀비 화살. Awake 가 작은 흰 원 sprite 자체 생성 (녹색 tint).
+        OverlapCircle 로 Player/Companion/Building 명중 시 데미지.</li>
+    </ul>
+
+    <div class="file">Assets/Scripts/Enemies/<strong>NightController.cs</strong></div>
+    <ul class="tight">
+      <li>씬에 1개. EventBus 페이즈 구독으로 자체 CurrentPhase 동기화.</li>
+      <li><code>StartNight(day)</code>: 웨이브 사이즈 결정 + IsBlizzard 추첨 + 보스
+        나이트 체크.</li>
+      <li>Variant enum: Normal / Fast (Day3+) / Tank (Day7+) / Archer (Day4+, 원거리).</li>
+      <li>일자별 강화 — HP × 1+0.12×(d-1), dmg + (d-1), speed × 1+0.02×(d-1).</li>
+      <li>보스 — Day 5/10/15 + KillsThisNight≥25 강제. HP 100+day×100, dmg
+        18+(d-1)×2.</li>
+      <li>무한 웨이브 — 활성 0+대기 0 시 자동 보충.</li>
+      <li>좀비 스폰 위치 <strong>PickOutsideVillageSpawnPos</strong> — 펜스 사각
+        안이면 외부로 강제 이동.</li>
+      <li>EndNight: 추적 + 추적 외 모든 좀비 sweep 정리 (다중 가드).</li>
+    </ul>
+
+    <div class="file">Assets/Scripts/Enemies/<strong>WaveSpawner.cs</strong></div>
+    <ul class="tight">
+      <li class="small">Legacy — VillageController 가 사용했지만 현재는 NightController 가
+        직접 스폰. 사실상 미사용.</li>
+    </ul>
+
+    <h2 id="animals">G. 야생 동물</h2>
+
+    <div class="file">Assets/Scripts/Animals/<strong>AnimalAi.cs</strong></div>
+    <ul class="tight">
+      <li>모든 동물의 추상 베이스 (RequireComponent Rigidbody2D).</li>
+      <li>HP / 회복 / 플레이어 캐싱 / TakeDamage(Gatherable.OnGathered 호출) 공통.</li>
+      <li>서브클래스는 <code>protected abstract void DoBehavior()</code> 만 구현.</li>
+    </ul>
+
+    <div class="file">Assets/Scripts/Animals/<strong>DeerAi.cs</strong></div>
+    <ul class="tight">
+      <li>도주형 — 토끼/여우/사슴/멧돼지/흰토끼. FleeRadius 안 들어오면 도망.</li>
+    </ul>
+
+    <div class="file">Assets/Scripts/Animals/<strong>WolfAi.cs</strong></div>
+    <ul class="tight">
+      <li>포식자 — 늑대/곰/맘모스. Sight 안 Player/Companion 추격, AttackRange 안에서
+        근접 공격.</li>
+      <li>ProceduralSpawner 가 PredatorMoveSpeed/AttackRange/SightRange/Cooldown
+        오버라이드 (맘모스는 느리고 사거리 길게).</li>
+    </ul>
+
+    <h2 id="village">H. 마을 + 건물</h2>
+
+    <div class="file">Assets/Scripts/Village/<strong>Building.cs</strong></div>
+    <ul class="tight">
+      <li>모든 건물 공통 컴포넌트. <code>Kind</code> (BuildingKind enum 10종).</li>
+      <li>Awake: HP 결정 — <strong>마을 성장도 곱</strong> (1 + 0.12 × 비-펜스 건물 수,
+        캡 ×3) + 펜스는 망루당 +50%.</li>
+      <li>Start: HpBarUi 자동 부착 + DawnRepair 구독.</li>
+      <li><code>TakeDamage</code>: HP 차감 + LastDamagedAt (ThreatCompass 용) +
+        파괴 시 호스팅 동료 노출.</li>
+      <li>새벽: <code>DawnRepair</code> = MaxHp/4 회복.</li>
+      <li>외부 <code>RepairHp(n)</code>: 수리 버튼 호출.</li>
+    </ul>
+
+    <div class="file">Assets/Scripts/Village/<strong>BuildingFactory.cs</strong></div>
+    <ul class="tight">
+      <li>모든 건물(Barricade/House/Storage/Farm/Watchtower/Infirmary/HuntersHut)
+        의 정적 spawn 메서드. SimpleHud + ConstructionSite + PrefabGenerator 가
+        같은 메서드 호출.</li>
+      <li>모닥불/펜스/문은 VillageStarter 에 있음 (역사적 위치).</li>
+    </ul>
+
+    <div class="file">Assets/Scripts/Village/<strong>VillageStarter.cs</strong></div>
+    <ul class="tight">
+      <li>게임 시작 시 마을 자동 빌드: 모닥불 1 + 사각 펜스 + 남쪽 게이트.</li>
+      <li><code>CurrentHalfSize</code> (5u 시작, 14u 캡) — 비-펜스 건물 1당 +0.4u 확장.</li>
+      <li><code>OnBuildingAdded(center)</code>: 새 건물 짓고 나면 호출 → 새 외곽
+        ring 추가 (기존 펜스 0.4u 안에 있으면 스킵).</li>
+      <li>SpawnFence/SpawnGate/SpawnCampfire 정적 메서드.</li>
+    </ul>
+
+    <div class="file">Assets/Scripts/Village/<strong>ConstructionSite.cs</strong></div>
+    <ul class="tight">
+      <li>"건축 중" 임시 GameObject. TotalTime(8s) 동안 진행도 누적, 반경 2.5u 안
+        워커(Player + 비-Hiding/Working 동료) 1명당 속도 +1×.</li>
+      <li>완료 시 <code>OnComplete(kind, pos)</code> 콜백 호출 — SimpleHud 가 SpawnX
+        실행.</li>
+    </ul>
+
+    <div class="file">Assets/Scripts/Village/<strong>Door.cs</strong></div>
+    <ul class="tight">
+      <li>게이트 콜라이더. Start 에서 Player + 모든 Companion 콜라이더와
+        IgnoreCollision (좀비/동물은 막힘).</li>
+      <li>0.5s 마다 새 동료 자동 등록 — 영입 동료가 통과 가능하도록.</li>
+      <li>정적 <code>Door.FindNearest(pos)</code> — 동료 follow 의 문 routing 에 사용.</li>
+    </ul>
+
+    <div class="file">Assets/Scripts/Village/<strong>FarmBuilding.cs</strong></div>
+    <ul class="tight">
+      <li>밤마다 NightStartedPayload 카운트 — NightsToRipe 도달 시 HarvestReady.</li>
+      <li>Workers 리스트 (max 2). Harvest() = BaseYield(10) + Workers×6 식량.</li>
+      <li>정적 <code>MaxFarmsAllowed = 1 + 창고수</code>, <code>CurrentFarmCount</code>.</li>
+    </ul>
+
+    <div class="file">Assets/Scripts/Village/<strong>VillageGrid.cs</strong></div>
+    <ul class="tight">
+      <li class="small">PlacementController 가 사용하던 그리드 셀 자료구조 — 현재
+        SimpleHud 의 자유 배치(좌클릭) 흐름이 기본이라 사실상 사용 안 함.</li>
+    </ul>
+
+    <div class="file">Assets/Scripts/Village/<strong>PlacementController.cs</strong></div>
+    <ul class="tight">
+      <li class="small">VillageGrid 기반 마우스 미리보기 + 격자 스냅. 현재 흐름에서
+        쓰이지 않음 (SimpleHud 의 _pendingBuildKind 가 대체).</li>
+    </ul>
+
+    <div class="file">Assets/Scripts/<strong>VillageController.cs</strong></div>
+    <ul class="tight">
+      <li class="small">VillageScene 루트. VillageScene 자체가 제거되어 사실상 미사용.</li>
+    </ul>
+
+    <h2 id="world">I. 월드</h2>
+
+    <div class="file">Assets/Scripts/World/<strong>ProceduralSpawner.cs</strong></div>
+    <ul class="tight">
+      <li>플레이어 주변 청크(10×10) 로드/언로드. 첫 방문 청크에만 동물/NPC 스폰.</li>
+      <li>per-slot roll: TreeChance(0.22) → RockChance(0.08) → DeerChance(0.10) →
+        NpcChance(0.04). 사냥꾼 오두막 1당 DeerChance ×1.25.</li>
+      <li>밤이면 EnsureLoaded 스킵 + SpawnAnimal/SpawnDailyVillageNpc 도 phase 가드.</li>
+      <li><strong>public 노출</strong> (PrefabGenerator 용): AnimalArchetype struct,
+        NpcArchetype struct, _animals[], _npcArchetypes[], CreateOneAnimal,
+        CreateNpcFromArchetype.</li>
+    </ul>
+
+    <div class="file">Assets/Scripts/World/<strong>ChunkManager.cs</strong></div>
+    <ul class="tight">
+      <li class="small">초기 ECS-style 청크 로직. 현재 ProceduralSpawner 가 자체적으로
+        청크 처리하므로 거의 미사용.</li>
+    </ul>
+
+    <h2 id="gather">J. 채집</h2>
+
+    <div class="file">Assets/Scripts/Gather/<strong>Gatherable.cs</strong></div>
+    <ul class="tight">
+      <li>채집 가능 마커. <code>YieldKind / YieldAmount / DurationSec</code>.</li>
+      <li><code>OnGathered(store)</code>: 자원 추가 + 사운드 + 부유 텍스트 + DeathPoof
+        + Destroy. BonusYieldOnGather 동반 시 추가 자원도.</li>
+    </ul>
+
+    <div class="file">Assets/Scripts/Gather/<strong>BonusYieldOnGather.cs</strong></div>
+    <ul class="tight">
+      <li>흰토끼 처럼 부가 자원 (Frostbloom) 떨어뜨리는 케이스 마커.</li>
+    </ul>
+
+    <div class="file">Assets/Scripts/Gather/<strong>GatherController.cs</strong></div>
+    <ul class="tight">
+      <li>플레이어 채집 — E키 또는 외부 <code>StartGathering(g)</code>.</li>
+      <li>진행 중 0.5s 마다 4u 안 Follow 동료 자동 합류 (최대 2명).</li>
+    </ul>
+
+    <h2 id="ui">K. UI / 시청각</h2>
+
+    <div class="file">Assets/Scripts/UI/<strong>SimpleHud.cs</strong></div>
+    <ul class="tight">
+      <li><strong>1700+ 줄 IMGUI 메인.</strong> 모든 카드/모달/배너/토스트/배치 모드.</li>
+      <li>5개 모서리 영역: TOP-LEFT WaveStanceBar / TOP-CENTER PhaseClock /
+        TOP-RIGHT ResourceBar / BOT-LEFT StatCard / BOT-CENTER BuildHotbar /
+        BOT-RIGHT DebugCorner.</li>
+      <li>오버레이: PhaseBanner / BossWarning / ThreatCompass / NightIntroFade /
+        DawnFlare / FloatText 가운데 모달들 (Rune / Recruit / Tutorial / Pause /
+        Death).</li>
+      <li><strong>HudMode enum</strong> Melee/Ranged/Build — 모드 탭 [1]/[2]/[3].</li>
+      <li><strong>_pendingBuildKind</strong> = 핫바 클릭 후 → 마우스 좌클릭으로 배치
+        확정 (ConstructionSite 스폰).</li>
+      <li>SpawnX 메서드들 (Barricade/House/...) 은 BuildingFactory 위임.</li>
+    </ul>
+
+    <div class="file">Assets/Scripts/UI/<strong>UiTheme.cs</strong></div>
+    <ul class="tight">
+      <li>색 팔레트 + Panel/Bar/Icon/Button 헬퍼. 모든 SimpleHud 호출이 통과.</li>
+    </ul>
+
+    <div class="file">Assets/Scripts/UI/<strong>GameFeel.cs</strong></div>
+    <ul class="tight">
+      <li>정적 VFX 모음: HitFlash, DeathPoof, SnowPuff, FloatText, Slash.</li>
+      <li>DontDestroyOnLoad runner 로 페이드 코루틴 호스팅.</li>
+    </ul>
+
+    <div class="file">Assets/Scripts/UI/<strong>Sfx.cs</strong></div>
+    <ul class="tight">
+      <li>외부 오디오 파일 0개 — 사인파/스윕 합성 7종 (Hit/Pickup/Death/Build/Click/
+        NightHowl/Boss). 첫 호출 시 캐싱.</li>
+      <li>Volume PlayerPrefs("il6_sfx_vol", 0.6).</li>
+    </ul>
+
+    <div class="file">Assets/Scripts/UI/<strong>Music.cs</strong></div>
+    <ul class="tight">
+      <li>페이즈별 8s 루프 chord 합성 (Day=G major / Night=A minor 저음 / Evening=긴장
+        / Dawn=가벼운 major).</li>
+      <li><code>PlayForPhase(phase)</code> — SimpleHud 가 phase 이벤트마다 호출.</li>
+    </ul>
+
+    <div class="file">Assets/Scripts/UI/<strong>HpBarUi.cs</strong></div>
+    <ul class="tight">
+      <li>머리 위 HP 바. <code>Player / Zombie / Building / CompanionRef /
+        AnimalRef</code> 다섯 ref 중 하나 세팅.</li>
+      <li>풀 HP 시 자동 숨김.</li>
+    </ul>
+
+    <div class="file">Assets/Scripts/Util/<strong>ColorFallback.cs</strong></div>
+    <ul class="tight">
+      <li>외부 sprite 없이 런타임 사각/원/삼각/Rounded 모양 sprite 생성. 모든 절차적
+        스폰의 시각 요소가 의존.</li>
+      <li><strong>Awake 가 아니라 Start 에서</strong> 생성 — AddComponent 이후 필드
+        세팅 시점이 Awake 이후라.</li>
+    </ul>
+
+    <div class="file">Assets/Scripts/UI/<strong>HudController.cs</strong></div>
+    <ul class="tight">
+      <li class="small">초기 HUD prototype. SimpleHud 가 대체. 현재 미사용.</li>
+    </ul>
+
+    <div class="file">Assets/Scripts/UI/<strong>BuildButton.cs</strong></div>
+    <ul class="tight">
+      <li class="small">초기 빌드 버튼 prototype. 현재 BuildHotbar 가 대체. 미사용.</li>
+    </ul>
+
+    <h2 id="resource">L. 자원 / 영속 / 업적</h2>
+
+    <div class="file">Assets/Scripts/Resources/<strong>ResourceStore.cs</strong></div>
+    <ul class="tight">
+      <li>5종 자원 (Wood/Meat/Food/Frostbloom/Stone) 보관소. 캡 관리.</li>
+      <li><code>Add / Spend / IncreaseCap</code> + ResourceChangedPayload emit.</li>
+      <li>Snapshot/Restore — JSON 직렬화 호환.</li>
+    </ul>
+
+    <div class="file">Assets/Scripts/Persistence/<strong>SaveLoad.cs</strong></div>
+    <ul class="tight">
+      <li>Application.persistentDataPath 에 JSON 한 파일 저장.</li>
+      <li>SaveFileV1: version, currentDay, ResourceSnapshot, weatherRng.</li>
+    </ul>
+
+    <div class="file">Assets/Scripts/Progression/<strong>AchievementManager.cs</strong></div>
+    <ul class="tight">
+      <li>9 마일스톤 (첫 사냥/25킬/100킬/첫 동료/5동료/3·7·15일/점수300).</li>
+      <li>0.4s 마다 폴링, NewlyUnlocked 큐에 새 entry 추가 → SimpleHud 가 토스트로
+        표시.</li>
+    </ul>
+
+    <h2 id="util">M. 유틸리티</h2>
+
+    <div class="file">Assets/Scripts/Util/<strong>SeededRng.cs</strong></div>
+    <ul class="tight">
+      <li>mulberry32 32bit 결정적 PRNG. 도메인 로직(스폰/대미지/날씨) 모두 사용.
+        UnityEngine.Random 대신.</li>
+      <li><code>Next() / IntRange(min,max) / Pick(list)</code>.</li>
+    </ul>
+
+    <div class="file">Assets/Scripts/Util/<strong>MathUtil.cs</strong></div>
+    <ul class="tight">
+      <li><code>SafeNormalize(Vector2)</code> 정도. 작은 헬퍼.</li>
+    </ul>
+
+    <div class="file">Assets/Scripts/Util/<strong>YSort.cs</strong></div>
+    <ul class="tight">
+      <li>Y 좌표 → sortingOrder 변환. 일부 entity 가 사용. 테스트도 있음.</li>
+    </ul>
+
+    <div class="file">Assets/Scripts/Util/<strong>DayNightLightCalc.cs</strong></div>
+    <ul class="tight">
+      <li>Phase → (intensity, color) 보간 계산. URP Light2D 가 있을 때 사용했지만
+        현재는 NightController 가 자체 카메라 BG 색 보간.</li>
+    </ul>
+
+    <div class="file">Assets/Scripts/FX/<strong>SnowEmitter.cs</strong></div>
+    <ul class="tight">
+      <li>Unity ParticleSystem 기반 카메라 추적 설원. 블리자드 시 강도 ↑.</li>
+    </ul>
+
+    <div class="file">Assets/Scripts/FX/<strong>LightFlicker.cs</strong></div>
+    <ul class="tight">
+      <li>모닥불 깜빡임 강도 계산 헬퍼. 테스트도 있음.</li>
+    </ul>
+
+    <div class="file">Assets/Scripts/Vision/<strong>VisionMask.cs</strong></div>
+    <ul class="tight">
+      <li>SpriteMask + 검정 풀스크린 — 야간에만 활성. 페이즈 이벤트 구독.</li>
+    </ul>
+
+    <h2 id="events">N. 이벤트 버스</h2>
+
+    <div class="file">Assets/Scripts/Events/<strong>EventBus.cs</strong> +
+      <strong>GameEvents.cs</strong></div>
+    <ul class="tight">
+      <li>심플한 publish/subscribe — 타입별 콜백 리스트.</li>
+      <li><code>EventBus.Instance.Subscribe&lt;T&gt;(handler)</code> 가 unsub
+        Action 반환. <code>OnDestroy</code> 에서 호출.</li>
+      <li>주요 페이로드: DayPayload, EveningStartedPayload, NightStartedPayload,
+        NightEndedPayload, DawnStartedPayload, DayStartedPayload (전부 IL6 namespace,
+        실제 정의는 DayNightController.cs 안), PlayerDamagedPayload,
+        PlayerDiedPayload, ZombieDiedPayload, ResourceChangedPayload,
+        BuildingDestroyedPayload, WaveStartedPayload, WaveClearedPayload,
+        BuildRequestPayload (IL6.Events namespace, GameEvents.cs).</li>
+    </ul>
+    <div class="gotcha">
+      Phase 페이로드들은 <strong>namespace IL6</strong> 에 있고 다른 페이로드들은
+      <strong>namespace IL6.Events</strong> 에 있어서 한 번 컴파일 에러 났었음.
+      구독자가 IL6 namespace 안에 있으면 페이즈 페이로드는 prefix 없이 쓰면 됨.
+    </div>
+
+    <h2 id="editor">O. 에디터 도구</h2>
+
+    <div class="file">Assets/Editor/<strong>BuildScript.cs</strong></div>
+    <ul class="tight">
+      <li>메뉴 IL6/Build/WebGL + Windows. CLI <code>-batchmode -executeMethod</code>
+        로도 호출 가능.</li>
+      <li>WebGL: IL2CPP, no compression, Wasm linker, no exceptions.</li>
+      <li>Windows: Mono, x64.</li>
+    </ul>
+
+    <div class="file">Assets/Editor/<strong>PrefabGenerator.cs</strong></div>
+    <ul class="tight">
+      <li>메뉴 IL6/Tools/Generate All Prefabs. 22개 프리팹 한 번에 자동 생성
+        (건물 10 + 동물 7 + NPC 5).</li>
+    </ul>
+
+    <h2 id="recipes">P. "어떻게 추가하나?" 레시피</h2>
+
+    <h3>새 동물 추가</h3>
+    <ol>
+      <li><code>ProceduralSpawner._animals</code> 배열에 AnimalArchetype 추가
+        (Name/Hp/MeatMin-Max/MoveSpeed 등).</li>
+      <li>Predator 면 PredatorDamage/MoveSpeed/SightRange 등도.</li>
+      <li>Day-locked 면 MinDay 세팅.</li>
+      <li>끝. PrefabGenerator 가 자동 픽업.</li>
+    </ol>
+
+    <h3>새 룬 추가</h3>
+    <ol>
+      <li><code>RuneKind</code> enum 에 추가.</li>
+      <li><code>PlayerProgression</code>:
+        <ul>
+          <li>효과 게터 (예: <code>public int FireBurnDmg => Scaled(...)</code>)</li>
+          <li><code>PickThreeOffer</code> 의 <code>AddIfRoom(RuneKind.Xxx, weight)</code></li>
+          <li><code>Title</code> switch 에 추가</li>
+          <li><code>DescribeAt(kind, level)</code> case 추가</li>
+          <li>즉시 효과면 <code>ApplyRune</code> 에 case</li>
+        </ul>
+      </li>
+      <li>지속 효과면 적절한 위치에서 <code>Progression.GetStacks(RuneKind.Xxx) > 0</code> 검사
+        후 적용 (Projectile.ApplyEffectsTo / PlayerAttackController.DealImmediate
+        / PlayerController.TakeDamage 중 적합한 곳).</li>
+    </ol>
+
+    <h3>새 건물 추가</h3>
+    <ol>
+      <li><code>BuildingKind</code> enum 에 추가.</li>
+      <li><code>Building.Awake</code> HP switch 에 case.</li>
+      <li><code>BuildingFactory.SpawnXxx(Vector3 pos)</code> 정적 메서드 추가.</li>
+      <li><code>SimpleHud.DrawBuildHotbar</code> slots 배열에 BuildSlot 추가 +
+        <code>BaseWoodCost</code> switch 에 case + <code>SpawnConstructionSite</code>
+        의 OnComplete 콜백 switch 에 case + SimpleHud 위임 메서드.</li>
+      <li>특수 동작 있으면 추가 컴포넌트 (HealingShrine 처럼).</li>
+      <li>PrefabGenerator 에 한 줄 (또는 Buildings 배열 만들어 iterate).</li>
+    </ol>
+
+    <h3>새 NPC archetype 추가</h3>
+    <ol>
+      <li><code>ProceduralSpawner._npcArchetypes</code> 에 NpcArchetype 추가.</li>
+      <li>끝. PrefabGenerator 자동 픽업.</li>
+    </ol>
+
+    <h3>새 적 변종 추가</h3>
+    <ol>
+      <li><code>NightController.Variant</code> enum 에 추가 + <code>PickVariant</code>
+        에 day 조건/확률.</li>
+      <li><code>SpawnOne</code> switch case — tint/scale/HP×배수/dmg/speed 변경.</li>
+      <li>특수 능력 (예: 원거리)이면 Zombie.cs 에 필드/로직 추가.</li>
+    </ol>
+
+    <h3>새 페이즈 이벤트 구독</h3>
+    <pre><code>using IL6.Events;
+private System.Action _unsub;
+private void OnEnable() {
+    _unsub = EventBus.Instance.Subscribe&lt;DawnStartedPayload&gt;(p =&gt; {
+        // p.Day 사용
+    });
+}
+private void OnDisable() { _unsub?.Invoke(); }</code></pre>
+
+    <h2 id="dead">Q. 사용 안 하는 / 레거시 파일</h2>
+    <p>아직 삭제 안 된 코드들 — 새 작업 시 무시해도 됨:</p>
+    <table>
+      <thead><tr><th>파일</th><th>이유</th><th>상태</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>Combat/WeaponVisual.cs</td><td>weapon 아이콘 hover 표시 — 미사용</td>
+          <td><span class="pill dead">DEAD</span></td>
+        </tr>
+        <tr>
+          <td>Enemies/WaveSpawner.cs</td>
+          <td>VillageController 가 사용했으나 NightController 가 대체</td>
+          <td><span class="pill dead">DEAD</span></td>
+        </tr>
+        <tr>
+          <td>Village/VillageGrid.cs</td>
+          <td>격자 배치 시스템 — SimpleHud 의 자유 배치가 대체</td>
+          <td><span class="pill dead">DEAD</span></td>
+        </tr>
+        <tr>
+          <td>Village/PlacementController.cs</td><td>VillageGrid 와 같이 미사용</td>
+          <td><span class="pill dead">DEAD</span></td>
+        </tr>
+        <tr>
+          <td>VillageController.cs</td>
+          <td>VillageScene 루트 — 씬 자체 제거됨</td>
+          <td><span class="pill dead">DEAD</span></td>
+        </tr>
+        <tr>
+          <td>UI/HudController.cs</td><td>초기 HUD prototype</td>
+          <td><span class="pill dead">DEAD</span></td>
+        </tr>
+        <tr>
+          <td>UI/BuildButton.cs</td><td>초기 빌드 버튼 prototype</td>
+          <td><span class="pill dead">DEAD</span></td>
+        </tr>
+        <tr>
+          <td>World/ChunkManager.cs</td>
+          <td>초기 ECS 청크 — ProceduralSpawner 자체 처리로 대체</td>
+          <td><span class="pill dead">DEAD</span></td>
+        </tr>
+        <tr>
+          <td>Player/DebugMove.cs</td><td>초기 키보드 이동 테스트</td>
+          <td><span class="pill dead">DEAD</span></td>
+        </tr>
+        <tr>
+          <td>Util/DayNightLightCalc.cs</td>
+          <td>URP Light2D 가 있을 때 보간. 현재 NightController 자체 보간으로 대체</td>
+          <td>일부 사용 (테스트만)</td>
+        </tr>
+        <tr>
+          <td>Cycle/DayNightLightBinder.cs</td>
+          <td>URP Light2D 변경 — 현재 미사용</td>
+          <td><span class="pill dead">DEAD</span></td>
+        </tr>
+        <tr>
+          <td>Tests/*.cs</td>
+          <td>NUnit 테스트 — <code>#if UNITY_INCLUDE_TESTS</code> 가드 안에서만 컴파일</td>
+          <td>활성</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <hr />
+    <p style="text-align: center; color: #888; font-size: 0.85em">
+      자동 생성 — 2026-05-02. art-upgrade <code>HEAD@31e114c</code> 기준.
+    </p>
+  </body>
+</html>

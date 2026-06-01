@@ -1,0 +1,688 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <title>6_IL 현재 상태 — art-upgrade 브랜치 (2026-04-28)</title>
+    <style>
+      body {
+        font-family:
+          -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+        max-width: 980px;
+        margin: 2em auto;
+        padding: 0 1.2em;
+        line-height: 1.65;
+        color: #222;
+      }
+      h1 { border-bottom: 2px solid #333; padding-bottom: 0.3em; }
+      h2 { border-bottom: 1px solid #ccc; padding-bottom: 0.25em; margin-top: 2em; }
+      h3 { margin-top: 1.6em; color: #2a4e8e; }
+      h4 { margin-top: 1.2em; color: #555; }
+      code {
+        background: #f3f3f3;
+        padding: 2px 6px;
+        border-radius: 3px;
+        font-family: ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+        font-size: 0.92em;
+      }
+      pre {
+        background: #1e1e1e;
+        color: #eaeaea;
+        padding: 1em 1.2em;
+        border-radius: 6px;
+        overflow-x: auto;
+        line-height: 1.4;
+      }
+      pre code { background: none; padding: 0; color: inherit; font-size: 0.88em; }
+      table { border-collapse: collapse; width: 100%; margin: 1em 0; font-size: 0.95em; }
+      th, td { border: 1px solid #ddd; padding: 6px 10px; text-align: left; vertical-align: top; }
+      th { background: #f0f4fa; }
+      td.num { text-align: right; font-variant-numeric: tabular-nums; }
+      .meta {
+        background: #fafafa;
+        padding: 0.6em 1em;
+        border-left: 3px solid #4a90e2;
+        margin: 1em 0;
+        font-size: 0.92em;
+      }
+      .pill {
+        display: inline-block;
+        padding: 1px 8px;
+        background: #eef5ff;
+        color: #2a4e8e;
+        border-radius: 12px;
+        font-size: 0.82em;
+        margin-right: 4px;
+      }
+      .pill.warn { background: #fff4d6; color: #8a5a00; }
+      .pill.danger { background: #ffe7e7; color: #a83434; }
+      .pill.ok { background: #e6f6e9; color: #2c6d3b; }
+      ul.tight li { margin: 2px 0; }
+      .toc { columns: 2; column-gap: 2em; margin-bottom: 2em; }
+      .toc a { text-decoration: none; }
+      .file { color: #7a5a00; }
+    </style>
+  </head>
+  <body>
+    <h1>6_IL — 현재 상태 (art-upgrade 브랜치)</h1>
+    <div class="meta">
+      <strong>날짜:</strong> 2026-04-28<br />
+      <strong>기준 브랜치:</strong> <code>art-upgrade</code> (HEAD: <code>d616c2e</code>) ·
+      <strong>main 대비 커밋 차:</strong> 124<br />
+      <strong>Unity 버전:</strong> 2022.3.62f3 LTS · <strong>플랫폼:</strong> WebGL + Windows
+      Standalone 빌드 양쪽 동작 확인<br />
+      <strong>이전 기획서:</strong>
+      <a href="2026-04-23-unity-art-upgrade.md">2026-04-23-unity-art-upgrade.md</a> (Phase
+      0~1 → 아트 업그레이드 시작 시점). 이 문서는 그 이후 추가된 모든 게임플레이/UI/밸런스
+      변경을 반영한 최신 스냅샷.
+    </div>
+
+    <h2>목차</h2>
+    <div class="toc">
+      <ul class="tight">
+        <li><a href="#overview">1. 한 줄 요약 + 핵심 게임플레이 루프</a></li>
+        <li><a href="#cycle">2. 사이클 시스템 (낮/저녁/밤/새벽)</a></li>
+        <li><a href="#village">3. 마을 + 건물</a></li>
+        <li><a href="#units">4. 유닛 — 플레이어/동료/펫</a></li>
+        <li><a href="#enemies">5. 적 — 좀비/보스</a></li>
+        <li><a href="#animals">6. 동물 (야외)</a></li>
+        <li><a href="#combat">7. 전투 + 룬 시스템</a></li>
+        <li><a href="#economy">8. 자원/채집/수리/영입</a></li>
+        <li><a href="#ui">9. UI 레이아웃</a></li>
+        <li><a href="#feel">10. 게임 필 (시청각 피드백)</a></li>
+        <li><a href="#progression">11. 진행/레벨/업적</a></li>
+        <li><a href="#balance">12. 밸런스 수치 표</a></li>
+        <li><a href="#files">13. 주요 코드 파일 인덱스</a></li>
+        <li><a href="#open">14. 열린 이슈 / 다음 후보</a></li>
+      </ul>
+    </div>
+
+    <h2 id="overview">1. 한 줄 요약 + 핵심 게임플레이 루프</h2>
+    <p>
+      <strong>"끝없는 겨울. 마지막 마을의 마지막 수호자."</strong> 한국어 판타지
+      설원 배경의 탑다운 생존 + 베이스 디펜스. 낮에는 자원을 채집하고 동료를 영입해
+      마을을 키우며, 밤에는 사방에서 몰려오는 좀비 웨이브로부터 마을을 사수.
+    </p>
+    <h3>코어 루프</h3>
+    <ol>
+      <li><strong>낮 (Day)</strong> — 자원 채집(나무/돌/고기), 동물 사냥, 떠돌이 영입,
+        마을 건설/수리, 모드 전환(근접/원거리/건축).</li>
+      <li><strong>저녁 (Evening, 5s)</strong> — 화면이 검게 페이드인, "마을로 돌아가는
+        중..." 안내. 페이드 절정에서 플레이어 + 모든 동료/펫이 마을 중심으로
+        텔레포트.</li>
+      <li><strong>밤 (Night)</strong> — 좀비 웨이브가 펜스 밖에서 무한 스폰, 활성 0
+        시 자동 보충. 25킬 마다 보스 강제 출현. 동료/동물/NPC 신규 스폰 정지.</li>
+      <li><strong>새벽 (Dawn, 5s)</strong> — 골드빛 그라데이션 + "☀ 아침이 밝았다"
+        시네마틱. EndNight() 가 모든 좀비 청소. 플레이어/동료 풀 HP 회복, 건물 25%
+        수리, 자동 저장, 새 NPC 1명 스폰.</li>
+    </ol>
+
+    <h2 id="cycle">2. 사이클 시스템</h2>
+    <ul class="tight">
+      <li>기본 페이즈 길이: 낮 40s, 밤 40s, 저녁 5s, 새벽 5s.</li>
+      <li><strong>레벨 스케일:</strong> Day/Night 만 <code>1 + 0.25 × (Level-1)</code>
+        곱연산. Lv 1 = 40s, Lv 5 = 80s, Lv 10 = 140s. 저녁/새벽은 고정.</li>
+      <li><strong>페이즈 길이 잠금:</strong> <code>DayNightController._phaseLockedDuration</code>
+        — 페이즈 진입 시점에 ComputeDuration 결과를 캐싱. 진행 중 레벨업으로 mul 이
+        바뀌어도 현재 페이즈 길이는 안 변함.</li>
+      <li><strong>좀비 안전망:</strong> NightController.Update 가 매 프레임
+        <code>Cycle.Phase</code> vs <code>CurrentPhase</code> 비교, 어긋나면 강제
+        StartNight/EndNight. Zombie.Update 도 본인 phase != Night 면 자폭. 낮에 좀비가
+        남아있는 가능성을 다층 가드로 차단.</li>
+    </ul>
+
+    <h2 id="village">3. 마을 + 건물</h2>
+    <h3>고정 구조</h3>
+    <p>
+      게임 시작 시 <code>VillageStarter.SpawnStarterVillage()</code> 가 마을 중심에
+      모닥불 + ±5u 사각 펜스 벽 + 남쪽 가운데 슬롯에 골드 게이트 (Door) 자동 스폰.
+      Door 콜라이더는 Player + 모든 Companion 콜라이더와 IgnoreCollision (좀비/동물은
+      막힘).
+    </p>
+    <h3>건물 종류 — <code>BuildingKind</code> enum</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>종류</th><th>역할</th><th>기본 HP</th><th>비용</th><th>특수</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Campfire 🔥</td><td>모닥불 + 좀비 화상 오라</td>
+          <td class="num">400</td><td>5W</td>
+          <td>반경 2.5u DPS 6, 동료 사격속도 ×0.7</td>
+        </tr>
+        <tr>
+          <td>House 🏠</td><td>인구 +4 (영입 한도 가산)</td>
+          <td class="num">200</td><td>6W</td>
+          <td>FreeCapacity 12 + 4 × houses</td>
+        </tr>
+        <tr>
+          <td>Fence 🥕</td><td>외곽 차단</td>
+          <td class="num">4</td><td>1W</td>
+          <td>망루당 +50% HP 부스트 (스택)</td>
+        </tr>
+        <tr>
+          <td>Storage 📦</td><td>자원 캡 +50, 농장 한도 +1</td>
+          <td class="num">250</td><td>8W</td>
+          <td>FarmCap = 1 + storage</td>
+        </tr>
+        <tr>
+          <td>Farm 🌾</td><td>식량 생산</td>
+          <td class="num">150</td><td>6W</td>
+          <td>BaseYield 10 + 워커×6, NightsToRipe 2</td>
+        </tr>
+        <tr>
+          <td>Watchtower 🏹</td><td>야간 자동 사격 + 동료 버프</td>
+          <td class="num">220</td><td>8W + 4S</td>
+          <td>야간 8u 자동 사격 7dmg/1.2s, 3.5u 내 동료 dmg ×1.5</td>
+        </tr>
+        <tr>
+          <td>Barricade 🪵</td><td>걸쇠 — 동료 비숨김 대상</td>
+          <td class="num">200</td><td>5W</td>
+          <td>현재 핫바에는 미노출 (집으로 대체)</td>
+        </tr>
+      </tbody>
+    </table>
+    <h3>건축 흐름</h3>
+    <ol>
+      <li>Build 모드 (탭 [3] 또는 핫바) 에서 슬롯 클릭 → <code>_pendingBuildKind</code>
+        설정.</li>
+      <li>마우스에 골드 + 커서 + 안내 배너. 좌클릭 = 확정, 우클릭/ESC = 취소.</li>
+      <li>좌클릭 시 자원 즉시 차감 후 <strong>ConstructionSite</strong> (반투명 회색
+        사각) 스폰.</li>
+      <li>ConstructionSite.Update — 반경 2.5u 의 워커 (플레이어 + 비-Hiding/Working/Farming
+        동료) 수에 비례해 진행도 누적. 단독 8s, 동료 2명 ~3s.</li>
+      <li>완료 시 <code>OnComplete</code> 콜백이 실제 SpawnX 메서드 호출 → 진짜 건물로
+        교체.</li>
+    </ol>
+    <h3>비용 점증</h3>
+    <p>
+      <code>Inflate(base, kind) = base × (1 + 0.35 × 이미 지은 같은 종류 수)</code>.
+      두 번째 집은 +35%, 세 번째는 +70%, 네 번째는 +105%. UI 핫바에 실시간 반영.
+    </p>
+    <h3>마을 성장도 → 건물 HP</h3>
+    <p>
+      Building.Awake 가 펜스 제외 살아있는 건물 수를 카운트해서 신규 건물 HP 에
+      <code>1 + 0.12 × N</code> (최대 ×3) 곱연산. 마을이 커질수록 새 건물이 더
+      튼튼해짐. 펜스는 따로 망루 수에 따라 +50%/+100%/... 적용.
+    </p>
+
+    <h2 id="units">4. 유닛 — 플레이어 / 동료 / 펫</h2>
+    <h3>플레이어</h3>
+    <ul class="tight">
+      <li>HP 100, MoveSpeed 5, 자동 공격 (장비 모드 따라 근접/원거리)</li>
+      <li><strong>HP 회복:</strong> 4초마다 +1, 새벽 풀회복</li>
+      <li><strong>이동:</strong> WASD/방향키. InputReader Y축은 W=+1 (위) 정상.</li>
+      <li><strong>모드 탭:</strong> [1] ⚔ 근접 (Longsword) / [2] 🏹 원거리 (Bow) /
+        [3] 🏠 건축 (Build). 건축 모드에만 BuildHotbar 표시.</li>
+      <li>이동 시 발자국 눈 퍼프, 피격 시 화면 빨간 비네트 + 카메라 셰이크</li>
+    </ul>
+    <h3>동료 (Companion)</h3>
+    <ul class="tight">
+      <li>RecruitableNpc 가 F키 또는 영입 다이얼로그로 Companion 변환</li>
+      <li>HP 50, IsCombat 따라 자동 공격. 사거리 5u, 시야 9u (사거리보다 넓음).</li>
+      <li><strong>Stance:</strong> 👣 Follow / 🛡 Hold / ⚔ Aggressive (HUD 토글)</li>
+      <li><strong>포메이션:</strong> 둘러싸기 X, 플레이어 facing 기준 종대로 한 줄에
+        2명씩 ±0.45u 흩어지며 거리 점점 멀어짐</li>
+      <li><strong>follow 우선순위:</strong>
+        <ol>
+          <li>플레이어 시야 밖이면 → 적 무시하고 따라옴 (전투 중단)</li>
+          <li>플레이어 시야 안 + 적 시야 안 → 적 추격해 사거리 안에서 사격</li>
+          <li>둘 다 마을 안 → 자리 지킴 (앵커)</li>
+          <li>다른 쪽 → 가장 가까운 문 통과 2단계 경로 (좌우 정렬 후 직진)</li>
+        </ol>
+      </li>
+      <li><strong>채집 중 피격</strong> → 즉시 Mode.Follow 전환 후 반격.
+        <strong>채집 중 평화 시</strong> → 적 시야 들어와도 채집 계속.</li>
+      <li><strong>자동 대피:</strong> 1초마다 TryAutoHide.
+        <code>(Night + IsBlizzard)</code> 또는 <code>(비전투 + 좀비/늑대 시야 진입)</code>
+        → 가까운 비-펜스/바리게이트 건물에 숨음.</li>
+      <li><strong>망루 부스트:</strong> 3.5u 내 동료의 사격 데미지 ×1.5</li>
+      <li><strong>영입 한도:</strong> <code>FreeCapacity(12) + Houses × 4</code>,
+        <strong>일일 최대 3명</strong> (DayStarted 마다 리셋)</li>
+      <li><strong>먼 거리 콜라이더 OFF:</strong> 플레이어와 8u 이상 거리면 collider
+        disabled (좀비/펜스 통과 가능, 정체 방지)</li>
+    </ul>
+    <h3>펫</h3>
+    <ul class="tight">
+      <li>SummonDog 룬 → 갈색 둥근 펫. 근접 5+lvl×3 dmg, AttackRange 1.4u, 0.55s.
+        Rigidbody2D Dynamic + collider 0.30u (다른 유닛처럼 충돌).</li>
+      <li>SummonHawk 룬 → 노란 삼각 펫. <strong>매도 근접</strong>. 5+lvl×3 dmg,
+        AttackRange 1.2u, 0.7s. RB2D + collider 0.25u.</li>
+      <li>둘 다 Player 주변 궤도, 근처 좀비 자동 추격해 슬래시 공격.</li>
+    </ul>
+
+    <h2 id="enemies">5. 적 — 좀비 + 보스</h2>
+    <h3>좀비 (Zombie)</h3>
+    <ul class="tight">
+      <li>NightController 가 밤에만 스폰. <code>PickOutsideVillageSpawnPos</code> 가
+        펜스 사각(±5u + 1u 여유) 안이면 외부로 밀어냄 — 마을 안에서 절대 안 뜸.</li>
+      <li><strong>일자별 강화 (per-night scaling):</strong> HP × <code>1 + 0.12 × (day-1)</code>,
+        damage <code>+(day-1)</code>, speed × <code>1 + 0.02 × (day-1)</code> (캡 1.5×).</li>
+      <li><strong>변종:</strong>
+        <ul>
+          <li>Day 3+ Fast (오렌지, 0.8x scale, 1.6× speed, 60% HP)</li>
+          <li>Day 7+ Tank (보라, 1.35x scale, 0.6× speed, 220% HP, +4 dmg)</li>
+        </ul>
+      </li>
+      <li><strong>경로 차단 시 건물 부수기:</strong> Linecast 로 플레이어/동료까지의
+        경로에 Building 콜라이더 있으면 그 건물을 우선 공격해 길 확보.</li>
+      <li><strong>상태이상:</strong> Poison(누적 DoT), Slow(이속 ½), Lightning chain,
+        Detonate(처치 시 폭발)</li>
+    </ul>
+    <h3>보스</h3>
+    <ul class="tight">
+      <li>Day 5/10/15 (5의 배수) 시 <strong>BossNight</strong>: 3초 카운트다운 + ⚠
+        보스 출현 배너 + 카메라 셰이크.</li>
+      <li><strong>킬 누적 보스:</strong> 임의 밤에서도 KillsThisNight ≥ 25 도달 시
+        그날 보스 미출현이면 강제 소환.</li>
+      <li>HP <code>60 + day × 8</code>, 공격 +6+day-1, 변종 색 보라.</li>
+    </ul>
+    <h3>웨이브 시스템</h3>
+    <ul class="tight">
+      <li>BaseWaveCount 6 + (day-1) × 3, 눈보라 시 ×2, 매 활성 0+대기 0 도달 시
+        <code>Base + KillsThisNight/5</code> 로 무한 보충.</li>
+      <li>스폰 간격 0.6s (눈보라 0.36s), MaxActive 40.</li>
+      <li>눈보라(20% 확률): 플레이어 모닥불 반경 밖이면 DPS 2 동상 데미지, 동료도
+        대피 트리거.</li>
+    </ul>
+
+    <h2 id="animals">6. 동물 (야외)</h2>
+    <p>
+      낮 + 저녁 + 새벽에만 스폰 (밤은 절대 안 뜸). 첫 방문 청크에서만 random roll
+      기반 스폰, 재방문 시 동물/NPC 미생성. 청크 unload 와 분리되어 자유 이동/사망까지
+      영속. <strong>HP ±20% 랜덤</strong> 개체별 변동.
+    </p>
+    <table>
+      <thead>
+        <tr>
+          <th>종</th><th>HP</th><th>고기</th><th>속성</th><th>출현</th><th>특기</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>토끼</td><td class="num">12</td><td class="num">1</td><td>도주</td>
+          <td class="num">16%</td><td>매우 빠름 (5.5)</td>
+        </tr>
+        <tr>
+          <td>여우</td><td class="num">24</td><td class="num">2</td><td>도주</td>
+          <td class="num">13%</td><td>중속 (4.5)</td>
+        </tr>
+        <tr>
+          <td>멧돼지</td><td class="num">240</td><td class="num">3-5</td><td>도주(약)</td>
+          <td class="num">22%</td><td>큰 몸체, 느림</td>
+        </tr>
+        <tr>
+          <td>늑대</td><td class="num">120</td><td class="num">1 (25%)</td><td><b>포식자</b></td>
+          <td class="num">13% (Day 3+)</td><td>4-7마리 무리, 6 dmg, 추격</td>
+        </tr>
+        <tr>
+          <td>사슴</td><td class="num">320</td><td class="num">2</td><td>도주(중)</td>
+          <td class="num">30%</td><td>중형 사냥감, 가장 흔함</td>
+        </tr>
+        <tr>
+          <td>흰토끼</td><td class="num">14</td><td class="num">1 + Frostbloom 1</td><td>도주(매우)</td>
+          <td class="num">3%</td><td>매우 빠름 (6.5), 희귀 보너스</td>
+        </tr>
+        <tr>
+          <td><b>맘모스</b></td><td class="num">2000</td><td class="num">30~50</td><td><b>포식자(정적)</b></td>
+          <td class="num">0.5% (Day 5+)</td>
+          <td>30 dmg, 속도 1.8, 시야 5u — 정적 위협</td>
+        </tr>
+      </tbody>
+    </table>
+    <p class="meta">
+      <strong>설계 원칙:</strong> HP 가 낮은 동물일수록 등장 확률도 낮춤 (사냥 가성비
+      균형). HP 큰 동물(사슴/멧돼지)이 흔함 → 한 번의 사냥이 의미있음. 늑대 4-7
+      무리 + 맘모스 공격형으로 야외도 위험. 동물의 ±20% HP 변동으로 같은 종도
+      개체차.
+    </p>
+
+    <h2 id="combat">7. 전투 + 룬 시스템</h2>
+    <h3>무기</h3>
+    <p>
+      <code>WeaponCatalog</code> — 2종만:
+      <strong>Longsword</strong> (근접, ProjectileSpeed=0, 16 dmg, 1.8u, 0.7s) /
+      <strong>Bow</strong> (원거리, 10 dmg, 7.0u, 1.1s, 투사체 10 speed). 모드 탭으로
+      자동 전환.
+    </p>
+    <h3>투사체</h3>
+    <p>
+      <code>Projectile.Awake</code> 가 자체 sprite 생성 (ColorFallback 의존 X — 실행
+      순서 문제 회피). 큰 흰 원 (PixelSize 48-64) + 1.7~2.4× soft glow halo + 0.025s
+      간격 ghost trail. sortingOrder 50, scale 0.9. <strong>Pierce</strong> 룬 시 ×N
+      관통.
+    </p>
+    <h3>룬 시스템</h3>
+    <p>
+      레벨업 시 3장 카드 모달 (920×380 큰 사이즈) 에서 1장 선택. 각 룬 최대 3중첩
+      (1=기본, 2=강화, 3=마스터). 같은 원소(독·얼음·번개) 중 2개 마스터하면
+      시너지 ×1.5.
+    </p>
+    <p>
+      <strong>단순 능력치 룬은 풀에서 제거됨 (DamageUp/FireRateUp/HpUp/RangeUp/MoveSpeedUp
+      enum 만 보존, 풀에는 없음).</strong> 모든 선택지는 효과 기반:
+    </p>
+    <table>
+      <thead>
+        <tr><th>룬</th><th>1중첩</th><th>2중첩</th><th>마스터(3)</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>☠ 독 무기</td><td>3s 5 DPS</td><td>4s 7 DPS</td><td>6s 18 DPS</td>
+        </tr>
+        <tr>
+          <td>❄ 얼음 화살</td><td>2s 슬로우</td><td>3s</td><td>5s + 80% 슬로우</td>
+        </tr>
+        <tr>
+          <td>⚡ 번개 강타</td><td>50% 1점프 6dmg</td><td>70% 2점프 9dmg</td><td>100% 3점프 20dmg</td>
+        </tr>
+        <tr>
+          <td>✦ 다중 사격</td><td>+1 발</td><td>+2 발</td><td>+4 발</td>
+        </tr>
+        <tr>
+          <td>💥 폭발 처치</td><td>1.6u 8dmg</td><td>1.8u 12dmg</td><td>2.5u 25dmg</td>
+        </tr>
+        <tr>
+          <td>🐕 사냥개 소환</td><td>1마리 5dmg</td><td>2마리 8dmg</td><td>3마리 11dmg</td>
+        </tr>
+        <tr>
+          <td>🦅 매 소환</td><td>1마리 4dmg</td><td>2마리 7dmg</td><td>3마리 10dmg</td>
+        </tr>
+        <tr>
+          <td>🩸 흡혈</td><td>처치 +2 HP</td><td>+4 HP</td><td>+9 HP</td>
+        </tr>
+        <tr>
+          <td>🌵 가시</td><td>1.5u 5 반사</td><td>1.8u 9 반사</td><td>2.5u 20 반사</td>
+        </tr>
+        <tr>
+          <td>🏹 관통</td><td>+1 적 추가 적중</td><td>+2 적</td><td>+4 적</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2 id="economy">8. 자원/채집/수리/영입</h2>
+    <h3>자원</h3>
+    <p>
+      Wood / Stone / Meat / Food / Frostbloom 5종. 각 캡 50 (Storage 1개당 +50).
+      ResourceStore 가 Add/Spend/IncreaseCap 관리.
+    </p>
+    <h3>채집 (Gather)</h3>
+    <ul class="tight">
+      <li><strong>나무:</strong> 9s, +4 Wood. <strong>돌:</strong> 12s, +3 Stone.
+        벌목/채굴 두 종류 다 월드 버튼 (220×52 큰 사이즈).</li>
+      <li>버튼 표시 조건: 노드 3.5u 안에 플레이어 또는 동료 1명 이상.
+        <ul>
+          <li>플레이어 근처 → 본인 채집 시작 + 근처 동료 (최대 2명) 합류, 라벨
+            <code>(나 + 동료 N)</code></li>
+          <li>플레이어 멀고 동료만 → 가장 가까운 동료 최대 2명, 라벨
+            <code>(동료 N)</code></li>
+        </ul>
+      </li>
+      <li><strong>플레이어 E키 채집 → 자동 합류:</strong> GatherController 가 0.5s
+        마다 4u 안 Follow 동료를 최대 2명 자동 AssignGather.</li>
+      <li>완료 시 자원 + 녹색 "+N 자원" 토스트 + DeathPoof + 픽업 사운드.</li>
+    </ul>
+    <h3>수리 (Repair)</h3>
+    <p>
+      손상된 건물 (HP &lt; MaxHp) 3.5u 안에 플레이어 또는 동료 있으면 🔨 수리 버튼
+      표시. 클릭당 <strong>1 Wood 소모, MaxHp의 20% 회복</strong>. 도배 클릭으로 풀
+      수리. 새벽엔 자동 25% 회복도 별도.
+    </p>
+    <h3>영입 (Recruit)</h3>
+    <ul class="tight">
+      <li><strong>출현 조건:</strong> 낮 페이즈에만 스폰. 전 세계 동시 RecruitableNpc
+        ≤ 3 (캡), DailyNpcIntervalSec 30s 마다 마을 6.5~9u 외곽에 1명 + DayStarted
+        시 1명 추가.</li>
+      <li><strong>아키타입 5종:</strong> 사냥꾼 (활), 전사 (검 9 dmg), 치유사 (원거리),
+        농부 (비전투), 방랑객 (밸런스).</li>
+      <li><strong>한도:</strong> <code>VillageCapacity = FreeCapacity(12) + Houses × 4</code>
+        + <strong>일일 최대 3명</strong> (DayStarted 마다 리셋).</li>
+      <li>F키 또는 영입 대화창. 한도 초과 시 버튼 disabled "건물 더 필요".</li>
+    </ul>
+
+    <h2 id="ui">9. UI 레이아웃</h2>
+    <p>
+      모든 HUD 는 IMGUI 기반 (UiTheme 골드/네이비 테마). Don't Starve / Vampire
+      Survivors / 7DTD 참고한 모서리 카드 + 하단 핫바 구조:
+    </p>
+    <h4>상단</h4>
+    <ul class="tight">
+      <li><strong>TOP-LEFT</strong> WaveStanceBar (320×120) — 페이즈별 컨텍스트 라인
+        (좀비/대기, 식량 부족, 평온한 낮) + 동료 스탠스 토글 [하단]</li>
+      <li><strong>TOP-CENTER</strong> PhaseClock (300×64) — 페이즈 아이콘 + MM:SS
+        남음 + Day N + 페이즈명 + 진행 바 (페이즈 색조 띠)</li>
+      <li><strong>TOP-CENTER 우측</strong> HomeCompass (130×40, 12u 이상 멀어지면) —
+        가장 가까운 건물 방향 회전 화살표</li>
+      <li><strong>TOP-RIGHT</strong> ResourceBar (290×244) — 5행 자원 카드 (아이콘
+        + 이름 + 수량/캡, 가득 차면 빨강)</li>
+    </ul>
+    <h4>중앙/이벤트</h4>
+    <ul class="tight">
+      <li><strong>PhaseBanner</strong> — 페이즈 전환 시 골드 보더 가로 배너 2.6s</li>
+      <li><strong>BossWarning</strong> — 보스 카운트다운 시 ⚠ 보스 출현 N 펄스</li>
+      <li><strong>ThreatCompass</strong> — 4초 이내 피격된 건물/동료가 화면 밖이면
+        화면 가장자리 회전 화살표 + ⚠ 라벨</li>
+      <li><strong>NightIntroFade</strong> — 검은 페이드 + "마을로 돌아가는 중..."
+        + 텔레포트</li>
+      <li><strong>DawnFlare</strong> — 골드빛 그라데이션 6 band + "☀ 아침이
+        밝았다" 2.6s</li>
+      <li><strong>FloatText</strong> — 데미지/자원/HP 회복 등 월드 좌표 떠오르는
+        숫자 (drop-shadow)</li>
+    </ul>
+    <h4>하단</h4>
+    <ul class="tight">
+      <li><strong>BOT-LEFT</strong> StatCard (460×200) — HP 바 + 텍스트, XP 바
+        + Lv N · m/n, 모드 탭 (⚔근접 [1] / 🏹원거리 [2] / 🏠건축 [3]), 무기명,
+        채집 진행 (활성 시)</li>
+      <li><strong>BOT-CENTER</strong> BuildHotbar (96×96 셀 6개) — 건축 모드일
+        때만 표시. 비용 점증 실시간 반영 + 농장은 창고 부족 시 disabled.</li>
+      <li><strong>BOT-RIGHT</strong> DebugCorner (280×160) — 페이즈+1, 강제 밤,
+        좀비+1, 낮으로, SFX 슬라이더</li>
+    </ul>
+    <h4>모달</h4>
+    <ul class="tight">
+      <li><strong>RuneModal</strong> 920×380, 카드 280×270 — 큰 사이즈로 가독성
+        ↑</li>
+      <li><strong>RecruitDialog</strong> — 초상 + 이름/역할 + 다이얼로그 + 별점 +
+        "마을 수용 N/cap" 라인</li>
+      <li><strong>TutorialOverlay</strong> 3페이지 — ❄세계관 / 🏹목표 / 🎮조작 ·
+        v2 PrefKey</li>
+      <li><strong>PauseMenu (ESC)</strong> — 계속하기 / 즉시 저장 / 처음부터</li>
+      <li><strong>DeathOverlay</strong> — YOU DIED + 점수 통계 + 다시 시작</li>
+    </ul>
+
+    <h2 id="feel">10. 게임 필 (시청각 피드백)</h2>
+    <ul class="tight">
+      <li><strong>GameFeel</strong> 정적 헬퍼 — DontDestroyOnLoad runner:
+        <ul>
+          <li>HitFlash — 0.08s 흰색 플래시</li>
+          <li>DeathPoof — 좀비/채집 죽음 시 색조 퍼프</li>
+          <li>SnowPuff — 플레이어 발자국 트레일</li>
+          <li>FloatText — 월드 좌표 부유 숫자/텍스트</li>
+          <li>Slash — 근접 슬래시 막대 (0.13s 페이드)</li>
+        </ul>
+      </li>
+      <li><strong>Sfx</strong> 절대정적 — 사인파/스윕 합성 AudioClip 7종 (Hit/Pickup/
+        Death/Build/Click/NightHowl/Boss). 첫 사용 시 캐싱.</li>
+      <li><strong>CameraFollow.Shake</strong> — Perlin trauma. 피격/밤시작/보스에
+        연동.</li>
+      <li><strong>SnowEmitter</strong> — Unity ParticleSystem 기반 카메라 종속
+        설원. 블리자드 시 강도 ↑.</li>
+    </ul>
+
+    <h2 id="progression">11. 진행/레벨/업적</h2>
+    <ul class="tight">
+      <li><strong>XP:</strong> 좀비 처치당 +1, XpToNext = <code>8 + Level × 4</code>.
+        Lv 1→2 = 12, 2→3 = 16, 3→4 = 20. 한 밤 평균 28킬 → ~2렙업.</li>
+      <li><strong>Achievements (9개):</strong> 첫 사냥, 25/100킬, 첫/5명 동료,
+        3/7/15일 생존, 점수 300. 토스트로 표시.</li>
+      <li><strong>SaveLoad:</strong> JSON 파일 (currentDay + ResourceSnapshot),
+        새벽마다 자동 저장 + ESC 즉시 저장.</li>
+      <li><strong>Score:</strong> <code>(Day-1) × 10 + Kills × 3 + MaxComp × 5 -
+        Lost × 4</code>. 사망 화면에서만 표시.</li>
+    </ul>
+
+    <h2 id="balance">12. 밸런스 수치 표</h2>
+    <p>
+      모든 수치는 <code>Assets/Resources/BalanceConfig.asset</code> 또는 코드 상수.
+      .asset 이 런타임 우선이라 양쪽 동기화 필요.
+    </p>
+    <h4>플레이어/적</h4>
+    <table>
+      <tr><th>키</th><th>값</th></tr>
+      <tr><td>PlayerMaxHp</td><td class="num">100</td></tr>
+      <tr><td>PlayerMoveSpeed</td><td class="num">5</td></tr>
+      <tr><td>ZombieMaxHp</td><td class="num">20 (Day 스케일링 적용)</td></tr>
+      <tr><td>ZombieMoveSpeed</td><td class="num">2 (Day 스케일링 적용)</td></tr>
+      <tr><td>ZombieAttackDamage</td><td class="num">8 + (day-1)</td></tr>
+      <tr><td>ZombieAttackRange</td><td class="num">1.2u</td></tr>
+    </table>
+    <h4>사이클</h4>
+    <table>
+      <tr><th>키</th><th>값</th></tr>
+      <tr><td>DayDurationSec</td><td class="num">40s × LevelMul</td></tr>
+      <tr><td>NightDurationSec</td><td class="num">40s × LevelMul</td></tr>
+      <tr><td>EveningTransitionSec</td><td class="num">5s 고정</td></tr>
+      <tr><td>DawnTransitionSec</td><td class="num">5s 고정</td></tr>
+      <tr><td>LevelDurationMul</td><td class="num">1 + 0.25 × (Level-1)</td></tr>
+    </table>
+    <h4>건물 HP</h4>
+    <table>
+      <tr><th>키</th><th>값</th></tr>
+      <tr><td>CampfireHp</td><td class="num">400</td></tr>
+      <tr><td>BarricadeHp</td><td class="num">200</td></tr>
+      <tr><td>FenceHp</td><td class="num">4 (망루 +50%/스택)</td></tr>
+      <tr><td>HouseHp</td><td class="num">200</td></tr>
+      <tr><td>StorageHp</td><td class="num">250</td></tr>
+      <tr><td>FarmHp</td><td class="num">150</td></tr>
+      <tr><td>WatchtowerHp</td><td class="num">220</td></tr>
+      <tr><td>마을 성장도 HP 곱</td><td class="num">1 + 0.12 × N (캡 ×3, 펜스 제외)</td></tr>
+    </table>
+    <h4>웨이브</h4>
+    <table>
+      <tr><th>키</th><th>값</th></tr>
+      <tr><td>BaseWaveCount</td><td class="num">6</td></tr>
+      <tr><td>PerDayIncrement</td><td class="num">+3</td></tr>
+      <tr><td>MaxActive</td><td class="num">40</td></tr>
+      <tr><td>SpawnDistance</td><td class="num">6u (펜스 밖 강제)</td></tr>
+      <tr><td>BetweenSpawnsSec</td><td class="num">0.6s (눈보라 ×0.6)</td></tr>
+      <tr><td>BlizzardChance</td><td class="num">20%</td></tr>
+      <tr><td>BossKillThreshold</td><td class="num">25 (강제 보스)</td></tr>
+    </table>
+    <h4>채집/영입</h4>
+    <table>
+      <tr><th>키</th><th>값</th></tr>
+      <tr><td>TreeDurationSec / Yield</td><td class="num">9s / 4 Wood</td></tr>
+      <tr><td>StoneDurationSec / Yield</td><td class="num">12s / 3 Stone</td></tr>
+      <tr><td>FreeCapacity</td><td class="num">12</td></tr>
+      <tr><td>CapacityPerHouse</td><td class="num">4</td></tr>
+      <tr><td>MaxRecruitsPerDay</td><td class="num">3</td></tr>
+      <tr><td>MaxAliveNpcs</td><td class="num">3</td></tr>
+      <tr><td>DailyNpcIntervalSec</td><td class="num">30s</td></tr>
+      <tr><td>FarmBaseYield / PerWorker / MaxWorkers</td><td class="num">10 / +6 / 2</td></tr>
+      <tr><td>MaxFarmsAllowed</td><td class="num">1 + storages</td></tr>
+    </table>
+    <h4>XP</h4>
+    <table>
+      <tr><th>키</th><th>값</th></tr>
+      <tr><td>좀비 처치 XP</td><td class="num">+1</td></tr>
+      <tr><td>XpToNext</td><td class="num">8 + Level × 4</td></tr>
+      <tr><td>Lv 1→2 / 2→3 / 3→4</td><td class="num">12 / 16 / 20</td></tr>
+    </table>
+
+    <h2 id="files">13. 주요 코드 파일 인덱스</h2>
+    <table>
+      <thead><tr><th>경로</th><th>역할</th></tr></thead>
+      <tbody>
+        <tr><td>Assets/Scripts/<span class="file">GameSession.cs</span></td>
+          <td>씬 간 싱글톤. ResourceStore + DayNightController + 점수 + 자동 저장</td></tr>
+        <tr><td>Assets/Scripts/<span class="file">SnowfieldController.cs</span></td>
+          <td>메인 씬 루트. 카메라/동물 정리/일일 NPC 구독</td></tr>
+        <tr><td>Assets/Scripts/<span class="file">BootController.cs</span></td>
+          <td>BootScene → SnowfieldScene 진입</td></tr>
+        <tr><td>Cycle/<span class="file">DayNightController.cs</span></td>
+          <td>페이즈 머신, LevelDurationMul, _phaseLockedDuration</td></tr>
+        <tr><td>Combat/<span class="file">PlayerAttackController.cs</span></td>
+          <td>자동 공격, 무기 사이클, 룬 효과 적용</td></tr>
+        <tr><td>Combat/<span class="file">PlayerProgression.cs</span></td>
+          <td>XP/레벨/룬 스택/시너지/PickThreeOffer</td></tr>
+        <tr><td>Combat/<span class="file">Projectile.cs</span></td>
+          <td>자체 sprite 렌더 + glow + trail + Pierce/Detonate/Lightning</td></tr>
+        <tr><td>Combat/<span class="file">Pet.cs</span></td>
+          <td>Dog/Hawk 둘 다 근접 + RB2D 충돌</td></tr>
+        <tr><td>Combat/<span class="file">Watchtower.cs</span></td>
+          <td>야간 자동 사격 + 동료 데미지 부스트</td></tr>
+        <tr><td>Companions/<span class="file">Companion.cs</span></td>
+          <td>follow/사이트/대피/공격/포메이션/콜라이더 토글</td></tr>
+        <tr><td>Companions/<span class="file">RecruitableNpc.cs</span></td>
+          <td>F키 영입, 마을 수용/일일 한도</td></tr>
+        <tr><td>Enemies/<span class="file">Zombie.cs</span></td>
+          <td>FindNearestTarget, 경로 차단 시 건물 부수기</td></tr>
+        <tr><td>Enemies/<span class="file">NightController.cs</span></td>
+          <td>웨이브 + 변종 + 보스 + 펜스 밖 스폰 + 블리자드</td></tr>
+        <tr><td>Animals/<span class="file">DeerAi.cs</span></td>
+          <td>도주형 동물 + HP/TakeDamage</td></tr>
+        <tr><td>Animals/<span class="file">WolfAi.cs</span></td>
+          <td>포식자 — 늑대/맘모스 공통</td></tr>
+        <tr><td>Village/<span class="file">Building.cs</span></td>
+          <td>BuildingKind enum, HP 스케일, DawnRepair, ThreatCompass용 LastDamagedAt</td></tr>
+        <tr><td>Village/<span class="file">VillageStarter.cs</span></td>
+          <td>모닥불 + 사각 펜스 + 게이트 자동 빌드</td></tr>
+        <tr><td>Village/<span class="file">Door.cs</span></td>
+          <td>플레이어/동료만 통과 (IgnoreCollision 자동 등록)</td></tr>
+        <tr><td>Village/<span class="file">ConstructionSite.cs</span></td>
+          <td>건축 진행 사이트, 워커 비례 속도</td></tr>
+        <tr><td>Village/<span class="file">FarmBuilding.cs</span></td>
+          <td>밤 카운트, 익으면 수확. 창고당 농장 한도</td></tr>
+        <tr><td>World/<span class="file">ProceduralSpawner.cs</span></td>
+          <td>청크 동물/NPC, MinDay 게이트, 일일 NPC, 첫방문 한정</td></tr>
+        <tr><td>UI/<span class="file">SimpleHud.cs</span></td>
+          <td>1500+ 줄 IMGUI 메인 — 모든 카드/모달/배너/토스트</td></tr>
+        <tr><td>UI/<span class="file">UiTheme.cs</span></td>
+          <td>색상 팔레트 + Panel/Bar/Icon/Button 헬퍼</td></tr>
+        <tr><td>UI/<span class="file">GameFeel.cs</span></td>
+          <td>정적 VFX 모음</td></tr>
+        <tr><td>UI/<span class="file">Sfx.cs</span></td>
+          <td>런타임 사인파/스윕 오디오</td></tr>
+        <tr><td>UI/<span class="file">HpBarUi.cs</span></td>
+          <td>머리 위 HP 바 (Player/Zombie/Building/Companion/Deer/Wolf)</td></tr>
+        <tr><td>Progression/<span class="file">AchievementManager.cs</span></td>
+          <td>마일스톤 9종 폴링 + NewlyUnlocked 큐</td></tr>
+        <tr><td>Editor/<span class="file">BuildScript.cs</span></td>
+          <td>WebGL + Windows 배치 빌드 (CLI <code>-executeMethod</code>)</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="open">14. 열린 이슈 / 다음 후보</h2>
+    <ul class="tight">
+      <li><strong>씬 정리 (Scene cleanup):</strong> SnowfieldScene 에 미배치 잔여물
+        (Companion1/2 GameObject) — Start 에서 Destroy 하지만 .unity YAML 직접 정리
+        가능.</li>
+      <li><strong>밤 페이즈 클럭 표시:</strong> Day 2+ 에서 페이즈 시계 안 보인다는
+        리포트 있었음 — phaseLockedDuration + ComputeDuration 분리로 어느 정도 안전
+        해졌으나 추가 검증 필요.</li>
+      <li><strong>맘모스 시야 5u 충분한가</strong> — 공격형 전환 후 실제 플레이 테스트
+        필요.</li>
+      <li><strong>WebGL 호스팅:</strong> Build/WebGL/ 결과물을 GitHub Pages 또는
+        Netlify 에 올리면 링크 공유 가능.</li>
+      <li><strong>Windows zip:</strong> Build/IL6-Windows.zip (27MB) 준비됨 — 직접
+        공유 가능. itch.io/Drive 업로드 추천.</li>
+      <li><strong>다음 큰 시스템 후보:</strong>
+        <ul>
+          <li>스킬 트리/마을 업그레이드 (모닥불 → 우물 → 식수, 망루 → 활쏘는 망루
+            등 분기)</li>
+          <li>장비 인벤토리 — 채집한 자원으로 무기 강화</li>
+          <li>퀘스트/일일 미션</li>
+          <li>음악 루프 (현재는 SFX 만)</li>
+        </ul>
+      </li>
+    </ul>
+
+    <hr />
+    <p style="text-align: center; color: #888; font-size: 0.85em">
+      자동 생성 — 2026-04-28. art-upgrade <code>HEAD@d616c2e</code> 기준. 이후 모든
+      커밋은 git log art-upgrade 참조.
+    </p>
+  </body>
+</html>

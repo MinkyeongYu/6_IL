@@ -8,7 +8,6 @@ import {
   type Component,
   type IWorld,
 } from 'bitecs';
-import { SpriteRegistry } from '@/util/sprite-registry';
 
 /**
  * 게임 전용 월드 확장. bitecs IWorld에 게임 틱 정보를 올린다.
@@ -16,14 +15,12 @@ import { SpriteRegistry } from '@/util/sprite-registry';
 export interface GameWorld extends IWorld {
   deltaTime: number;
   elapsed: number;
-  sprites: SpriteRegistry;
 }
 
 export function createGameWorld(): GameWorld {
   const w = bitCreateWorld() as GameWorld;
   w.deltaTime = 0;
   w.elapsed = 0;
-  w.sprites = new SpriteRegistry();
   return w;
 }
 

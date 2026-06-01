@@ -1,0 +1,3494 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <title>6_IL Phase 1 — 수직 슬라이스 플랜</title>
+    <style>
+      body {
+        font-family:
+          -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+        max-width: 980px;
+        margin: 2em auto;
+        padding: 0 1.2em;
+        line-height: 1.65;
+        color: #222;
+      }
+      h1 {
+        border-bottom: 2px solid #333;
+        padding-bottom: 0.3em;
+      }
+      h2 {
+        border-bottom: 1px solid #ccc;
+        padding-bottom: 0.25em;
+        margin-top: 2em;
+      }
+      h3 {
+        margin-top: 1.6em;
+        color: #2a4e8e;
+      }
+      code {
+        background: #f3f3f3;
+        padding: 2px 6px;
+        border-radius: 3px;
+        font-family: ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+        font-size: 0.92em;
+      }
+      pre {
+        background: #1e1e1e;
+        color: #eaeaea;
+        padding: 1em 1.2em;
+        border-radius: 6px;
+        overflow-x: auto;
+        line-height: 1.4;
+      }
+      pre code {
+        background: none;
+        padding: 0;
+        color: inherit;
+        font-size: 0.88em;
+      }
+      .task {
+        background: #fafafa;
+        padding: 1em 1.4em;
+        border-left: 4px solid #4a90e2;
+        margin: 1.6em 0;
+        border-radius: 0 6px 6px 0;
+      }
+      .task h3 {
+        margin-top: 0.2em;
+      }
+      .files {
+        background: #fff8e1;
+        padding: 0.6em 1em;
+        border-radius: 4px;
+        margin: 0.8em 0;
+        font-size: 0.93em;
+      }
+      .files strong {
+        color: #7a5a00;
+      }
+      .step {
+        margin: 1em 0;
+      }
+      .step > strong {
+        display: inline-block;
+        padding: 2px 8px;
+        background: #eaf1fb;
+        color: #2a4e8e;
+        border-radius: 3px;
+      }
+      .expect {
+        background: #e8f5e9;
+        padding: 0.5em 1em;
+        border-left: 3px solid #43a047;
+        border-radius: 0 4px 4px 0;
+        margin: 0.4em 0;
+      }
+      .note {
+        background: #fff3e0;
+        padding: 0.6em 1em;
+        border-left: 3px solid #fb8c00;
+        border-radius: 0 4px 4px 0;
+        margin: 0.8em 0;
+      }
+      table {
+        border-collapse: collapse;
+        width: 100%;
+        margin: 1em 0;
+      }
+      th,
+      td {
+        border: 1px solid #ddd;
+        padding: 0.5em 0.7em;
+        text-align: left;
+      }
+      th {
+        background: #f4f4f4;
+      }
+      .checkbox {
+        font-family: ui-monospace, Menlo, Consolas, monospace;
+        font-weight: 700;
+        color: #888;
+      }
+      .cmd {
+        color: #a0e0ff;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>6_IL — Phase 1: 수직 슬라이스 구현 플랜</h1>
+
+    <blockquote>
+      <strong>에이전트 작업자 주의:</strong> 필수 서브스킬 —
+      <code>superpowers:executing-plans</code>(inline) 또는
+      <code>superpowers:subagent-driven-development</code>로 태스크 단위 실행. 체크박스
+      <code>[ ]</code> → <code>[x]</code> 갱신.
+    </blockquote>
+
+    <p>
+      <strong>Goal:</strong> 플레이어가 설원에서 채집·사냥 → 저녁 종소리 → 마을에서 모닥불·바리게이트
+      배치 → 좀비 웨이브 방어 → 새벽 → Day 2 진입하는 "1일 루프"를 완성. 핵심 재미를 검증하는 최소
+      플레이 가능 빌드.
+    </p>
+
+    <p>
+      <strong>Architecture:</strong> ECS(bitecs)로 엔티티 관리. Phaser 신
+      3개(SnowfieldScene·VillageScene·HudScene). 낮/밤 상태 머신이 씬 전환과 스폰 로직 제어. 시뮬
+      틱 30Hz 고정, 렌더는 Phaser 기본. 모든 Math.random은 <code>createRng</code>로 대체 (Phase 0).
+    </p>
+
+    <p>
+      <strong>Tech Stack:</strong> Phaser 3 + TypeScript + Phase 0 이벤트 버스/ECS/RNG. 단위 테스트는
+      순수 로직만 (Phaser 신은 수동 검증).
+    </p>
+
+    <p>
+      <strong>범위 제한:</strong> 무기 1종(롱소드), 좀비 1종(일반), 보스 없음, 동료 없음, 밭 없음,
+      초대형 눈보라 없음, 룬 없음, 진화 없음, 대장간 없음. 모든 확장은 Phase 2 이후. 아트는 컬러
+      도형(circle/rectangle) 플레이스홀더 사용 — 픽셀 아트 에셋은 Phase 3.
+    </p>
+
+    <hr />
+
+    <h2>파일 구조 (Phase 1 완료 시점)</h2>
+
+    <pre><code>src/
+├── main.ts                           [Phase 0 존재 — 신 리스트 확장]
+├── config/
+│   ├── constants.ts                  [확장]
+│   ├── balance.ts                    [확장 — 웨이브·대미지 테이블]
+│   └── controls.ts                   [NEW — 키 바인딩]
+├── util/
+│   ├── rng.ts                        [Phase 0]
+│   └── math.ts                       [NEW — vec2 유틸, clamp, dist]
+├── events/
+│   ├── event-bus.ts                  [Phase 0]
+│   └── types.ts                      [확장 — Phase 1 이벤트 추가]
+├── ecs/
+│   ├── world.ts                      [Phase 0]
+│   ├── queries.ts                    [NEW — 공용 쿼리 캐시]
+│   ├── components/
+│   │   ├── position.ts               [NEW]
+│   │   ├── velocity.ts               [NEW]
+│   │   ├── health.ts                 [NEW]
+│   │   ├── collider.ts               [NEW]
+│   │   ├── sprite-ref.ts             [NEW — ECS eid ↔ Phaser sprite 연결]
+│   │   ├── tags.ts                   [NEW — Player/Zombie/Tree/Stone/Deer/Building 태그]
+│   │   ├── weapon.ts                 [NEW]
+│   │   ├── gather.ts                 [NEW — 채집 중 상태]
+│   │   ├── ai.ts                     [NEW — 좀비/사슴 AI 상태]
+│   │   └── lifetime.ts               [NEW — 투사체/이펙트 자동 제거]
+│   └── systems/
+│       ├── movement.ts               [NEW]
+│       ├── lifetime.ts               [NEW]
+│       ├── cleanup.ts                [NEW — dead 엔티티 제거]
+│       └── sprite-sync.ts            [NEW — Position → Phaser sprite.x/y]
+├── gameplay/
+│   ├── player/
+│   │   ├── input-adapter.ts          [NEW — 키보드 추상화]
+│   │   ├── player-factory.ts         [NEW — 플레이어 엔티티 생성]
+│   │   └── player-controller.ts      [NEW — 입력 → Velocity]
+│   ├── combat/
+│   │   ├── weapon-definitions.ts     [NEW — 롱소드 정의]
+│   │   ├── damage-calc.ts            [NEW — 순수 함수]
+│   │   ├── attack-controller.ts      [NEW — 자동 공격 쿨다운]
+│   │   └── combat-system.ts          [NEW — 히트 판정 → Health 감소]
+│   ├── gather/
+│   │   ├── tree-factory.ts           [NEW]
+│   │   ├── stone-factory.ts          [NEW]
+│   │   └── gather-controller.ts      [NEW — 인터랙트 키 처리, 진행바]
+│   ├── animals/
+│   │   ├── deer-factory.ts           [NEW]
+│   │   └── deer-ai.ts                [NEW — 플레이어 접근 시 도망]
+│   ├── resources/
+│   │   └── resource-store.ts         [NEW — 전역 자원 카운트]
+│   ├── village/
+│   │   ├── grid.ts                   [NEW — 24×24 타일 그리드]
+│   │   ├── building-factory.ts       [NEW — 모닥불/바리게이트 엔티티 생성]
+│   │   └── placement-controller.ts   [NEW — 건설 페이즈 배치 UI]
+│   ├── enemies/
+│   │   ├── zombie-factory.ts         [NEW]
+│   │   ├── zombie-ai.ts              [NEW — 가장 가까운 타겟 추적]
+│   │   └── wave-spawner.ts           [NEW — 밤 시작 시 웨이브 스폰]
+│   ├── cycle/
+│   │   └── day-night-controller.ts   [NEW — 타이머, 상태 머신, 씬 전환 트리거]
+│   ├── vision/
+│   │   └── vision-mask.ts            [NEW — 단순 원형 마스크]
+│   └── persistence/
+│       └── save-load.ts              [NEW — localStorage]
+├── scenes/
+│   ├── boot.ts                       [Phase 0 — Preload로 교체]
+│   ├── preload.ts                    [NEW — 색 플레이스홀더 프리로드]
+│   ├── snowfield.ts                  [NEW]
+│   ├── village.ts                    [NEW]
+│   └── hud.ts                        [NEW — 오버레이]
+└── ui/
+    ├── hud-controller.ts             [NEW — HUD 갱신]
+    ├── resource-panel.ts             [NEW]
+    ├── health-bar.ts                 [NEW]
+    └── phase-banner.ts               [NEW — "Day 1 / 저녁이 온다" 등]
+
+tests/
+├── (Phase 0 존재)
+├── util/math.test.ts                 [NEW]
+├── combat/damage-calc.test.ts        [NEW]
+├── resources/resource-store.test.ts  [NEW]
+├── village/grid.test.ts              [NEW]
+├── enemies/wave-spawner.test.ts      [NEW]
+├── cycle/day-night.test.ts           [NEW]
+└── persistence/save-load.test.ts     [NEW]
+</code></pre>
+
+    <hr />
+
+    <h2>태스크 목록</h2>
+
+    <p>총 24개 태스크. 각 태스크의 TDD 스텝은 <em>순수 로직에만</em> 엄격히 적용. Phaser 신/렌더
+    코드는 수동 브라우저 검증으로 대체 (단위 테스트에서 Phaser 신을 끌어오기 부담).</p>
+
+    <!-- ========================================================= -->
+    <div class="task">
+      <h3>Task 1: 수학 유틸</h3>
+      <div class="files"><strong>Create:</strong> <code>src/util/math.ts</code>, <code>tests/util/math.test.ts</code></div>
+
+      <div class="step"><strong>Step 1</strong> <span class="checkbox">[ ]</span> 실패 테스트 작성</div>
+      <p>파일: <code>C:/Users/bada/6_IL/tests/util/math.test.ts</code></p>
+      <pre><code>import { describe, expect, it } from 'vitest';
+import { clamp, dist2, distance, lerp, vec2Length, vec2Normalize } from '@/util/math';
+
+describe('math utils', () =&gt; {
+  it('clamp keeps value in range', () =&gt; {
+    expect(clamp(5, 0, 10)).toBe(5);
+    expect(clamp(-1, 0, 10)).toBe(0);
+    expect(clamp(11, 0, 10)).toBe(10);
+  });
+
+  it('lerp interpolates', () =&gt; {
+    expect(lerp(0, 10, 0)).toBe(0);
+    expect(lerp(0, 10, 1)).toBe(10);
+    expect(lerp(0, 10, 0.5)).toBe(5);
+  });
+
+  it('dist2 returns squared distance', () =&gt; {
+    expect(dist2(0, 0, 3, 4)).toBe(25);
+  });
+
+  it('distance returns euclidean distance', () =&gt; {
+    expect(distance(0, 0, 3, 4)).toBe(5);
+  });
+
+  it('vec2Length', () =&gt; {
+    expect(vec2Length(3, 4)).toBe(5);
+  });
+
+  it('vec2Normalize returns unit vector', () =&gt; {
+    const [nx, ny] = vec2Normalize(3, 4);
+    expect(Math.hypot(nx, ny)).toBeCloseTo(1);
+    expect(nx).toBeCloseTo(0.6);
+    expect(ny).toBeCloseTo(0.8);
+  });
+
+  it('vec2Normalize handles zero vector safely', () =&gt; {
+    const [nx, ny] = vec2Normalize(0, 0);
+    expect(nx).toBe(0);
+    expect(ny).toBe(0);
+  });
+});
+</code></pre>
+
+      <div class="step"><strong>Step 2</strong> <span class="checkbox">[ ]</span> 테스트 실행해 실패 확인</div>
+      <pre><code class="cmd">npm test -- util/math</code></pre>
+      <div class="expect">FAIL — 모듈 없음.</div>
+
+      <div class="step"><strong>Step 3</strong> <span class="checkbox">[ ]</span> 구현</div>
+      <p>파일: <code>C:/Users/bada/6_IL/src/util/math.ts</code></p>
+      <pre><code>export function clamp(v: number, min: number, max: number): number {
+  return v &lt; min ? min : v &gt; max ? max : v;
+}
+
+export function lerp(a: number, b: number, t: number): number {
+  return a + (b - a) * t;
+}
+
+export function dist2(ax: number, ay: number, bx: number, by: number): number {
+  const dx = ax - bx;
+  const dy = ay - by;
+  return dx * dx + dy * dy;
+}
+
+export function distance(ax: number, ay: number, bx: number, by: number): number {
+  return Math.sqrt(dist2(ax, ay, bx, by));
+}
+
+export function vec2Length(x: number, y: number): number {
+  return Math.sqrt(x * x + y * y);
+}
+
+export function vec2Normalize(x: number, y: number): [number, number] {
+  const len = vec2Length(x, y);
+  if (len === 0) return [0, 0];
+  return [x / len, y / len];
+}
+</code></pre>
+
+      <div class="step"><strong>Step 4</strong> <span class="checkbox">[ ]</span> 테스트 통과 확인</div>
+      <pre><code class="cmd">npm test</code></pre>
+      <div class="expect">math 7 tests PASS, 기존 18 tests 여전히 통과.</div>
+
+      <div class="step"><strong>Step 5</strong> <span class="checkbox">[ ]</span> 커밋</div>
+      <pre><code class="cmd">git add src/util/math.ts tests/util/math.test.ts
+git commit -m "feat(util): add vec2 and math utils"</code></pre>
+    </div>
+
+    <!-- ========================================================= -->
+    <div class="task">
+      <h3>Task 2: ECS 컴포넌트 정의</h3>
+      <p>Position·Velocity·Health·Collider·SpriteRef·Tags·Weapon·Gather·Ai·Lifetime 컴포넌트 한꺼번에 정의. bitecs는 컴포넌트를 typed array 저장소로 취급.</p>
+
+      <div class="files"><strong>Create:</strong> <code>src/ecs/components/*.ts</code> (10개)</div>
+
+      <div class="step"><strong>Step 1</strong> <span class="checkbox">[ ]</span> Position 컴포넌트</div>
+      <p>파일: <code>C:/Users/bada/6_IL/src/ecs/components/position.ts</code></p>
+      <pre><code>import { defineComponent, Types } from 'bitecs';
+
+export const Position = defineComponent({ x: Types.f32, y: Types.f32 });
+</code></pre>
+
+      <div class="step"><strong>Step 2</strong> <span class="checkbox">[ ]</span> Velocity 컴포넌트</div>
+      <p>파일: <code>C:/Users/bada/6_IL/src/ecs/components/velocity.ts</code></p>
+      <pre><code>import { defineComponent, Types } from 'bitecs';
+
+export const Velocity = defineComponent({ vx: Types.f32, vy: Types.f32 });
+</code></pre>
+
+      <div class="step"><strong>Step 3</strong> <span class="checkbox">[ ]</span> Health 컴포넌트</div>
+      <p>파일: <code>C:/Users/bada/6_IL/src/ecs/components/health.ts</code></p>
+      <pre><code>import { defineComponent, Types } from 'bitecs';
+
+export const Health = defineComponent({
+  current: Types.f32,
+  max: Types.f32,
+  dead: Types.ui8, // 0 or 1
+});
+</code></pre>
+
+      <div class="step"><strong>Step 4</strong> <span class="checkbox">[ ]</span> Collider 컴포넌트 (원형 충돌)</div>
+      <p>파일: <code>C:/Users/bada/6_IL/src/ecs/components/collider.ts</code></p>
+      <pre><code>import { defineComponent, Types } from 'bitecs';
+
+export const Collider = defineComponent({ radius: Types.f32 });
+</code></pre>
+
+      <div class="step"><strong>Step 5</strong> <span class="checkbox">[ ]</span> SpriteRef 컴포넌트</div>
+      <p>파일: <code>C:/Users/bada/6_IL/src/ecs/components/sprite-ref.ts</code></p>
+      <pre><code>import { defineComponent, Types } from 'bitecs';
+
+/**
+ * ECS 엔티티를 Phaser GameObject와 연결. 실제 sprite 인스턴스는
+ * sprite-map(숫자 id → Phaser 객체)에 저장하고, 여기선 id만 보관.
+ */
+export const SpriteRef = defineComponent({ gid: Types.ui32 });
+</code></pre>
+
+      <div class="step"><strong>Step 6</strong> <span class="checkbox">[ ]</span> Tags 컴포넌트 (빈 태그용)</div>
+      <p>파일: <code>C:/Users/bada/6_IL/src/ecs/components/tags.ts</code></p>
+      <pre><code>import { defineComponent } from 'bitecs';
+
+export const PlayerTag = defineComponent();
+export const ZombieTag = defineComponent();
+export const TreeTag = defineComponent();
+export const StoneTag = defineComponent();
+export const DeerTag = defineComponent();
+export const BuildingTag = defineComponent();
+export const BarricadeTag = defineComponent();
+export const CampfireTag = defineComponent();
+export const ProjectileTag = defineComponent();
+</code></pre>
+
+      <div class="step"><strong>Step 7</strong> <span class="checkbox">[ ]</span> Weapon 컴포넌트</div>
+      <p>파일: <code>C:/Users/bada/6_IL/src/ecs/components/weapon.ts</code></p>
+      <pre><code>import { defineComponent, Types } from 'bitecs';
+
+export const Weapon = defineComponent({
+  weaponId: Types.ui16,   // content 테이블 참조
+  cooldown: Types.f32,    // 남은 쿨다운(초)
+  range: Types.f32,       // 타겟 감지 반경(px)
+});
+</code></pre>
+
+      <div class="step"><strong>Step 8</strong> <span class="checkbox">[ ]</span> Gather 컴포넌트 (채집 중 상태)</div>
+      <p>파일: <code>C:/Users/bada/6_IL/src/ecs/components/gather.ts</code></p>
+      <pre><code>import { defineComponent, Types } from 'bitecs';
+
+export const Gather = defineComponent({
+  targetEid: Types.ui32,  // 채집 대상 엔티티
+  progress: Types.f32,    // 0..1
+  durationSec: Types.f32,
+});
+</code></pre>
+
+      <div class="step"><strong>Step 9</strong> <span class="checkbox">[ ]</span> Ai 컴포넌트</div>
+      <p>파일: <code>C:/Users/bada/6_IL/src/ecs/components/ai.ts</code></p>
+      <pre><code>import { defineComponent, Types } from 'bitecs';
+
+/**
+ * mode: 0=idle, 1=seekPlayer, 2=attackTarget, 3=flee, 4=seekBuilding
+ * targetEid: 추적/공격 대상 엔티티
+ */
+export const Ai = defineComponent({
+  mode: Types.ui8,
+  targetEid: Types.ui32,
+  attackCooldown: Types.f32,
+});
+</code></pre>
+
+      <div class="step"><strong>Step 10</strong> <span class="checkbox">[ ]</span> Lifetime 컴포넌트</div>
+      <p>파일: <code>C:/Users/bada/6_IL/src/ecs/components/lifetime.ts</code></p>
+      <pre><code>import { defineComponent, Types } from 'bitecs';
+
+export const Lifetime = defineComponent({ remainingSec: Types.f32 });
+</code></pre>
+
+      <div class="step"><strong>Step 11</strong> <span class="checkbox">[ ]</span> typecheck + commit</div>
+      <pre><code class="cmd">npm run typecheck
+git add src/ecs/components/
+git commit -m "feat(ecs): add core components for phase 1"</code></pre>
+      <div class="expect">typecheck 통과 (타입만 정의, 로직 없음).</div>
+    </div>
+
+    <!-- ========================================================= -->
+    <div class="task">
+      <h3>Task 3: ECS 시스템 — Movement, Lifetime, Cleanup, SpriteSync</h3>
+
+      <div class="files">
+        <strong>Create:</strong>
+        <code>src/ecs/systems/movement.ts</code>,
+        <code>src/ecs/systems/lifetime.ts</code>,
+        <code>src/ecs/systems/cleanup.ts</code>,
+        <code>src/ecs/systems/sprite-sync.ts</code>,
+        <code>src/ecs/queries.ts</code>,
+        <code>tests/ecs/systems.test.ts</code>
+      </div>
+
+      <div class="step"><strong>Step 1</strong> <span class="checkbox">[ ]</span> 공용 쿼리 모듈</div>
+      <p>파일: <code>C:/Users/bada/6_IL/src/ecs/queries.ts</code></p>
+      <pre><code>import { defineQuery } from 'bitecs';
+import { Position } from './components/position';
+import { Velocity } from './components/velocity';
+import { Health } from './components/health';
+import { Lifetime } from './components/lifetime';
+import { SpriteRef } from './components/sprite-ref';
+
+export const movementQuery = defineQuery([Position, Velocity]);
+export const lifetimeQuery = defineQuery([Lifetime]);
+export const healthQuery = defineQuery([Health]);
+export const spriteQuery = defineQuery([Position, SpriteRef]);
+</code></pre>
+
+      <div class="step"><strong>Step 2</strong> <span class="checkbox">[ ]</span> 실패 테스트 작성</div>
+      <p>파일: <code>C:/Users/bada/6_IL/tests/ecs/systems.test.ts</code></p>
+      <pre><code>import { describe, expect, it } from 'vitest';
+import { addComponent, addEntity, createGameWorld } from '@/ecs/world';
+import { Position } from '@/ecs/components/position';
+import { Velocity } from '@/ecs/components/velocity';
+import { Lifetime } from '@/ecs/components/lifetime';
+import { Health } from '@/ecs/components/health';
+import { movementSystem } from '@/ecs/systems/movement';
+import { lifetimeSystem } from '@/ecs/systems/lifetime';
+import { cleanupSystem } from '@/ecs/systems/cleanup';
+
+describe('movementSystem', () =&gt; {
+  it('advances position by velocity * dt', () =&gt; {
+    const w = createGameWorld();
+    const e = addEntity(w);
+    addComponent(w, Position, e);
+    addComponent(w, Velocity, e);
+    Position.x[e] = 0;
+    Position.y[e] = 0;
+    Velocity.vx[e] = 100;
+    Velocity.vy[e] = 50;
+    w.deltaTime = 0.1;
+
+    movementSystem(w);
+
+    expect(Position.x[e]).toBeCloseTo(10);
+    expect(Position.y[e]).toBeCloseTo(5);
+  });
+});
+
+describe('lifetimeSystem', () =&gt; {
+  it('decrements lifetime by dt', () =&gt; {
+    const w = createGameWorld();
+    const e = addEntity(w);
+    addComponent(w, Lifetime, e);
+    Lifetime.remainingSec[e] = 1;
+    w.deltaTime = 0.25;
+
+    lifetimeSystem(w);
+
+    expect(Lifetime.remainingSec[e]).toBeCloseTo(0.75);
+  });
+
+  it('marks health.dead when lifetime expires (without Health component, no-op)', () =&gt; {
+    const w = createGameWorld();
+    const e = addEntity(w);
+    addComponent(w, Lifetime, e);
+    Lifetime.remainingSec[e] = 0.05;
+    w.deltaTime = 0.1;
+
+    lifetimeSystem(w);
+
+    expect(Lifetime.remainingSec[e]).toBeLessThanOrEqual(0);
+  });
+});
+
+describe('cleanupSystem', () =&gt; {
+  it('removes entities with Health.dead == 1', () =&gt; {
+    const w = createGameWorld();
+    const e = addEntity(w);
+    addComponent(w, Health, e);
+    Health.current[e] = 0;
+    Health.max[e] = 10;
+    Health.dead[e] = 1;
+
+    const removed = cleanupSystem(w);
+
+    expect(removed).toContain(e);
+  });
+
+  it('does not remove alive entities', () =&gt; {
+    const w = createGameWorld();
+    const e = addEntity(w);
+    addComponent(w, Health, e);
+    Health.current[e] = 10;
+    Health.max[e] = 10;
+    Health.dead[e] = 0;
+
+    const removed = cleanupSystem(w);
+
+    expect(removed).not.toContain(e);
+  });
+});
+</code></pre>
+
+      <div class="step"><strong>Step 3</strong> <span class="checkbox">[ ]</span> movement 시스템 구현</div>
+      <p>파일: <code>C:/Users/bada/6_IL/src/ecs/systems/movement.ts</code></p>
+      <pre><code>import type { GameWorld } from '../world';
+import { Position } from '../components/position';
+import { Velocity } from '../components/velocity';
+import { movementQuery } from '../queries';
+
+export function movementSystem(world: GameWorld): void {
+  const dt = world.deltaTime;
+  const entities = movementQuery(world);
+  for (const eid of entities) {
+    Position.x[eid] += Velocity.vx[eid] * dt;
+    Position.y[eid] += Velocity.vy[eid] * dt;
+  }
+}
+</code></pre>
+
+      <div class="step"><strong>Step 4</strong> <span class="checkbox">[ ]</span> lifetime 시스템 구현</div>
+      <p>파일: <code>C:/Users/bada/6_IL/src/ecs/systems/lifetime.ts</code></p>
+      <pre><code>import type { GameWorld } from '../world';
+import { Lifetime } from '../components/lifetime';
+import { Health } from '../components/health';
+import { hasComponent } from '../world';
+import { lifetimeQuery } from '../queries';
+
+export function lifetimeSystem(world: GameWorld): void {
+  const dt = world.deltaTime;
+  const entities = lifetimeQuery(world);
+  for (const eid of entities) {
+    Lifetime.remainingSec[eid] -= dt;
+    if (Lifetime.remainingSec[eid] &lt;= 0 && hasComponent(world, Health, eid)) {
+      Health.dead[eid] = 1;
+    }
+  }
+}
+</code></pre>
+
+      <div class="step"><strong>Step 5</strong> <span class="checkbox">[ ]</span> cleanup 시스템 구현</div>
+      <p>파일: <code>C:/Users/bada/6_IL/src/ecs/systems/cleanup.ts</code></p>
+      <pre><code>import { type GameWorld, removeEntity } from '../world';
+import { Health } from '../components/health';
+import { healthQuery } from '../queries';
+
+export function cleanupSystem(world: GameWorld): number[] {
+  const entities = healthQuery(world);
+  const removed: number[] = [];
+  for (const eid of entities) {
+    if (Health.dead[eid] === 1) {
+      removeEntity(world, eid);
+      removed.push(eid);
+    }
+  }
+  return removed;
+}
+</code></pre>
+
+      <div class="step"><strong>Step 6</strong> <span class="checkbox">[ ]</span> sprite-sync 시스템 (브라우저 전용, 테스트 없음)</div>
+      <p>파일: <code>C:/Users/bada/6_IL/src/ecs/systems/sprite-sync.ts</code></p>
+      <pre><code>import type Phaser from 'phaser';
+import type { GameWorld } from '../world';
+import { Position } from '../components/position';
+import { SpriteRef } from '../components/sprite-ref';
+import { spriteQuery } from '../queries';
+
+/**
+ * ECS Position을 Phaser sprite에 복사.
+ * spriteMap: SpriteRef.gid → Phaser GameObject
+ */
+export function spriteSyncSystem(
+  world: GameWorld,
+  spriteMap: Map&lt;number, Phaser.GameObjects.GameObject &amp; Phaser.GameObjects.Components.Transform&gt;,
+): void {
+  const entities = spriteQuery(world);
+  for (const eid of entities) {
+    const gid = SpriteRef.gid[eid];
+    const obj = spriteMap.get(gid);
+    if (obj) {
+      obj.x = Position.x[eid];
+      obj.y = Position.y[eid];
+    }
+  }
+}
+</code></pre>
+
+      <div class="step"><strong>Step 7</strong> <span class="checkbox">[ ]</span> 테스트 + typecheck + commit</div>
+      <pre><code class="cmd">npm test
+npm run typecheck
+git add src/ecs/ tests/ecs/
+git commit -m "feat(ecs): add core systems (movement, lifetime, cleanup, sprite-sync)"</code></pre>
+      <div class="expect">새 테스트 4개 PASS, 누적 29 tests.</div>
+    </div>
+
+    <!-- ========================================================= -->
+    <div class="task">
+      <h3>Task 4: 입력 어댑터 + 조작 설정</h3>
+      <p>키보드 입력을 추상화. 향후 게임패드/터치 확장을 위한 인터페이스.</p>
+
+      <div class="files">
+        <strong>Create:</strong>
+        <code>src/config/controls.ts</code>,
+        <code>src/gameplay/player/input-adapter.ts</code>
+      </div>
+
+      <div class="step"><strong>Step 1</strong> <span class="checkbox">[ ]</span> 키 바인딩</div>
+      <p>파일: <code>C:/Users/bada/6_IL/src/config/controls.ts</code></p>
+      <pre><code>export const CONTROLS = {
+  up: ['W', 'UP'],
+  down: ['S', 'DOWN'],
+  left: ['A', 'LEFT'],
+  right: ['D', 'RIGHT'],
+  interact: ['E', 'SPACE'],
+  placeBuilding: ['B'],
+  confirm: ['ENTER'],
+  cancel: ['ESC'],
+} as const;
+
+export type ActionName = keyof typeof CONTROLS;
+</code></pre>
+
+      <div class="step"><strong>Step 2</strong> <span class="checkbox">[ ]</span> 입력 어댑터</div>
+      <p>파일: <code>C:/Users/bada/6_IL/src/gameplay/player/input-adapter.ts</code></p>
+      <pre><code>import type Phaser from 'phaser';
+import { CONTROLS, type ActionName } from '@/config/controls';
+
+export class InputAdapter {
+  private readonly keys = new Map&lt;string, Phaser.Input.Keyboard.Key&gt;();
+
+  constructor(private readonly scene: Phaser.Scene) {
+    const kb = scene.input.keyboard;
+    if (!kb) throw new Error('InputAdapter requires a keyboard plugin');
+
+    const uniqueCodes = new Set&lt;string&gt;();
+    for (const names of Object.values(CONTROLS)) {
+      for (const n of names) uniqueCodes.add(n);
+    }
+    for (const code of uniqueCodes) {
+      this.keys.set(code, kb.addKey(code));
+    }
+  }
+
+  isDown(action: ActionName): boolean {
+    return CONTROLS[action].some((code) =&gt; this.keys.get(code)?.isDown ?? false);
+  }
+
+  justPressed(action: ActionName): boolean {
+    return CONTROLS[action].some((code) =&gt; {
+      const key = this.keys.get(code);
+      return key ? Phaser.Input.Keyboard.JustDown(key) : false;
+    });
+  }
+
+  axis(neg: ActionName, pos: ActionName): number {
+    return (this.isDown(pos) ? 1 : 0) - (this.isDown(neg) ? 1 : 0);
+  }
+}
+</code></pre>
+
+      <div class="step"><strong>Step 3</strong> <span class="checkbox">[ ]</span> typecheck + commit</div>
+      <pre><code class="cmd">npm run typecheck
+git add src/config/controls.ts src/gameplay/player/input-adapter.ts
+git commit -m "feat(input): add keyboard input adapter"</code></pre>
+    </div>
+
+    <!-- ========================================================= -->
+    <div class="task">
+      <h3>Task 5: 자원 저장소 (TDD)</h3>
+
+      <div class="files">
+        <strong>Create:</strong>
+        <code>src/gameplay/resources/resource-store.ts</code>,
+        <code>tests/resources/resource-store.test.ts</code>
+      </div>
+
+      <div class="step"><strong>Step 1</strong> <span class="checkbox">[ ]</span> 실패 테스트</div>
+      <p>파일: <code>C:/Users/bada/6_IL/tests/resources/resource-store.test.ts</code></p>
+      <pre><code>import { describe, expect, it } from 'vitest';
+import { createResourceStore, type ResourceKind } from '@/gameplay/resources/resource-store';
+
+describe('ResourceStore', () =&gt; {
+  it('initializes with zeros', () =&gt; {
+    const store = createResourceStore();
+    expect(store.get('wood')).toBe(0);
+    expect(store.get('stone')).toBe(0);
+    expect(store.get('meat')).toBe(0);
+  });
+
+  it('add/spend adjusts totals', () =&gt; {
+    const store = createResourceStore();
+    store.add('wood', 10);
+    expect(store.get('wood')).toBe(10);
+    const ok = store.spend('wood', 3);
+    expect(ok).toBe(true);
+    expect(store.get('wood')).toBe(7);
+  });
+
+  it('spend returns false when insufficient', () =&gt; {
+    const store = createResourceStore();
+    store.add('wood', 2);
+    const ok = store.spend('wood', 5);
+    expect(ok).toBe(false);
+    expect(store.get('wood')).toBe(2);
+  });
+
+  it('snapshot returns plain object', () =&gt; {
+    const store = createResourceStore();
+    store.add('wood', 3);
+    store.add('stone', 5);
+    const snap = store.snapshot();
+    expect(snap.wood).toBe(3);
+    expect(snap.stone).toBe(5);
+  });
+
+  it('restore loads from snapshot', () =&gt; {
+    const store = createResourceStore();
+    store.restore({ wood: 7, stone: 2, iron: 0, meat: 1, food: 0, frostbloom: 0 });
+    expect(store.get('wood')).toBe(7);
+    expect(store.get('meat')).toBe(1);
+  });
+
+  it('emits resource:changed event on add', () =&gt; {
+    const store = createResourceStore();
+    const events: Array&lt;{ kind: ResourceKind; delta: number; total: number }&gt; = [];
+    store.onChange((e) =&gt; events.push(e));
+    store.add('wood', 5);
+    expect(events).toHaveLength(1);
+    expect(events[0]).toEqual({ kind: 'wood', delta: 5, total: 5 });
+  });
+});
+</code></pre>
+
+      <div class="step"><strong>Step 2</strong> <span class="checkbox">[ ]</span> 테스트 실행 (실패 확인)</div>
+      <pre><code class="cmd">npm test -- resources</code></pre>
+      <div class="expect">FAIL — 모듈 없음.</div>
+
+      <div class="step"><strong>Step 3</strong> <span class="checkbox">[ ]</span> 구현</div>
+      <p>파일: <code>C:/Users/bada/6_IL/src/gameplay/resources/resource-store.ts</code></p>
+      <pre><code>export type ResourceKind = 'wood' | 'stone' | 'iron' | 'meat' | 'food' | 'frostbloom';
+
+export type ResourceSnapshot = Record&lt;ResourceKind, number&gt;;
+
+export interface ResourceChangeEvent {
+  kind: ResourceKind;
+  delta: number;
+  total: number;
+}
+
+export interface ResourceStore {
+  get(kind: ResourceKind): number;
+  add(kind: ResourceKind, amount: number): void;
+  spend(kind: ResourceKind, amount: number): boolean;
+  snapshot(): ResourceSnapshot;
+  restore(snap: ResourceSnapshot): void;
+  onChange(listener: (e: ResourceChangeEvent) =&gt; void): () =&gt; void;
+}
+
+export function createResourceStore(): ResourceStore {
+  const totals: ResourceSnapshot = {
+    wood: 0,
+    stone: 0,
+    iron: 0,
+    meat: 0,
+    food: 0,
+    frostbloom: 0,
+  };
+  const listeners = new Set&lt;(e: ResourceChangeEvent) =&gt; void&gt;();
+
+  const emit = (e: ResourceChangeEvent): void =&gt; {
+    for (const l of listeners) {
+      try {
+        l(e);
+      } catch (err) {
+        console.error('[ResourceStore] listener threw:', err);
+      }
+    }
+  };
+
+  return {
+    get(kind) {
+      return totals[kind];
+    },
+    add(kind, amount) {
+      if (amount &lt;= 0) return;
+      totals[kind] += amount;
+      emit({ kind, delta: amount, total: totals[kind] });
+    },
+    spend(kind, amount) {
+      if (totals[kind] &lt; amount) return false;
+      totals[kind] -= amount;
+      emit({ kind, delta: -amount, total: totals[kind] });
+      return true;
+    },
+    snapshot() {
+      return { ...totals };
+    },
+    restore(snap) {
+      for (const k of Object.keys(totals) as ResourceKind[]) {
+        totals[k] = snap[k] ?? 0;
+      }
+    },
+    onChange(listener) {
+      listeners.add(listener);
+      return () =&gt; listeners.delete(listener);
+    },
+  };
+}
+</code></pre>
+
+      <div class="step"><strong>Step 4</strong> <span class="checkbox">[ ]</span> 테스트 통과 + commit</div>
+      <pre><code class="cmd">npm test
+git add src/gameplay/resources/ tests/resources/
+git commit -m "feat(resources): add resource store with change events"</code></pre>
+    </div>
+
+    <!-- ========================================================= -->
+    <div class="task">
+      <h3>Task 6: 대미지 계산 (순수 함수, TDD)</h3>
+
+      <div class="files">
+        <strong>Create:</strong>
+        <code>src/gameplay/combat/weapon-definitions.ts</code>,
+        <code>src/gameplay/combat/damage-calc.ts</code>,
+        <code>tests/combat/damage-calc.test.ts</code>
+      </div>
+
+      <div class="step"><strong>Step 1</strong> <span class="checkbox">[ ]</span> 실패 테스트</div>
+      <p>파일: <code>C:/Users/bada/6_IL/tests/combat/damage-calc.test.ts</code></p>
+      <pre><code>import { describe, expect, it } from 'vitest';
+import { calcDamage } from '@/gameplay/combat/damage-calc';
+
+describe('calcDamage', () =&gt; {
+  it('base damage applied when no modifiers', () =&gt; {
+    const d = calcDamage({ base: 10, armor: 0, critRoll: 0.5, critChance: 0, critMult: 2 });
+    expect(d).toBe(10);
+  });
+
+  it('armor subtracts from damage', () =&gt; {
+    const d = calcDamage({ base: 10, armor: 3, critRoll: 0.5, critChance: 0, critMult: 2 });
+    expect(d).toBe(7);
+  });
+
+  it('minimum 1 damage even with heavy armor', () =&gt; {
+    const d = calcDamage({ base: 5, armor: 100, critRoll: 0.5, critChance: 0, critMult: 2 });
+    expect(d).toBe(1);
+  });
+
+  it('critical doubles when critRoll &lt; critChance', () =&gt; {
+    const d = calcDamage({ base: 10, armor: 0, critRoll: 0.1, critChance: 0.2, critMult: 2 });
+    expect(d).toBe(20);
+  });
+
+  it('no crit when critRoll &gt;= critChance', () =&gt; {
+    const d = calcDamage({ base: 10, armor: 0, critRoll: 0.3, critChance: 0.2, critMult: 2 });
+    expect(d).toBe(10);
+  });
+});
+</code></pre>
+
+      <div class="step"><strong>Step 2</strong> <span class="checkbox">[ ]</span> weapon-definitions.ts</div>
+      <p>파일: <code>C:/Users/bada/6_IL/src/gameplay/combat/weapon-definitions.ts</code></p>
+      <pre><code>export interface WeaponDef {
+  id: string;
+  displayName: string;
+  baseDamage: number;
+  range: number;              // px
+  cooldownSec: number;
+  critChance: number;         // 0..1
+  critMult: number;
+  hitRadius: number;          // 근접 반경(px) 또는 투사체 반경
+}
+
+export const WEAPONS: Record&lt;string, WeaponDef&gt; = {
+  longsword: {
+    id: 'longsword',
+    displayName: 'Longsword',
+    baseDamage: 12,
+    range: 48,
+    cooldownSec: 0.75,
+    critChance: 0.08,
+    critMult: 2,
+    hitRadius: 36,
+  },
+} as const;
+
+export type WeaponId = keyof typeof WEAPONS;
+</code></pre>
+
+      <div class="step"><strong>Step 3</strong> <span class="checkbox">[ ]</span> damage-calc.ts</div>
+      <p>파일: <code>C:/Users/bada/6_IL/src/gameplay/combat/damage-calc.ts</code></p>
+      <pre><code>export interface DamageInput {
+  base: number;
+  armor: number;
+  critRoll: number;           // 0..1 (rng.next())
+  critChance: number;         // 0..1
+  critMult: number;
+}
+
+export function calcDamage(input: DamageInput): number {
+  const crit = input.critRoll &lt; input.critChance ? input.critMult : 1;
+  const raw = input.base * crit - input.armor;
+  return Math.max(1, Math.floor(raw));
+}
+</code></pre>
+
+      <div class="step"><strong>Step 4</strong> <span class="checkbox">[ ]</span> 테스트 + commit</div>
+      <pre><code class="cmd">npm test
+git add src/gameplay/combat/ tests/combat/
+git commit -m "feat(combat): add weapon definitions and damage calc"</code></pre>
+    </div>
+
+    <!-- ========================================================= -->
+    <div class="task">
+      <h3>Task 7: 마을 그리드 (TDD)</h3>
+
+      <div class="files">
+        <strong>Create:</strong>
+        <code>src/gameplay/village/grid.ts</code>,
+        <code>tests/village/grid.test.ts</code>
+      </div>
+
+      <div class="step"><strong>Step 1</strong> <span class="checkbox">[ ]</span> 실패 테스트</div>
+      <p>파일: <code>C:/Users/bada/6_IL/tests/village/grid.test.ts</code></p>
+      <pre><code>import { describe, expect, it } from 'vitest';
+import { createVillageGrid } from '@/gameplay/village/grid';
+
+describe('VillageGrid', () =&gt; {
+  it('starts empty (all cells free)', () =&gt; {
+    const grid = createVillageGrid(24, 24);
+    expect(grid.isFree(0, 0, 1, 1)).toBe(true);
+    expect(grid.isFree(10, 10, 3, 3)).toBe(true);
+  });
+
+  it('place reserves cells with entity id', () =&gt; {
+    const grid = createVillageGrid(24, 24);
+    const ok = grid.place(5, 5, 2, 2, 42);
+    expect(ok).toBe(true);
+    expect(grid.isFree(5, 5, 2, 2)).toBe(false);
+    expect(grid.getCell(5, 5)).toBe(42);
+    expect(grid.getCell(6, 6)).toBe(42);
+  });
+
+  it('place fails if overlap', () =&gt; {
+    const grid = createVillageGrid(24, 24);
+    grid.place(5, 5, 2, 2, 1);
+    const ok = grid.place(6, 6, 2, 2, 2);
+    expect(ok).toBe(false);
+  });
+
+  it('place fails out of bounds', () =&gt; {
+    const grid = createVillageGrid(24, 24);
+    expect(grid.place(-1, 0, 1, 1, 1)).toBe(false);
+    expect(grid.place(23, 23, 2, 2, 1)).toBe(false);
+  });
+
+  it('remove frees the cells', () =&gt; {
+    const grid = createVillageGrid(24, 24);
+    grid.place(5, 5, 2, 2, 42);
+    grid.remove(42);
+    expect(grid.isFree(5, 5, 2, 2)).toBe(true);
+  });
+
+  it('tileToWorld and worldToTile round-trip', () =&gt; {
+    const grid = createVillageGrid(24, 24, 32);
+    const { x, y } = grid.tileToWorld(3, 5);
+    expect(x).toBe(3 * 32 + 16);
+    expect(y).toBe(5 * 32 + 16);
+    const tile = grid.worldToTile(x, y);
+    expect(tile).toEqual({ tx: 3, ty: 5 });
+  });
+});
+</code></pre>
+
+      <div class="step"><strong>Step 2</strong> <span class="checkbox">[ ]</span> 구현</div>
+      <p>파일: <code>C:/Users/bada/6_IL/src/gameplay/village/grid.ts</code></p>
+      <pre><code>const EMPTY = 0;
+
+export interface VillageGrid {
+  readonly width: number;
+  readonly height: number;
+  readonly tileSize: number;
+  isFree(tx: number, ty: number, w: number, h: number): boolean;
+  place(tx: number, ty: number, w: number, h: number, eid: number): boolean;
+  remove(eid: number): void;
+  getCell(tx: number, ty: number): number;
+  tileToWorld(tx: number, ty: number): { x: number; y: number };
+  worldToTile(x: number, y: number): { tx: number; ty: number };
+}
+
+export function createVillageGrid(width: number, height: number, tileSize = 32): VillageGrid {
+  const cells = new Uint32Array(width * height);
+
+  const idx = (tx: number, ty: number): number =&gt; ty * width + tx;
+
+  const inBounds = (tx: number, ty: number, w: number, h: number): boolean =&gt;
+    tx &gt;= 0 &amp;&amp; ty &gt;= 0 &amp;&amp; tx + w &lt;= width &amp;&amp; ty + h &lt;= height;
+
+  return {
+    width,
+    height,
+    tileSize,
+    isFree(tx, ty, w, h) {
+      if (!inBounds(tx, ty, w, h)) return false;
+      for (let y = ty; y &lt; ty + h; y++) {
+        for (let x = tx; x &lt; tx + w; x++) {
+          if (cells[idx(x, y)] !== EMPTY) return false;
+        }
+      }
+      return true;
+    },
+    place(tx, ty, w, h, eid) {
+      if (!this.isFree(tx, ty, w, h)) return false;
+      for (let y = ty; y &lt; ty + h; y++) {
+        for (let x = tx; x &lt; tx + w; x++) {
+          cells[idx(x, y)] = eid;
+        }
+      }
+      return true;
+    },
+    remove(eid) {
+      for (let i = 0; i &lt; cells.length; i++) {
+        if (cells[i] === eid) cells[i] = EMPTY;
+      }
+    },
+    getCell(tx, ty) {
+      if (!inBounds(tx, ty, 1, 1)) return EMPTY;
+      return cells[idx(tx, ty)] ?? EMPTY;
+    },
+    tileToWorld(tx, ty) {
+      return { x: tx * tileSize + tileSize / 2, y: ty * tileSize + tileSize / 2 };
+    },
+    worldToTile(x, y) {
+      return { tx: Math.floor(x / tileSize), ty: Math.floor(y / tileSize) };
+    },
+  };
+}
+</code></pre>
+
+      <div class="step"><strong>Step 3</strong> <span class="checkbox">[ ]</span> 테스트 + commit</div>
+      <pre><code class="cmd">npm test
+git add src/gameplay/village/grid.ts tests/village/grid.test.ts
+git commit -m "feat(village): add tile grid with placement rules"</code></pre>
+    </div>
+
+    <!-- ========================================================= -->
+    <div class="task">
+      <h3>Task 8: 낮/밤 상태 머신 (TDD)</h3>
+
+      <div class="files">
+        <strong>Create:</strong>
+        <code>src/gameplay/cycle/day-night-controller.ts</code>,
+        <code>tests/cycle/day-night.test.ts</code>
+        <br /><strong>Modify:</strong> <code>src/events/types.ts</code> (phase 전환 이벤트 추가)
+      </div>
+
+      <div class="step"><strong>Step 1</strong> <span class="checkbox">[ ]</span> 이벤트 타입 확장</div>
+      <p>파일: <code>C:/Users/bada/6_IL/src/events/types.ts</code></p>
+      <pre><code>export type GameEvents = {
+  'day:started': { day: number };
+  'day:ended': { day: number };
+  'night:started': { day: number };
+  'night:ended': { day: number };
+  'evening:started': { day: number };
+  'dawn:started': { day: number };
+  'player:damaged': { amount: number; remaining: number };
+  'player:died': { day: number };
+  'zombie:died': { id: number; position: { x: number; y: number } };
+  'resource:changed': { kind: string; delta: number; total: number };
+  'building:destroyed': { eid: number; kind: string };
+  'wave:started': { day: number; waveIndex: number; enemyCount: number };
+  'wave:cleared': { day: number; waveIndex: number };
+};
+</code></pre>
+
+      <div class="step"><strong>Step 2</strong> <span class="checkbox">[ ]</span> 실패 테스트</div>
+      <p>파일: <code>C:/Users/bada/6_IL/tests/cycle/day-night.test.ts</code></p>
+      <pre><code>import { describe, expect, it } from 'vitest';
+import { createDayNightController } from '@/gameplay/cycle/day-night-controller';
+import { EventBus } from '@/events/event-bus';
+import type { GameEvents } from '@/events/types';
+
+const phases = {
+  dayDurationSec: 5,
+  eveningTransitionSec: 1,
+  nightDurationSec: 3,
+  dawnTransitionSec: 1,
+};
+
+describe('DayNightController', () =&gt; {
+  it('starts in day phase on Day 1', () =&gt; {
+    const bus = new EventBus&lt;GameEvents&gt;();
+    const c = createDayNightController(phases, bus);
+    expect(c.phase).toBe('day');
+    expect(c.day).toBe(1);
+  });
+
+  it('transitions day -&gt; evening after dayDurationSec', () =&gt; {
+    const bus = new EventBus&lt;GameEvents&gt;();
+    const c = createDayNightController(phases, bus);
+    c.update(5);
+    expect(c.phase).toBe('evening');
+  });
+
+  it('emits phase events', () =&gt; {
+    const bus = new EventBus&lt;GameEvents&gt;();
+    const log: string[] = [];
+    bus.on('evening:started', () =&gt; log.push('evening'));
+    bus.on('night:started', () =&gt; log.push('night'));
+    bus.on('dawn:started', () =&gt; log.push('dawn'));
+    bus.on('day:started', (p) =&gt; log.push(`day:${p.day}`));
+
+    const c = createDayNightController(phases, bus);
+    c.update(5); // day -&gt; evening
+    c.update(1); // evening -&gt; night
+    c.update(3); // night -&gt; dawn
+    c.update(1); // dawn -&gt; day 2
+
+    expect(log).toEqual(['evening', 'night', 'dawn', 'day:2']);
+    expect(c.day).toBe(2);
+  });
+
+  it('snapshot and restore', () =&gt; {
+    const bus = new EventBus&lt;GameEvents&gt;();
+    const c = createDayNightController(phases, bus);
+    c.update(2.5);
+    const snap = c.snapshot();
+
+    const c2 = createDayNightController(phases, bus);
+    c2.restore(snap);
+    expect(c2.phase).toBe('day');
+    expect(c2.day).toBe(1);
+    c2.update(2.5);
+    expect(c2.phase).toBe('evening');
+  });
+});
+</code></pre>
+
+      <div class="step"><strong>Step 3</strong> <span class="checkbox">[ ]</span> 구현</div>
+      <p>파일: <code>C:/Users/bada/6_IL/src/gameplay/cycle/day-night-controller.ts</code></p>
+      <pre><code>import type { EventBus } from '@/events/event-bus';
+import type { GameEvents } from '@/events/types';
+
+export type Phase = 'day' | 'evening' | 'night' | 'dawn';
+
+export interface PhaseDurations {
+  dayDurationSec: number;
+  eveningTransitionSec: number;
+  nightDurationSec: number;
+  dawnTransitionSec: number;
+}
+
+export interface DayNightSnapshot {
+  day: number;
+  phase: Phase;
+  elapsedInPhase: number;
+}
+
+export interface DayNightController {
+  readonly day: number;
+  readonly phase: Phase;
+  readonly elapsedInPhase: number;
+  readonly phaseDurationSec: number;
+  update(dt: number): void;
+  snapshot(): DayNightSnapshot;
+  restore(snap: DayNightSnapshot): void;
+}
+
+export function createDayNightController(
+  durations: PhaseDurations,
+  bus: EventBus&lt;GameEvents&gt;,
+): DayNightController {
+  let day = 1;
+  let phase: Phase = 'day';
+  let elapsed = 0;
+
+  const durationOf = (p: Phase): number =&gt; {
+    switch (p) {
+      case 'day':
+        return durations.dayDurationSec;
+      case 'evening':
+        return durations.eveningTransitionSec;
+      case 'night':
+        return durations.nightDurationSec;
+      case 'dawn':
+        return durations.dawnTransitionSec;
+    }
+  };
+
+  const advance = (): void =&gt; {
+    switch (phase) {
+      case 'day':
+        phase = 'evening';
+        bus.emit('day:ended', { day });
+        bus.emit('evening:started', { day });
+        break;
+      case 'evening':
+        phase = 'night';
+        bus.emit('night:started', { day });
+        break;
+      case 'night':
+        phase = 'dawn';
+        bus.emit('night:ended', { day });
+        bus.emit('dawn:started', { day });
+        break;
+      case 'dawn':
+        phase = 'day';
+        day += 1;
+        bus.emit('day:started', { day });
+        break;
+    }
+    elapsed = 0;
+  };
+
+  return {
+    get day() {
+      return day;
+    },
+    get phase() {
+      return phase;
+    },
+    get elapsedInPhase() {
+      return elapsed;
+    },
+    get phaseDurationSec() {
+      return durationOf(phase);
+    },
+    update(dt) {
+      elapsed += dt;
+      while (elapsed &gt;= durationOf(phase)) {
+        elapsed -= durationOf(phase);
+        advance();
+      }
+    },
+    snapshot() {
+      return { day, phase, elapsedInPhase: elapsed };
+    },
+    restore(snap) {
+      day = snap.day;
+      phase = snap.phase;
+      elapsed = snap.elapsedInPhase;
+    },
+  };
+}
+</code></pre>
+
+      <div class="step"><strong>Step 4</strong> <span class="checkbox">[ ]</span> 테스트 + commit</div>
+      <pre><code class="cmd">npm test
+git add src/events/types.ts src/gameplay/cycle/ tests/cycle/
+git commit -m "feat(cycle): add day/night state machine"</code></pre>
+    </div>
+
+    <!-- ========================================================= -->
+    <div class="task">
+      <h3>Task 9: 웨이브 스포너 (TDD)</h3>
+
+      <div class="files">
+        <strong>Create:</strong>
+        <code>src/gameplay/enemies/wave-spawner.ts</code>,
+        <code>tests/enemies/wave-spawner.test.ts</code>
+      </div>
+
+      <div class="step"><strong>Step 1</strong> <span class="checkbox">[ ]</span> 실패 테스트</div>
+      <p>파일: <code>C:/Users/bada/6_IL/tests/enemies/wave-spawner.test.ts</code></p>
+      <pre><code>import { describe, expect, it } from 'vitest';
+import { createWaveSpawner } from '@/gameplay/enemies/wave-spawner';
+import { createRng } from '@/util/rng';
+
+describe('WaveSpawner', () =&gt; {
+  it('plans a wave sized by day (simple scaling)', () =&gt; {
+    const rng = createRng(1);
+    const spawner = createWaveSpawner(rng);
+    const plan = spawner.planWave(1);
+    expect(plan.enemyCount).toBe(8);           // Day 1: 8
+    expect(plan.spawnPoints.length).toBeGreaterThan(0);
+  });
+
+  it('scales linearly each day', () =&gt; {
+    const rng = createRng(1);
+    const spawner = createWaveSpawner(rng);
+    expect(spawner.planWave(2).enemyCount).toBe(12);
+    expect(spawner.planWave(3).enemyCount).toBe(16);
+    expect(spawner.planWave(5).enemyCount).toBe(24);
+  });
+
+  it('caps enemy count at high day', () =&gt; {
+    const rng = createRng(1);
+    const spawner = createWaveSpawner(rng);
+    expect(spawner.planWave(100).enemyCount).toBeLessThanOrEqual(300);
+  });
+
+  it('same seed produces same spawn points', () =&gt; {
+    const spawn1 = createWaveSpawner(createRng(42)).planWave(3);
+    const spawn2 = createWaveSpawner(createRng(42)).planWave(3);
+    expect(spawn1.spawnPoints).toEqual(spawn2.spawnPoints);
+  });
+});
+</code></pre>
+
+      <div class="step"><strong>Step 2</strong> <span class="checkbox">[ ]</span> 구현</div>
+      <p>파일: <code>C:/Users/bada/6_IL/src/gameplay/enemies/wave-spawner.ts</code></p>
+      <pre><code>import type { Rng } from '@/util/rng';
+
+export interface SpawnPoint {
+  x: number;
+  y: number;
+}
+
+export interface WavePlan {
+  enemyCount: number;
+  spawnPoints: SpawnPoint[];
+}
+
+export interface WaveSpawner {
+  planWave(day: number): WavePlan;
+}
+
+const BASE_COUNT = 8;
+const PER_DAY = 4;
+const MAX_COUNT = 300;
+
+// 마을 외곽 기본 스폰 위치 후보 (월드 좌표)
+const SPAWN_CANDIDATES: SpawnPoint[] = [
+  { x: -100, y: 384 },
+  { x: 864, y: 384 },
+  { x: 384, y: -100 },
+  { x: 384, y: 868 },
+];
+
+export function createWaveSpawner(rng: Rng): WaveSpawner {
+  return {
+    planWave(day) {
+      const rawCount = BASE_COUNT + (day - 1) * PER_DAY;
+      const enemyCount = Math.min(MAX_COUNT, rawCount);
+
+      // 1~4개 스폰 포인트 선택 (시드 결정적)
+      const numPoints = rng.intRange(2, SPAWN_CANDIDATES.length);
+      const picked: SpawnPoint[] = [];
+      const pool = [...SPAWN_CANDIDATES];
+      for (let i = 0; i &lt; numPoints; i++) {
+        const idx = rng.intRange(0, pool.length - 1);
+        const pt = pool.splice(idx, 1)[0];
+        if (pt) picked.push(pt);
+      }
+      return { enemyCount, spawnPoints: picked };
+    },
+  };
+}
+</code></pre>
+
+      <div class="step"><strong>Step 3</strong> <span class="checkbox">[ ]</span> 테스트 + commit</div>
+      <pre><code class="cmd">npm test
+git add src/gameplay/enemies/ tests/enemies/
+git commit -m "feat(enemies): add deterministic wave spawner"</code></pre>
+    </div>
+
+    <!-- ========================================================= -->
+    <div class="task">
+      <h3>Task 10: 세이브/로드 (TDD)</h3>
+
+      <div class="files">
+        <strong>Create:</strong>
+        <code>src/gameplay/persistence/save-load.ts</code>,
+        <code>tests/persistence/save-load.test.ts</code>
+      </div>
+
+      <div class="step"><strong>Step 1</strong> <span class="checkbox">[ ]</span> 실패 테스트</div>
+      <p>파일: <code>C:/Users/bada/6_IL/tests/persistence/save-load.test.ts</code></p>
+      <pre><code>import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { saveGame, loadGame, SAVE_KEY, type SaveFileV1 } from '@/gameplay/persistence/save-load';
+
+class MemoryStorage {
+  private store = new Map&lt;string, string&gt;();
+  getItem(k: string): string | null {
+    return this.store.get(k) ?? null;
+  }
+  setItem(k: string, v: string): void {
+    this.store.set(k, v);
+  }
+  removeItem(k: string): void {
+    this.store.delete(k);
+  }
+}
+
+const sample: SaveFileV1 = {
+  version: 1,
+  currentDay: 3,
+  resources: { wood: 12, stone: 5, iron: 0, meat: 2, food: 4, frostbloom: 0 },
+  weatherRng: 42,
+};
+
+beforeEach(() =&gt; {
+  vi.stubGlobal('localStorage', new MemoryStorage());
+});
+
+describe('save-load', () =&gt; {
+  it('saves and loads a round-trip', () =&gt; {
+    saveGame(sample);
+    const loaded = loadGame();
+    expect(loaded).toEqual(sample);
+  });
+
+  it('returns null when no save exists', () =&gt; {
+    expect(loadGame()).toBeNull();
+  });
+
+  it('returns null for corrupted json', () =&gt; {
+    localStorage.setItem(SAVE_KEY, 'not-json');
+    expect(loadGame()).toBeNull();
+  });
+
+  it('returns null for unsupported version', () =&gt; {
+    localStorage.setItem(SAVE_KEY, JSON.stringify({ version: 999 }));
+    expect(loadGame()).toBeNull();
+  });
+});
+</code></pre>
+
+      <div class="step"><strong>Step 2</strong> <span class="checkbox">[ ]</span> 구현</div>
+      <p>파일: <code>C:/Users/bada/6_IL/src/gameplay/persistence/save-load.ts</code></p>
+      <pre><code>import type { ResourceSnapshot } from '@/gameplay/resources/resource-store';
+
+export const SAVE_KEY = '6il.save.v1';
+
+export interface SaveFileV1 {
+  version: 1;
+  currentDay: number;
+  resources: ResourceSnapshot;
+  weatherRng: number;
+}
+
+export function saveGame(data: SaveFileV1): void {
+  try {
+    localStorage.setItem(SAVE_KEY, JSON.stringify(data));
+  } catch (err) {
+    console.error('[save] failed:', err);
+  }
+}
+
+export function loadGame(): SaveFileV1 | null {
+  try {
+    const raw = localStorage.getItem(SAVE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as unknown;
+    if (
+      typeof parsed !== 'object' ||
+      parsed === null ||
+      (parsed as { version?: unknown }).version !== 1
+    ) {
+      return null;
+    }
+    return parsed as SaveFileV1;
+  } catch {
+    return null;
+  }
+}
+
+export function clearSave(): void {
+  localStorage.removeItem(SAVE_KEY);
+}
+</code></pre>
+
+      <div class="step"><strong>Step 3</strong> <span class="checkbox">[ ]</span> 테스트 + commit</div>
+      <pre><code class="cmd">npm test
+git add src/gameplay/persistence/ tests/persistence/
+git commit -m "feat(persistence): add save/load with versioning"</code></pre>
+    </div>
+
+    <!-- ========================================================= -->
+    <div class="task">
+      <h3>Task 11: 밸런스 확장 — 웨이브·대미지·사이클 수치</h3>
+
+      <div class="files"><strong>Modify:</strong> <code>src/config/balance.ts</code></div>
+
+      <div class="step"><strong>Step 1</strong> <span class="checkbox">[ ]</span> balance.ts 확장</div>
+      <p>파일: <code>C:/Users/bada/6_IL/src/config/balance.ts</code> (전체 교체)</p>
+      <pre><code>/**
+ * 게임 밸런스 단일 소스.
+ */
+
+export const DAY_CYCLE = {
+  dayDurationSec: 540,
+  nightDurationSec: 360,
+  eveningTransitionSec: 30,
+  dawnTransitionSec: 30,
+} as const;
+
+export const VISION = {
+  dayRadiusTiles: 10,
+  nightRadiusTiles: 6,
+  megaBlizzardRadiusTiles: 3,
+} as const;
+
+export const RESOURCES = {
+  startingWood: 15,
+  startingStone: 5,
+  startingIron: 0,
+  startingMeat: 0,
+  startingFood: 5,
+  startingFrostbloom: 0,
+} as const;
+
+export const GATHER = {
+  treeDurationSec: 4,
+  stoneDurationSec: 6,
+  deerDurationSec: 2,
+  treeWoodYield: 3,
+  stoneYield: 2,
+  deerMeatYield: 2,
+} as const;
+
+export const PLAYER = {
+  maxHp: 100,
+  moveSpeed: 180,  // px/s
+  respawnSec: 3,
+  armor: 0,
+} as const;
+
+export const ZOMBIE = {
+  maxHp: 20,
+  moveSpeed: 60,
+  attackDamage: 8,
+  attackCooldownSec: 1,
+  attackRange: 36,
+  armor: 0,
+} as const;
+
+export const WAVE = {
+  baseCount: 8,
+  perDay: 4,
+  maxCount: 300,
+} as const;
+
+export const BUILDING_HP = {
+  campfire: 400,
+  barricadeWood: 200,
+} as const;
+
+export type BalanceConfig = {
+  dayCycle: typeof DAY_CYCLE;
+  vision: typeof VISION;
+  resources: typeof RESOURCES;
+  gather: typeof GATHER;
+  player: typeof PLAYER;
+  zombie: typeof ZOMBIE;
+  wave: typeof WAVE;
+  buildingHp: typeof BUILDING_HP;
+};
+
+export const BALANCE: BalanceConfig = {
+  dayCycle: DAY_CYCLE,
+  vision: VISION,
+  resources: RESOURCES,
+  gather: GATHER,
+  player: PLAYER,
+  zombie: ZOMBIE,
+  wave: WAVE,
+  buildingHp: BUILDING_HP,
+};
+</code></pre>
+
+      <div class="step"><strong>Step 2</strong> <span class="checkbox">[ ]</span> 기존 smoke 테스트 여전히 통과 확인 + commit</div>
+      <pre><code class="cmd">npm test
+git add src/config/balance.ts
+git commit -m "feat(config): extend balance with combat/gather/wave tables"</code></pre>
+    </div>
+
+    <!-- ========================================================= -->
+    <div class="task">
+      <h3>Task 12: Preload 신 + 플레이스홀더 스프라이트</h3>
+      <p>픽셀 아트는 Phase 3. MVP는 컬러 원/사각형으로 시각화. Phaser의 Graphics API로 런타임 생성 후 RenderTexture에 캐싱.</p>
+
+      <div class="files">
+        <strong>Create:</strong>
+        <code>src/scenes/preload.ts</code>,
+        <code>src/util/placeholder-textures.ts</code>
+        <br /><strong>Modify:</strong>
+        <code>src/main.ts</code> (신 리스트 확장)
+      </div>
+
+      <div class="step"><strong>Step 1</strong> <span class="checkbox">[ ]</span> placeholder-textures 생성기</div>
+      <p>파일: <code>C:/Users/bada/6_IL/src/util/placeholder-textures.ts</code></p>
+      <pre><code>import type Phaser from 'phaser';
+
+export interface PlaceholderSpec {
+  key: string;
+  shape: 'circle' | 'square';
+  size: number;
+  color: number;      // 0xrrggbb
+  border?: number;    // 테두리 색
+}
+
+/**
+ * Phase 3에서 실제 픽셀 아트로 교체될 플레이스홀더 텍스처를
+ * Graphics로 그리고 텍스처로 캐시.
+ */
+export function generatePlaceholders(scene: Phaser.Scene, specs: PlaceholderSpec[]): void {
+  for (const spec of specs) {
+    if (scene.textures.exists(spec.key)) continue;
+    const g = scene.add.graphics({ x: 0, y: 0 });
+    g.fillStyle(spec.color, 1);
+    if (spec.border !== undefined) {
+      g.lineStyle(2, spec.border, 1);
+    }
+    const half = spec.size / 2;
+    if (spec.shape === 'circle') {
+      g.fillCircle(half, half, half);
+      if (spec.border !== undefined) g.strokeCircle(half, half, half - 1);
+    } else {
+      g.fillRect(0, 0, spec.size, spec.size);
+      if (spec.border !== undefined) g.strokeRect(1, 1, spec.size - 2, spec.size - 2);
+    }
+    g.generateTexture(spec.key, spec.size, spec.size);
+    g.destroy();
+  }
+}
+
+export const PLACEHOLDER_SPECS: PlaceholderSpec[] = [
+  { key: 'player', shape: 'circle', size: 24, color: 0x4a90e2, border: 0xffffff },
+  { key: 'zombie', shape: 'circle', size: 22, color: 0x7a9e6e, border: 0x2a4020 },
+  { key: 'deer', shape: 'circle', size: 20, color: 0xa88b60, border: 0x000000 },
+  { key: 'tree', shape: 'circle', size: 28, color: 0x2f6b2f, border: 0x1a3a1a },
+  { key: 'stone', shape: 'square', size: 26, color: 0x808080, border: 0x404040 },
+  { key: 'campfire', shape: 'square', size: 64, color: 0xf25f27, border: 0x8b2d00 },
+  { key: 'barricade', shape: 'square', size: 32, color: 0x8b5a2b, border: 0x3d2810 },
+  { key: 'projectile', shape: 'circle', size: 8, color: 0xffffff },
+];
+</code></pre>
+
+      <div class="step"><strong>Step 2</strong> <span class="checkbox">[ ]</span> Preload 신</div>
+      <p>파일: <code>C:/Users/bada/6_IL/src/scenes/preload.ts</code></p>
+      <pre><code>import Phaser from 'phaser';
+import { generatePlaceholders, PLACEHOLDER_SPECS } from '@/util/placeholder-textures';
+
+export class PreloadScene extends Phaser.Scene {
+  constructor() {
+    super({ key: 'Preload' });
+  }
+
+  create(): void {
+    generatePlaceholders(this, PLACEHOLDER_SPECS);
+    this.scene.start('Snowfield');
+  }
+}
+</code></pre>
+
+      <div class="step"><strong>Step 3</strong> <span class="checkbox">[ ]</span> main.ts에 신 등록</div>
+      <p>파일: <code>C:/Users/bada/6_IL/src/main.ts</code> (전체 교체)</p>
+      <pre><code>import Phaser from 'phaser';
+import { GAME_WIDTH, GAME_HEIGHT } from '@/config/constants';
+import { BootScene } from '@/scenes/boot';
+import { PreloadScene } from '@/scenes/preload';
+import { SnowfieldScene } from '@/scenes/snowfield';
+import { VillageScene } from '@/scenes/village';
+import { HudScene } from '@/scenes/hud';
+
+const config: Phaser.Types.Core.GameConfig = {
+  type: Phaser.AUTO,
+  parent: 'game',
+  width: GAME_WIDTH,
+  height: GAME_HEIGHT,
+  backgroundColor: '#0a0a14',
+  pixelArt: true,
+  scale: {
+    mode: Phaser.Scale.FIT,
+    autoCenter: Phaser.Scale.CENTER_BOTH,
+  },
+  scene: [BootScene, PreloadScene, SnowfieldScene, VillageScene, HudScene],
+};
+
+new Phaser.Game(config);
+</code></pre>
+
+      <div class="step"><strong>Step 4</strong> <span class="checkbox">[ ]</span> Boot 신을 Preload로 체인</div>
+      <p>파일: <code>C:/Users/bada/6_IL/src/scenes/boot.ts</code> (전체 교체)</p>
+      <pre><code>import Phaser from 'phaser';
+
+export class BootScene extends Phaser.Scene {
+  constructor() {
+    super({ key: 'Boot' });
+  }
+
+  create(): void {
+    this.scene.start('Preload');
+  }
+}
+</code></pre>
+
+      <div class="step"><strong>Step 5</strong> <span class="checkbox">[ ]</span> 이 시점에서는 Snowfield/Village/Hud가 없어 빌드 실패. Task 13~15에서 생성. 지금은 임시로 import를 주석 처리 (타입 에러 피하기 위한 임시 조치):</div>
+      <pre><code class="cmd">echo "Task 12 partial — continue to Task 13/14/15 which create the scene files"</code></pre>
+      <div class="note">Task 12~15는 한꺼번에 마지막에 커밋한다. 각 파일이 생성되기 전엔 typecheck 통과 안 함. (Task 15 끝에서 단일 커밋.)</div>
+    </div>
+
+    <!-- ========================================================= -->
+    <div class="task">
+      <h3>Task 13: Snowfield 신</h3>
+
+      <div class="files">
+        <strong>Create:</strong>
+        <code>src/gameplay/player/player-factory.ts</code>,
+        <code>src/gameplay/player/player-controller.ts</code>,
+        <code>src/gameplay/gather/tree-factory.ts</code>,
+        <code>src/gameplay/gather/stone-factory.ts</code>,
+        <code>src/gameplay/gather/gather-controller.ts</code>,
+        <code>src/gameplay/animals/deer-factory.ts</code>,
+        <code>src/gameplay/animals/deer-ai.ts</code>,
+        <code>src/scenes/snowfield.ts</code>
+      </div>
+
+      <div class="step"><strong>Step 1</strong> <span class="checkbox">[ ]</span> player-factory</div>
+      <p>파일: <code>C:/Users/bada/6_IL/src/gameplay/player/player-factory.ts</code></p>
+      <pre><code>import type Phaser from 'phaser';
+import { addComponent, addEntity, type GameWorld } from '@/ecs/world';
+import { Position } from '@/ecs/components/position';
+import { Velocity } from '@/ecs/components/velocity';
+import { Health } from '@/ecs/components/health';
+import { Collider } from '@/ecs/components/collider';
+import { SpriteRef } from '@/ecs/components/sprite-ref';
+import { PlayerTag } from '@/ecs/components/tags';
+import { Weapon } from '@/ecs/components/weapon';
+import { PLAYER } from '@/config/balance';
+import { WEAPONS } from '@/gameplay/combat/weapon-definitions';
+
+export interface PlayerHandles {
+  eid: number;
+  sprite: Phaser.GameObjects.Image;
+  gid: number;
+}
+
+export function spawnPlayer(
+  world: GameWorld,
+  scene: Phaser.Scene,
+  spriteMap: Map&lt;number, Phaser.GameObjects.Image&gt;,
+  nextGid: () =&gt; number,
+  x: number,
+  y: number,
+): PlayerHandles {
+  const eid = addEntity(world);
+  addComponent(world, Position, eid);
+  addComponent(world, Velocity, eid);
+  addComponent(world, Health, eid);
+  addComponent(world, Collider, eid);
+  addComponent(world, SpriteRef, eid);
+  addComponent(world, PlayerTag, eid);
+  addComponent(world, Weapon, eid);
+
+  Position.x[eid] = x;
+  Position.y[eid] = y;
+  Velocity.vx[eid] = 0;
+  Velocity.vy[eid] = 0;
+  Health.current[eid] = PLAYER.maxHp;
+  Health.max[eid] = PLAYER.maxHp;
+  Health.dead[eid] = 0;
+  Collider.radius[eid] = 12;
+  Weapon.weaponId[eid] = 1; // longsword id (map below)
+  Weapon.cooldown[eid] = 0;
+  Weapon.range[eid] = WEAPONS.longsword.range;
+
+  const sprite = scene.add.image(x, y, 'player');
+  const gid = nextGid();
+  spriteMap.set(gid, sprite);
+  SpriteRef.gid[eid] = gid;
+
+  return { eid, sprite, gid };
+}
+</code></pre>
+
+      <div class="step"><strong>Step 2</strong> <span class="checkbox">[ ]</span> player-controller</div>
+      <p>파일: <code>C:/Users/bada/6_IL/src/gameplay/player/player-controller.ts</code></p>
+      <pre><code>import { Velocity } from '@/ecs/components/velocity';
+import { vec2Normalize } from '@/util/math';
+import { PLAYER } from '@/config/balance';
+import type { InputAdapter } from './input-adapter';
+
+export function updatePlayerInput(eid: number, input: InputAdapter): void {
+  const ax = input.axis('left', 'right');
+  const ay = input.axis('up', 'down');
+  const [nx, ny] = vec2Normalize(ax, ay);
+  Velocity.vx[eid] = nx * PLAYER.moveSpeed;
+  Velocity.vy[eid] = ny * PLAYER.moveSpeed;
+}
+</code></pre>
+
+      <div class="step"><strong>Step 3</strong> <span class="checkbox">[ ]</span> tree-factory</div>
+      <p>파일: <code>C:/Users/bada/6_IL/src/gameplay/gather/tree-factory.ts</code></p>
+      <pre><code>import type Phaser from 'phaser';
+import { addComponent, addEntity, type GameWorld } from '@/ecs/world';
+import { Position } from '@/ecs/components/position';
+import { Collider } from '@/ecs/components/collider';
+import { SpriteRef } from '@/ecs/components/sprite-ref';
+import { Health } from '@/ecs/components/health';
+import { TreeTag } from '@/ecs/components/tags';
+
+export function spawnTree(
+  world: GameWorld,
+  scene: Phaser.Scene,
+  spriteMap: Map&lt;number, Phaser.GameObjects.Image&gt;,
+  nextGid: () =&gt; number,
+  x: number,
+  y: number,
+): number {
+  const eid = addEntity(world);
+  addComponent(world, Position, eid);
+  addComponent(world, Collider, eid);
+  addComponent(world, SpriteRef, eid);
+  addComponent(world, Health, eid);
+  addComponent(world, TreeTag, eid);
+
+  Position.x[eid] = x;
+  Position.y[eid] = y;
+  Collider.radius[eid] = 14;
+  Health.current[eid] = 1;
+  Health.max[eid] = 1;
+  Health.dead[eid] = 0;
+
+  const sprite = scene.add.image(x, y, 'tree');
+  const gid = nextGid();
+  spriteMap.set(gid, sprite);
+  SpriteRef.gid[eid] = gid;
+
+  return eid;
+}
+</code></pre>
+
+      <div class="step"><strong>Step 4</strong> <span class="checkbox">[ ]</span> stone-factory (tree와 동일 패턴, StoneTag/stone 스프라이트)</div>
+      <p>파일: <code>C:/Users/bada/6_IL/src/gameplay/gather/stone-factory.ts</code></p>
+      <pre><code>import type Phaser from 'phaser';
+import { addComponent, addEntity, type GameWorld } from '@/ecs/world';
+import { Position } from '@/ecs/components/position';
+import { Collider } from '@/ecs/components/collider';
+import { SpriteRef } from '@/ecs/components/sprite-ref';
+import { Health } from '@/ecs/components/health';
+import { StoneTag } from '@/ecs/components/tags';
+
+export function spawnStone(
+  world: GameWorld,
+  scene: Phaser.Scene,
+  spriteMap: Map&lt;number, Phaser.GameObjects.Image&gt;,
+  nextGid: () =&gt; number,
+  x: number,
+  y: number,
+): number {
+  const eid = addEntity(world);
+  addComponent(world, Position, eid);
+  addComponent(world, Collider, eid);
+  addComponent(world, SpriteRef, eid);
+  addComponent(world, Health, eid);
+  addComponent(world, StoneTag, eid);
+
+  Position.x[eid] = x;
+  Position.y[eid] = y;
+  Collider.radius[eid] = 14;
+  Health.current[eid] = 1;
+  Health.max[eid] = 1;
+  Health.dead[eid] = 0;
+
+  const sprite = scene.add.image(x, y, 'stone');
+  const gid = nextGid();
+  spriteMap.set(gid, sprite);
+  SpriteRef.gid[eid] = gid;
+
+  return eid;
+}
+</code></pre>
+
+      <div class="step"><strong>Step 5</strong> <span class="checkbox">[ ]</span> deer-factory + deer-ai</div>
+      <p>파일: <code>C:/Users/bada/6_IL/src/gameplay/animals/deer-factory.ts</code></p>
+      <pre><code>import type Phaser from 'phaser';
+import { addComponent, addEntity, type GameWorld } from '@/ecs/world';
+import { Position } from '@/ecs/components/position';
+import { Velocity } from '@/ecs/components/velocity';
+import { Collider } from '@/ecs/components/collider';
+import { SpriteRef } from '@/ecs/components/sprite-ref';
+import { Health } from '@/ecs/components/health';
+import { DeerTag } from '@/ecs/components/tags';
+import { Ai } from '@/ecs/components/ai';
+
+export function spawnDeer(
+  world: GameWorld,
+  scene: Phaser.Scene,
+  spriteMap: Map&lt;number, Phaser.GameObjects.Image&gt;,
+  nextGid: () =&gt; number,
+  x: number,
+  y: number,
+): number {
+  const eid = addEntity(world);
+  addComponent(world, Position, eid);
+  addComponent(world, Velocity, eid);
+  addComponent(world, Collider, eid);
+  addComponent(world, SpriteRef, eid);
+  addComponent(world, Health, eid);
+  addComponent(world, DeerTag, eid);
+  addComponent(world, Ai, eid);
+
+  Position.x[eid] = x;
+  Position.y[eid] = y;
+  Velocity.vx[eid] = 0;
+  Velocity.vy[eid] = 0;
+  Collider.radius[eid] = 10;
+  Health.current[eid] = 6;
+  Health.max[eid] = 6;
+  Health.dead[eid] = 0;
+  Ai.mode[eid] = 0;
+
+  const sprite = scene.add.image(x, y, 'deer');
+  const gid = nextGid();
+  spriteMap.set(gid, sprite);
+  SpriteRef.gid[eid] = gid;
+
+  return eid;
+}
+</code></pre>
+
+      <p>파일: <code>C:/Users/bada/6_IL/src/gameplay/animals/deer-ai.ts</code></p>
+      <pre><code>import { defineQuery } from 'bitecs';
+import type { GameWorld } from '@/ecs/world';
+import { Position } from '@/ecs/components/position';
+import { Velocity } from '@/ecs/components/velocity';
+import { DeerTag } from '@/ecs/components/tags';
+import { distance, vec2Normalize } from '@/util/math';
+
+const DEER_FLEE_RADIUS = 120;
+const DEER_SPEED = 140;
+
+const deerQuery = defineQuery([DeerTag, Position, Velocity]);
+
+export function deerAiSystem(world: GameWorld, playerX: number, playerY: number): void {
+  const deers = deerQuery(world);
+  for (const eid of deers) {
+    const dx = Position.x[eid] - playerX;
+    const dy = Position.y[eid] - playerY;
+    const d = distance(playerX, playerY, Position.x[eid], Position.y[eid]);
+    if (d &lt; DEER_FLEE_RADIUS) {
+      const [nx, ny] = vec2Normalize(dx, dy);
+      Velocity.vx[eid] = nx * DEER_SPEED;
+      Velocity.vy[eid] = ny * DEER_SPEED;
+    } else {
+      Velocity.vx[eid] = 0;
+      Velocity.vy[eid] = 0;
+    }
+  }
+}
+</code></pre>
+
+      <div class="step"><strong>Step 6</strong> <span class="checkbox">[ ]</span> gather-controller — 채집 진행 로직</div>
+      <p>파일: <code>C:/Users/bada/6_IL/src/gameplay/gather/gather-controller.ts</code></p>
+      <pre><code>import { hasComponent, type GameWorld } from '@/ecs/world';
+import { Position } from '@/ecs/components/position';
+import { Health } from '@/ecs/components/health';
+import { TreeTag, StoneTag, DeerTag } from '@/ecs/components/tags';
+import { GATHER } from '@/config/balance';
+import { distance } from '@/util/math';
+import type { ResourceStore, ResourceKind } from '@/gameplay/resources/resource-store';
+import { defineQuery } from 'bitecs';
+
+const INTERACT_RADIUS = 32;
+
+interface GatherState {
+  targetEid: number;
+  progress: number;
+  durationSec: number;
+  kind: ResourceKind;
+  yield: number;
+}
+
+const gatherCandidateQuery = defineQuery([Position]);
+
+export class GatherController {
+  private active: GatherState | null = null;
+
+  constructor(
+    private readonly world: GameWorld,
+    private readonly resources: ResourceStore,
+  ) {}
+
+  /** 플레이어가 E 키를 눌렀을 때 호출 */
+  tryStart(playerEid: number): boolean {
+    if (this.active) return false;
+    const px = Position.x[playerEid];
+    const py = Position.y[playerEid];
+    const candidates = gatherCandidateQuery(this.world);
+    let nearest: { eid: number; dist: number } | null = null;
+    for (const eid of candidates) {
+      if (eid === playerEid) continue;
+      const isGatherable =
+        hasComponent(this.world, TreeTag, eid) ||
+        hasComponent(this.world, StoneTag, eid) ||
+        hasComponent(this.world, DeerTag, eid);
+      if (!isGatherable) continue;
+      const d = distance(px, py, Position.x[eid], Position.y[eid]);
+      if (d &lt;= INTERACT_RADIUS &amp;&amp; (!nearest || d &lt; nearest.dist)) {
+        nearest = { eid, dist: d };
+      }
+    }
+    if (!nearest) return false;
+
+    let kind: ResourceKind;
+    let yield_: number;
+    let durationSec: number;
+    if (hasComponent(this.world, TreeTag, nearest.eid)) {
+      kind = 'wood';
+      yield_ = GATHER.treeWoodYield;
+      durationSec = GATHER.treeDurationSec;
+    } else if (hasComponent(this.world, StoneTag, nearest.eid)) {
+      kind = 'stone';
+      yield_ = GATHER.stoneYield;
+      durationSec = GATHER.stoneDurationSec;
+    } else {
+      kind = 'meat';
+      yield_ = GATHER.deerMeatYield;
+      durationSec = GATHER.deerDurationSec;
+    }
+
+    this.active = {
+      targetEid: nearest.eid,
+      progress: 0,
+      durationSec,
+      kind,
+      yield: yield_,
+    };
+    return true;
+  }
+
+  cancel(): void {
+    this.active = null;
+  }
+
+  /** 매 틱. dt를 진행도에 더하고 완료 시 자원 지급 */
+  update(dt: number): void {
+    if (!this.active) return;
+    this.active.progress += dt / this.active.durationSec;
+    if (this.active.progress &gt;= 1) {
+      this.resources.add(this.active.kind, this.active.yield);
+      Health.dead[this.active.targetEid] = 1;
+      this.active = null;
+    }
+  }
+
+  get currentProgress(): number {
+    return this.active?.progress ?? 0;
+  }
+
+  get isActive(): boolean {
+    return this.active !== null;
+  }
+}
+</code></pre>
+
+      <div class="step"><strong>Step 7</strong> <span class="checkbox">[ ]</span> SnowfieldScene</div>
+      <p>파일: <code>C:/Users/bada/6_IL/src/scenes/snowfield.ts</code></p>
+      <pre><code>import Phaser from 'phaser';
+import { createGameWorld, type GameWorld } from '@/ecs/world';
+import { spawnPlayer } from '@/gameplay/player/player-factory';
+import { InputAdapter } from '@/gameplay/player/input-adapter';
+import { updatePlayerInput } from '@/gameplay/player/player-controller';
+import { spawnTree } from '@/gameplay/gather/tree-factory';
+import { spawnStone } from '@/gameplay/gather/stone-factory';
+import { spawnDeer } from '@/gameplay/animals/deer-factory';
+import { deerAiSystem } from '@/gameplay/animals/deer-ai';
+import { GatherController } from '@/gameplay/gather/gather-controller';
+import { movementSystem } from '@/ecs/systems/movement';
+import { spriteSyncSystem } from '@/ecs/systems/sprite-sync';
+import { cleanupSystem } from '@/ecs/systems/cleanup';
+import { createResourceStore, type ResourceStore } from '@/gameplay/resources/resource-store';
+import { createDayNightController, type DayNightController } from '@/gameplay/cycle/day-night-controller';
+import { EventBus } from '@/events/event-bus';
+import type { GameEvents } from '@/events/types';
+import { DAY_CYCLE } from '@/config/balance';
+import { SpriteRef } from '@/ecs/components/sprite-ref';
+import { Position } from '@/ecs/components/position';
+import { Health } from '@/ecs/components/health';
+import { PlayerTag, TreeTag, StoneTag, DeerTag } from '@/ecs/components/tags';
+import { defineQuery, hasComponent as bitHas } from 'bitecs';
+import { removeEntity } from '@/ecs/world';
+
+const playerQuery = defineQuery([PlayerTag]);
+const snowfieldContentQuery = defineQuery([Position]);
+
+export class SnowfieldScene extends Phaser.Scene {
+  private world!: GameWorld;
+  private input2!: InputAdapter;
+  private playerEid!: number;
+  private spriteMap!: Map&lt;number, Phaser.GameObjects.Image&gt;;
+  private gidCounter = 1;
+  private resources!: ResourceStore;
+  private gather!: GatherController;
+  private bus!: EventBus&lt;GameEvents&gt;;
+  private cycle!: DayNightController;
+
+  constructor() {
+    super({ key: 'Snowfield' });
+  }
+
+  private nextGid = (): number =&gt; this.gidCounter++;
+
+  private clearSnowfieldContent(): void {
+    const ents = snowfieldContentQuery(this.world);
+    for (const eid of ents) {
+      if (
+        bitHas(this.world, TreeTag, eid) ||
+        bitHas(this.world, StoneTag, eid) ||
+        bitHas(this.world, DeerTag, eid)
+      ) {
+        const gid = SpriteRef.gid[eid];
+        this.spriteMap.get(gid)?.destroy();
+        this.spriteMap.delete(gid);
+        removeEntity(this.world, eid);
+      }
+    }
+  }
+
+  init(data: {
+    world?: GameWorld;
+    resources?: ResourceStore;
+    bus?: EventBus&lt;GameEvents&gt;;
+    cycle?: DayNightController;
+  }): void {
+    this.world = data.world ?? createGameWorld();
+    this.resources = data.resources ?? createResourceStore();
+    this.bus = data.bus ?? new EventBus&lt;GameEvents&gt;();
+    this.cycle = data.cycle ?? createDayNightController(DAY_CYCLE, this.bus);
+    this.spriteMap = new Map();
+  }
+
+  create(): void {
+    this.cameras.main.setBackgroundColor('#9bb4c8');
+    this.input2 = new InputAdapter(this);
+
+    // 플레이어가 이미 존재하면(씬 재진입) 엔티티 재사용, 스프라이트만 새로 등록
+    const existingPlayerQ = playerQuery(this.world);
+    const existingPlayerEid = existingPlayerQ[0];
+    if (existingPlayerEid !== undefined) {
+      this.playerEid = existingPlayerEid;
+      const sprite = this.add.image(
+        Position.x[existingPlayerEid],
+        Position.y[existingPlayerEid],
+        'player',
+      );
+      const gid = this.nextGid();
+      this.spriteMap.set(gid, sprite);
+      SpriteRef.gid[existingPlayerEid] = gid;
+    } else {
+      const { eid } = spawnPlayer(this.world, this, this.spriteMap, this.nextGid, 480, 270);
+      this.playerEid = eid;
+    }
+
+    // 남은 자원/동물 엔티티 제거 후 새 낮 배치 (씬 재진입 시 초기화)
+    this.clearSnowfieldContent();
+
+    // 근교 자원·동물 배치 (임의)
+    for (let i = 0; i &lt; 6; i++) {
+      spawnTree(this.world, this, this.spriteMap, this.nextGid, 100 + i * 70, 100);
+      spawnTree(this.world, this, this.spriteMap, this.nextGid, 120 + i * 70, 450);
+    }
+    for (let i = 0; i &lt; 3; i++) {
+      spawnStone(this.world, this, this.spriteMap, this.nextGid, 150 + i * 120, 250);
+    }
+    for (let i = 0; i &lt; 2; i++) {
+      spawnDeer(this.world, this, this.spriteMap, this.nextGid, 700, 150 + i * 200);
+    }
+
+    this.gather = new GatherController(this.world, this.resources);
+
+    // HUD 신 기동 (데이터 전달)
+    this.scene.launch('Hud', {
+      resources: this.resources,
+      bus: this.bus,
+      cycle: this.cycle,
+      playerEid: this.playerEid,
+      world: this.world,
+    });
+
+    // 씬 전환: evening 시작 시 Village 신으로
+    this.bus.on('evening:started', () =&gt; {
+      this.scene.start('Village', {
+        world: this.world,
+        resources: this.resources,
+        bus: this.bus,
+        cycle: this.cycle,
+      });
+    });
+  }
+
+  update(_t: number, dtMs: number): void {
+    const dt = dtMs / 1000;
+    this.world.deltaTime = dt;
+    this.world.elapsed += dt;
+
+    // 입력
+    updatePlayerInput(this.playerEid, this.input2);
+    if (this.input2.justPressed('interact')) {
+      this.gather.tryStart(this.playerEid);
+    }
+
+    // AI
+    const px = Position.x[this.playerEid];
+    const py = Position.y[this.playerEid];
+    deerAiSystem(this.world, px, py);
+
+    // 시스템
+    movementSystem(this.world);
+    this.gather.update(dt);
+
+    // 죽은 엔티티 제거 (채집 완료 후 나무·사슴 시체)
+    const removed = cleanupSystem(this.world);
+    for (const eid of removed) {
+      const gid = SpriteRef.gid[eid];
+      this.spriteMap.get(gid)?.destroy();
+      this.spriteMap.delete(gid);
+    }
+
+    // Phaser sprite 위치 동기화
+    spriteSyncSystem(this.world, this.spriteMap);
+
+    // 낮/밤 타이머
+    this.cycle.update(dt);
+  }
+}
+</code></pre>
+
+      <div class="step"><strong>Step 8</strong> <span class="checkbox">[ ]</span> 임시 placeholder VillageScene / HudScene (Task 14·15에서 채움)</div>
+      <p>파일: <code>C:/Users/bada/6_IL/src/scenes/village.ts</code></p>
+      <pre><code>import Phaser from 'phaser';
+
+export class VillageScene extends Phaser.Scene {
+  constructor() {
+    super({ key: 'Village' });
+  }
+  create(): void {
+    this.cameras.main.setBackgroundColor('#1b2434');
+    this.add.text(100, 100, 'Village (WIP — Task 14)', { color: '#fff' });
+  }
+}
+</code></pre>
+
+      <p>파일: <code>C:/Users/bada/6_IL/src/scenes/hud.ts</code></p>
+      <pre><code>import Phaser from 'phaser';
+
+export class HudScene extends Phaser.Scene {
+  constructor() {
+    super({ key: 'Hud' });
+  }
+  create(): void {
+    this.add.text(10, 10, 'HUD (WIP — Task 15)', { color: '#fff' });
+  }
+}
+</code></pre>
+
+      <div class="step"><strong>Step 9</strong> <span class="checkbox">[ ]</span> 빌드 확인 + commit</div>
+      <pre><code class="cmd">npm run typecheck
+npm run build
+git add src/scenes/ src/gameplay/ src/util/placeholder-textures.ts src/main.ts
+git commit -m "feat(scenes): add snowfield scene with player, gather, animals"</code></pre>
+
+      <div class="step"><strong>Step 10</strong> <span class="checkbox">[ ]</span> 수동 검증: 브라우저에서 플레이어 이동·나무/돌/사슴 채집</div>
+      <pre><code class="cmd">npm run dev</code></pre>
+      <div class="expect">WASD로 파란 원(플레이어) 이동. 초록 원(나무) 근처에서 E 키 → 4초 후 나무 사라짐. 사슴은 도망감.</div>
+    </div>
+
+    <!-- ========================================================= -->
+    <div class="task">
+      <h3>Task 14: Village 신 + 건물 팩토리 + 배치 컨트롤러</h3>
+
+      <div class="files">
+        <strong>Create:</strong>
+        <code>src/gameplay/village/building-factory.ts</code>,
+        <code>src/gameplay/village/placement-controller.ts</code>
+        <br /><strong>Modify:</strong> <code>src/scenes/village.ts</code>
+      </div>
+
+      <div class="step"><strong>Step 1</strong> <span class="checkbox">[ ]</span> building-factory</div>
+      <p>파일: <code>C:/Users/bada/6_IL/src/gameplay/village/building-factory.ts</code></p>
+      <pre><code>import type Phaser from 'phaser';
+import { addComponent, addEntity, type GameWorld } from '@/ecs/world';
+import { Position } from '@/ecs/components/position';
+import { Health } from '@/ecs/components/health';
+import { Collider } from '@/ecs/components/collider';
+import { SpriteRef } from '@/ecs/components/sprite-ref';
+import { BuildingTag, BarricadeTag, CampfireTag } from '@/ecs/components/tags';
+import { BUILDING_HP } from '@/config/balance';
+
+type BuildingKind = 'campfire' | 'barricade';
+
+const FOOTPRINT: Record&lt;BuildingKind, { w: number; h: number; texture: string; hp: number }&gt; = {
+  campfire: { w: 2, h: 2, texture: 'campfire', hp: BUILDING_HP.campfire },
+  barricade: { w: 1, h: 1, texture: 'barricade', hp: BUILDING_HP.barricadeWood },
+};
+
+export function spawnBuilding(
+  world: GameWorld,
+  scene: Phaser.Scene,
+  spriteMap: Map&lt;number, Phaser.GameObjects.Image&gt;,
+  nextGid: () =&gt; number,
+  kind: BuildingKind,
+  worldX: number,
+  worldY: number,
+): number {
+  const spec = FOOTPRINT[kind];
+  const eid = addEntity(world);
+  addComponent(world, Position, eid);
+  addComponent(world, Health, eid);
+  addComponent(world, Collider, eid);
+  addComponent(world, SpriteRef, eid);
+  addComponent(world, BuildingTag, eid);
+  if (kind === 'campfire') addComponent(world, CampfireTag, eid);
+  if (kind === 'barricade') addComponent(world, BarricadeTag, eid);
+
+  Position.x[eid] = worldX;
+  Position.y[eid] = worldY;
+  Health.current[eid] = spec.hp;
+  Health.max[eid] = spec.hp;
+  Health.dead[eid] = 0;
+  Collider.radius[eid] = spec.w * 16;
+
+  const sprite = scene.add.image(worldX, worldY, spec.texture);
+  const gid = nextGid();
+  spriteMap.set(gid, sprite);
+  SpriteRef.gid[eid] = gid;
+
+  return eid;
+}
+
+export const BUILDING_COSTS: Record&lt;BuildingKind, { kind: 'wood' | 'stone'; amount: number }&gt; = {
+  campfire: { kind: 'wood', amount: 5 },
+  barricade: { kind: 'wood', amount: 5 },
+};
+
+export const BUILDING_FOOTPRINTS = FOOTPRINT;
+</code></pre>
+
+      <div class="step"><strong>Step 2</strong> <span class="checkbox">[ ]</span> placement-controller</div>
+      <p>파일: <code>C:/Users/bada/6_IL/src/gameplay/village/placement-controller.ts</code></p>
+      <pre><code>import type Phaser from 'phaser';
+import type { VillageGrid } from './grid';
+import type { ResourceStore } from '@/gameplay/resources/resource-store';
+import { BUILDING_COSTS, BUILDING_FOOTPRINTS, spawnBuilding } from './building-factory';
+import type { GameWorld } from '@/ecs/world';
+
+type PlacementKind = 'campfire' | 'barricade';
+
+export class PlacementController {
+  private currentKind: PlacementKind | null = null;
+  private cursor: Phaser.GameObjects.Rectangle | null = null;
+
+  constructor(
+    private readonly scene: Phaser.Scene,
+    private readonly world: GameWorld,
+    private readonly grid: VillageGrid,
+    private readonly resources: ResourceStore,
+    private readonly spriteMap: Map&lt;number, Phaser.GameObjects.Image&gt;,
+    private readonly nextGid: () =&gt; number,
+  ) {}
+
+  start(kind: PlacementKind): void {
+    this.cancel();
+    this.currentKind = kind;
+    const spec = BUILDING_FOOTPRINTS[kind];
+    this.cursor = this.scene.add
+      .rectangle(0, 0, spec.w * this.grid.tileSize, spec.h * this.grid.tileSize, 0x4a90e2, 0.3)
+      .setOrigin(0, 0);
+  }
+
+  cancel(): void {
+    this.currentKind = null;
+    this.cursor?.destroy();
+    this.cursor = null;
+  }
+
+  updateCursor(worldX: number, worldY: number): void {
+    if (!this.currentKind || !this.cursor) return;
+    const { tx, ty } = this.grid.worldToTile(worldX, worldY);
+    this.cursor.x = tx * this.grid.tileSize;
+    this.cursor.y = ty * this.grid.tileSize;
+  }
+
+  /** 현재 커서 위치에 건설 시도. 성공 여부 반환. */
+  confirmPlace(worldX: number, worldY: number): boolean {
+    if (!this.currentKind) return false;
+    const spec = BUILDING_FOOTPRINTS[this.currentKind];
+    const cost = BUILDING_COSTS[this.currentKind];
+    const { tx, ty } = this.grid.worldToTile(worldX, worldY);
+
+    if (!this.grid.isFree(tx, ty, spec.w, spec.h)) return false;
+    if (this.resources.get(cost.kind) &lt; cost.amount) return false;
+
+    this.resources.spend(cost.kind, cost.amount);
+    const centerX = tx * this.grid.tileSize + (spec.w * this.grid.tileSize) / 2;
+    const centerY = ty * this.grid.tileSize + (spec.h * this.grid.tileSize) / 2;
+    const eid = spawnBuilding(
+      this.world,
+      this.scene,
+      this.spriteMap,
+      this.nextGid,
+      this.currentKind,
+      centerX,
+      centerY,
+    );
+    this.grid.place(tx, ty, spec.w, spec.h, eid);
+    return true;
+  }
+
+  get isActive(): boolean {
+    return this.currentKind !== null;
+  }
+}
+</code></pre>
+
+      <div class="step"><strong>Step 3</strong> <span class="checkbox">[ ]</span> VillageScene 본체 교체</div>
+      <p>파일: <code>C:/Users/bada/6_IL/src/scenes/village.ts</code> (전체 교체)</p>
+      <pre><code>import Phaser from 'phaser';
+import { type GameWorld } from '@/ecs/world';
+import { createVillageGrid, type VillageGrid } from '@/gameplay/village/grid';
+import { PlacementController } from '@/gameplay/village/placement-controller';
+import type { ResourceStore } from '@/gameplay/resources/resource-store';
+import type { DayNightController } from '@/gameplay/cycle/day-night-controller';
+import type { EventBus } from '@/events/event-bus';
+import type { GameEvents } from '@/events/types';
+import { InputAdapter } from '@/gameplay/player/input-adapter';
+import { VILLAGE_GRID_SIZE, TILE_SIZE } from '@/config/constants';
+
+export class VillageScene extends Phaser.Scene {
+  private world!: GameWorld;
+  private grid!: VillageGrid;
+  private resources!: ResourceStore;
+  private cycle!: DayNightController;
+  private bus!: EventBus&lt;GameEvents&gt;;
+  private spriteMap!: Map&lt;number, Phaser.GameObjects.Image&gt;;
+  private gidCounter = 10000;
+  private placement!: PlacementController;
+  private input2!: InputAdapter;
+  private nextGid = (): number =&gt; this.gidCounter++;
+
+  constructor() {
+    super({ key: 'Village' });
+  }
+
+  init(data: {
+    world: GameWorld;
+    resources: ResourceStore;
+    bus: EventBus&lt;GameEvents&gt;;
+    cycle: DayNightController;
+  }): void {
+    this.world = data.world;
+    this.resources = data.resources;
+    this.bus = data.bus;
+    this.cycle = data.cycle;
+    this.spriteMap = new Map();
+  }
+
+  create(): void {
+    this.cameras.main.setBackgroundColor('#1b2434');
+    this.input2 = new InputAdapter(this);
+
+    this.grid = createVillageGrid(VILLAGE_GRID_SIZE, VILLAGE_GRID_SIZE, TILE_SIZE);
+    this.drawGrid();
+
+    this.placement = new PlacementController(
+      this,
+      this.world,
+      this.grid,
+      this.resources,
+      this.spriteMap,
+      this.nextGid,
+    );
+
+    this.input.on('pointermove', (p: Phaser.Input.Pointer) =&gt; {
+      this.placement.updateCursor(p.worldX, p.worldY);
+    });
+    this.input.on('pointerdown', (p: Phaser.Input.Pointer) =&gt; {
+      this.placement.confirmPlace(p.worldX, p.worldY);
+    });
+
+    // 키 1: 바리게이트 / 키 2: 모닥불
+    this.input.keyboard?.on('keydown-ONE', () =&gt; this.placement.start('barricade'));
+    this.input.keyboard?.on('keydown-TWO', () =&gt; this.placement.start('campfire'));
+
+    // 새벽 시작 시 Snowfield로 복귀
+    this.bus.on('dawn:started', () =&gt; {
+      this.scene.start('Snowfield', {
+        world: this.world,
+        resources: this.resources,
+        bus: this.bus,
+        cycle: this.cycle,
+      });
+    });
+  }
+
+  private drawGrid(): void {
+    const g = this.add.graphics({ lineStyle: { width: 1, color: 0x2a3644 } });
+    for (let x = 0; x &lt;= VILLAGE_GRID_SIZE; x++) {
+      g.lineBetween(x * TILE_SIZE, 0, x * TILE_SIZE, VILLAGE_GRID_SIZE * TILE_SIZE);
+    }
+    for (let y = 0; y &lt;= VILLAGE_GRID_SIZE; y++) {
+      g.lineBetween(0, y * TILE_SIZE, VILLAGE_GRID_SIZE * TILE_SIZE, y * TILE_SIZE);
+    }
+  }
+
+  update(_t: number, dtMs: number): void {
+    const dt = dtMs / 1000;
+    this.world.deltaTime = dt;
+    this.cycle.update(dt);
+
+    if (this.input2.justPressed('cancel')) {
+      this.placement.cancel();
+    }
+  }
+}
+</code></pre>
+
+      <div class="step"><strong>Step 4</strong> <span class="checkbox">[ ]</span> typecheck·build·수동 검증·commit</div>
+      <pre><code class="cmd">npm run typecheck
+npm run build
+git add src/gameplay/village/ src/scenes/village.ts
+git commit -m "feat(village): add grid scene with building placement"</code></pre>
+      <div class="expect">Snowfield에서 저녁이 되면 Village로 전환. 키 1/2로 건물 선택, 마우스 클릭으로 배치, ESC 취소.</div>
+    </div>
+
+    <!-- ========================================================= -->
+    <div class="task">
+      <h3>Task 15: HUD 신 + 자원 패널 + HP 바</h3>
+
+      <div class="files">
+        <strong>Create:</strong>
+        <code>src/ui/resource-panel.ts</code>,
+        <code>src/ui/health-bar.ts</code>,
+        <code>src/ui/phase-banner.ts</code>
+        <br /><strong>Modify:</strong> <code>src/scenes/hud.ts</code>
+      </div>
+
+      <div class="step"><strong>Step 1</strong> <span class="checkbox">[ ]</span> resource-panel.ts</div>
+      <p>파일: <code>C:/Users/bada/6_IL/src/ui/resource-panel.ts</code></p>
+      <pre><code>import Phaser from 'phaser';
+import type { ResourceStore } from '@/gameplay/resources/resource-store';
+
+export class ResourcePanel {
+  private readonly text: Phaser.GameObjects.Text;
+  private readonly unsub: () =&gt; void;
+
+  constructor(scene: Phaser.Scene, x: number, y: number, private readonly store: ResourceStore) {
+    this.text = scene.add.text(x, y, '', {
+      fontFamily: 'ui-monospace, monospace',
+      fontSize: '14px',
+      color: '#e0e6ed',
+    });
+    this.refresh();
+    this.unsub = store.onChange(() =&gt; this.refresh());
+  }
+
+  private refresh(): void {
+    const s = this.store.snapshot();
+    this.text.setText(
+      `Wood ${s.wood}  Stone ${s.stone}  Iron ${s.iron}  Meat ${s.meat}  Food ${s.food}`,
+    );
+  }
+
+  destroy(): void {
+    this.unsub();
+    this.text.destroy();
+  }
+}
+</code></pre>
+
+      <div class="step"><strong>Step 2</strong> <span class="checkbox">[ ]</span> health-bar.ts</div>
+      <p>파일: <code>C:/Users/bada/6_IL/src/ui/health-bar.ts</code></p>
+      <pre><code>import Phaser from 'phaser';
+import { Health } from '@/ecs/components/health';
+
+const WIDTH = 200;
+const HEIGHT = 14;
+
+export class HealthBar {
+  private readonly bg: Phaser.GameObjects.Rectangle;
+  private readonly fg: Phaser.GameObjects.Rectangle;
+
+  constructor(scene: Phaser.Scene, x: number, y: number, private readonly eid: number) {
+    this.bg = scene.add.rectangle(x, y, WIDTH, HEIGHT, 0x333333).setOrigin(0, 0);
+    this.fg = scene.add.rectangle(x, y, WIDTH, HEIGHT, 0xe03a3a).setOrigin(0, 0);
+  }
+
+  update(): void {
+    const cur = Health.current[this.eid] ?? 0;
+    const max = Health.max[this.eid] ?? 1;
+    const pct = Math.max(0, Math.min(1, cur / max));
+    this.fg.width = WIDTH * pct;
+  }
+
+  destroy(): void {
+    this.bg.destroy();
+    this.fg.destroy();
+  }
+}
+</code></pre>
+
+      <div class="step"><strong>Step 3</strong> <span class="checkbox">[ ]</span> phase-banner.ts</div>
+      <p>파일: <code>C:/Users/bada/6_IL/src/ui/phase-banner.ts</code></p>
+      <pre><code>import Phaser from 'phaser';
+import type { EventBus } from '@/events/event-bus';
+import type { GameEvents } from '@/events/types';
+
+export class PhaseBanner {
+  private readonly text: Phaser.GameObjects.Text;
+
+  constructor(
+    scene: Phaser.Scene,
+    x: number,
+    y: number,
+    private readonly bus: EventBus&lt;GameEvents&gt;,
+  ) {
+    this.text = scene.add
+      .text(x, y, 'Day 1 — 낮', {
+        fontFamily: 'ui-monospace, monospace',
+        fontSize: '16px',
+        color: '#ffd080',
+      })
+      .setOrigin(0.5, 0);
+
+    bus.on('day:started', (p) =&gt; this.text.setText(`Day ${p.day} — 낮`));
+    bus.on('evening:started', (p) =&gt; this.text.setText(`Day ${p.day} — 저녁 (30초 건설)`));
+    bus.on('night:started', (p) =&gt; this.text.setText(`Day ${p.day} — 밤 (생존)`));
+    bus.on('dawn:started', (p) =&gt; this.text.setText(`Day ${p.day} — 새벽`));
+  }
+}
+</code></pre>
+
+      <div class="step"><strong>Step 4</strong> <span class="checkbox">[ ]</span> HudScene 본체 교체</div>
+      <p>파일: <code>C:/Users/bada/6_IL/src/scenes/hud.ts</code> (전체 교체)</p>
+      <pre><code>import Phaser from 'phaser';
+import type { GameWorld } from '@/ecs/world';
+import type { ResourceStore } from '@/gameplay/resources/resource-store';
+import type { DayNightController } from '@/gameplay/cycle/day-night-controller';
+import type { EventBus } from '@/events/event-bus';
+import type { GameEvents } from '@/events/types';
+import { ResourcePanel } from '@/ui/resource-panel';
+import { HealthBar } from '@/ui/health-bar';
+import { PhaseBanner } from '@/ui/phase-banner';
+
+export class HudScene extends Phaser.Scene {
+  private resources!: ResourceStore;
+  private bus!: EventBus&lt;GameEvents&gt;;
+  private cycle!: DayNightController;
+  private playerEid!: number;
+  private world!: GameWorld;
+  private healthBar?: HealthBar;
+
+  constructor() {
+    super({ key: 'Hud' });
+  }
+
+  init(data: {
+    resources: ResourceStore;
+    bus: EventBus&lt;GameEvents&gt;;
+    cycle: DayNightController;
+    playerEid: number;
+    world: GameWorld;
+  }): void {
+    this.resources = data.resources;
+    this.bus = data.bus;
+    this.cycle = data.cycle;
+    this.playerEid = data.playerEid;
+    this.world = data.world;
+  }
+
+  create(): void {
+    new ResourcePanel(this, 10, 10, this.resources);
+    this.healthBar = new HealthBar(this, 10, 30, this.playerEid);
+    new PhaseBanner(this, Number(this.scale.width) / 2, 10, this.bus);
+  }
+
+  update(): void {
+    this.healthBar?.update();
+  }
+}
+</code></pre>
+
+      <div class="step"><strong>Step 5</strong> <span class="checkbox">[ ]</span> typecheck·build·수동 검증·commit</div>
+      <pre><code class="cmd">npm run typecheck
+npm run build
+git add src/ui/ src/scenes/hud.ts
+git commit -m "feat(ui): add HUD with resources, health, phase banner"</code></pre>
+      <div class="expect">상단에 자원 카운터, HP 바, 상단 중앙 단계 표시(Day 1 — 낮). 자원 채집 시 자원 숫자 증가.</div>
+    </div>
+
+    <!-- ========================================================= -->
+    <div class="task">
+      <h3>Task 16: 좀비 팩토리 + AI + 웨이브 적용</h3>
+
+      <div class="files">
+        <strong>Create:</strong>
+        <code>src/gameplay/enemies/zombie-factory.ts</code>,
+        <code>src/gameplay/enemies/zombie-ai.ts</code>
+        <br /><strong>Modify:</strong> <code>src/scenes/village.ts</code> (웨이브 스폰)
+      </div>
+
+      <div class="step"><strong>Step 1</strong> <span class="checkbox">[ ]</span> zombie-factory</div>
+      <p>파일: <code>C:/Users/bada/6_IL/src/gameplay/enemies/zombie-factory.ts</code></p>
+      <pre><code>import type Phaser from 'phaser';
+import { addComponent, addEntity, type GameWorld } from '@/ecs/world';
+import { Position } from '@/ecs/components/position';
+import { Velocity } from '@/ecs/components/velocity';
+import { Health } from '@/ecs/components/health';
+import { Collider } from '@/ecs/components/collider';
+import { SpriteRef } from '@/ecs/components/sprite-ref';
+import { ZombieTag } from '@/ecs/components/tags';
+import { Ai } from '@/ecs/components/ai';
+import { ZOMBIE } from '@/config/balance';
+
+export function spawnZombie(
+  world: GameWorld,
+  scene: Phaser.Scene,
+  spriteMap: Map&lt;number, Phaser.GameObjects.Image&gt;,
+  nextGid: () =&gt; number,
+  x: number,
+  y: number,
+): number {
+  const eid = addEntity(world);
+  addComponent(world, Position, eid);
+  addComponent(world, Velocity, eid);
+  addComponent(world, Health, eid);
+  addComponent(world, Collider, eid);
+  addComponent(world, SpriteRef, eid);
+  addComponent(world, ZombieTag, eid);
+  addComponent(world, Ai, eid);
+
+  Position.x[eid] = x;
+  Position.y[eid] = y;
+  Velocity.vx[eid] = 0;
+  Velocity.vy[eid] = 0;
+  Health.current[eid] = ZOMBIE.maxHp;
+  Health.max[eid] = ZOMBIE.maxHp;
+  Health.dead[eid] = 0;
+  Collider.radius[eid] = 11;
+  Ai.mode[eid] = 1;
+  Ai.attackCooldown[eid] = 0;
+
+  const sprite = scene.add.image(x, y, 'zombie');
+  const gid = nextGid();
+  spriteMap.set(gid, sprite);
+  SpriteRef.gid[eid] = gid;
+
+  return eid;
+}
+</code></pre>
+
+      <div class="step"><strong>Step 2</strong> <span class="checkbox">[ ]</span> zombie-ai (가장 가까운 바리게이트/모닥불/플레이어 추적, 공격)</div>
+      <p>파일: <code>C:/Users/bada/6_IL/src/gameplay/enemies/zombie-ai.ts</code></p>
+      <pre><code>import { defineQuery } from 'bitecs';
+import { hasComponent, type GameWorld } from '@/ecs/world';
+import { Position } from '@/ecs/components/position';
+import { Velocity } from '@/ecs/components/velocity';
+import { Health } from '@/ecs/components/health';
+import { Ai } from '@/ecs/components/ai';
+import { ZombieTag, BarricadeTag, CampfireTag, PlayerTag } from '@/ecs/components/tags';
+import { distance, vec2Normalize } from '@/util/math';
+import { ZOMBIE } from '@/config/balance';
+
+const zombieQuery = defineQuery([ZombieTag, Position, Velocity, Ai]);
+const targetQuery = defineQuery([Position]);
+
+export function zombieAiSystem(world: GameWorld): void {
+  const dt = world.deltaTime;
+  const zombies = zombieQuery(world);
+  const targets = targetQuery(world);
+
+  for (const zeid of zombies) {
+    // 가장 가까운 "타겟 가능" 엔티티 찾기
+    let nearest: { eid: number; dist: number } | null = null;
+    for (const teid of targets) {
+      if (teid === zeid) continue;
+      const isTarget =
+        hasComponent(world, PlayerTag, teid) ||
+        hasComponent(world, BarricadeTag, teid) ||
+        hasComponent(world, CampfireTag, teid);
+      if (!isTarget) continue;
+      const d = distance(Position.x[zeid], Position.y[zeid], Position.x[teid], Position.y[teid]);
+      if (!nearest || d &lt; nearest.dist) nearest = { eid: teid, dist: d };
+    }
+
+    if (!nearest) {
+      Velocity.vx[zeid] = 0;
+      Velocity.vy[zeid] = 0;
+      continue;
+    }
+
+    Ai.targetEid[zeid] = nearest.eid;
+
+    // 사거리 내면 공격, 밖이면 추격
+    if (nearest.dist &lt;= ZOMBIE.attackRange) {
+      Velocity.vx[zeid] = 0;
+      Velocity.vy[zeid] = 0;
+      if (Ai.attackCooldown[zeid] &lt;= 0) {
+        Health.current[nearest.eid] -= ZOMBIE.attackDamage;
+        if (Health.current[nearest.eid] &lt;= 0) Health.dead[nearest.eid] = 1;
+        Ai.attackCooldown[zeid] = ZOMBIE.attackCooldownSec;
+      } else {
+        Ai.attackCooldown[zeid] -= dt;
+      }
+    } else {
+      const dx = Position.x[nearest.eid] - Position.x[zeid];
+      const dy = Position.y[nearest.eid] - Position.y[zeid];
+      const [nx, ny] = vec2Normalize(dx, dy);
+      Velocity.vx[zeid] = nx * ZOMBIE.moveSpeed;
+      Velocity.vy[zeid] = ny * ZOMBIE.moveSpeed;
+      if (Ai.attackCooldown[zeid] &gt; 0) Ai.attackCooldown[zeid] -= dt;
+    }
+  }
+}
+</code></pre>
+
+      <div class="step"><strong>Step 3</strong> <span class="checkbox">[ ]</span> VillageScene에 웨이브 로직 추가</div>
+      <p>파일: <code>C:/Users/bada/6_IL/src/scenes/village.ts</code> — <code>create</code>와 <code>update</code>를 아래 전체로 교체</p>
+      <pre><code>import Phaser from 'phaser';
+import { type GameWorld } from '@/ecs/world';
+import { createVillageGrid, type VillageGrid } from '@/gameplay/village/grid';
+import { PlacementController } from '@/gameplay/village/placement-controller';
+import type { ResourceStore } from '@/gameplay/resources/resource-store';
+import type { DayNightController } from '@/gameplay/cycle/day-night-controller';
+import type { EventBus } from '@/events/event-bus';
+import type { GameEvents } from '@/events/types';
+import { InputAdapter } from '@/gameplay/player/input-adapter';
+import { VILLAGE_GRID_SIZE, TILE_SIZE } from '@/config/constants';
+import { createWaveSpawner } from '@/gameplay/enemies/wave-spawner';
+import { spawnZombie } from '@/gameplay/enemies/zombie-factory';
+import { zombieAiSystem } from '@/gameplay/enemies/zombie-ai';
+import { movementSystem } from '@/ecs/systems/movement';
+import { spriteSyncSystem } from '@/ecs/systems/sprite-sync';
+import { cleanupSystem } from '@/ecs/systems/cleanup';
+import { createRng } from '@/util/rng';
+import { SpriteRef } from '@/ecs/components/sprite-ref';
+
+export class VillageScene extends Phaser.Scene {
+  private world!: GameWorld;
+  private grid!: VillageGrid;
+  private resources!: ResourceStore;
+  private cycle!: DayNightController;
+  private bus!: EventBus&lt;GameEvents&gt;;
+  private spriteMap!: Map&lt;number, Phaser.GameObjects.Image&gt;;
+  private gidCounter = 10000;
+  private placement!: PlacementController;
+  private input2!: InputAdapter;
+  private nextGid = (): number =&gt; this.gidCounter++;
+
+  constructor() {
+    super({ key: 'Village' });
+  }
+
+  init(data: {
+    world: GameWorld;
+    resources: ResourceStore;
+    bus: EventBus&lt;GameEvents&gt;;
+    cycle: DayNightController;
+  }): void {
+    this.world = data.world;
+    this.resources = data.resources;
+    this.bus = data.bus;
+    this.cycle = data.cycle;
+    this.spriteMap = new Map();
+  }
+
+  create(): void {
+    this.cameras.main.setBackgroundColor('#1b2434');
+    this.input2 = new InputAdapter(this);
+
+    this.grid = createVillageGrid(VILLAGE_GRID_SIZE, VILLAGE_GRID_SIZE, TILE_SIZE);
+    this.drawGrid();
+
+    this.placement = new PlacementController(
+      this,
+      this.world,
+      this.grid,
+      this.resources,
+      this.spriteMap,
+      this.nextGid,
+    );
+
+    this.input.on('pointermove', (p: Phaser.Input.Pointer) =&gt; {
+      this.placement.updateCursor(p.worldX, p.worldY);
+    });
+    this.input.on('pointerdown', (p: Phaser.Input.Pointer) =&gt; {
+      this.placement.confirmPlace(p.worldX, p.worldY);
+    });
+
+    this.input.keyboard?.on('keydown-ONE', () =&gt; this.placement.start('barricade'));
+    this.input.keyboard?.on('keydown-TWO', () =&gt; this.placement.start('campfire'));
+
+    // 밤 시작 → 좀비 웨이브 스폰
+    this.bus.on('night:started', ({ day }) =&gt; {
+      const spawner = createWaveSpawner(createRng(day * 1000));
+      const plan = spawner.planWave(day);
+      for (let i = 0; i &lt; plan.enemyCount; i++) {
+        const pt = plan.spawnPoints[i % plan.spawnPoints.length];
+        if (!pt) continue;
+        const jitterX = (Math.random() - 0.5) * 40;
+        const jitterY = (Math.random() - 0.5) * 40;
+        spawnZombie(
+          this.world,
+          this,
+          this.spriteMap,
+          this.nextGid,
+          pt.x + jitterX,
+          pt.y + jitterY,
+        );
+      }
+      this.bus.emit('wave:started', {
+        day,
+        waveIndex: 0,
+        enemyCount: plan.enemyCount,
+      });
+    });
+
+    // 새벽 → Snowfield로
+    this.bus.on('dawn:started', () =&gt; {
+      this.scene.start('Snowfield', {
+        world: this.world,
+        resources: this.resources,
+        bus: this.bus,
+        cycle: this.cycle,
+      });
+    });
+  }
+
+  private drawGrid(): void {
+    const g = this.add.graphics({ lineStyle: { width: 1, color: 0x2a3644 } });
+    for (let x = 0; x &lt;= VILLAGE_GRID_SIZE; x++) {
+      g.lineBetween(x * TILE_SIZE, 0, x * TILE_SIZE, VILLAGE_GRID_SIZE * TILE_SIZE);
+    }
+    for (let y = 0; y &lt;= VILLAGE_GRID_SIZE; y++) {
+      g.lineBetween(0, y * TILE_SIZE, VILLAGE_GRID_SIZE * TILE_SIZE, y * TILE_SIZE);
+    }
+  }
+
+  update(_t: number, dtMs: number): void {
+    const dt = dtMs / 1000;
+    this.world.deltaTime = dt;
+
+    zombieAiSystem(this.world);
+    movementSystem(this.world);
+
+    const removed = cleanupSystem(this.world);
+    for (const eid of removed) {
+      const gid = SpriteRef.gid[eid];
+      this.spriteMap.get(gid)?.destroy();
+      this.spriteMap.delete(gid);
+      this.grid.remove(eid);
+    }
+
+    spriteSyncSystem(this.world, this.spriteMap);
+    this.cycle.update(dt);
+
+    if (this.input2.justPressed('cancel')) this.placement.cancel();
+  }
+}
+</code></pre>
+
+      <div class="step"><strong>Step 4</strong> <span class="checkbox">[ ]</span> typecheck·build·수동 검증·commit</div>
+      <pre><code class="cmd">npm run typecheck
+npm run build
+git add src/gameplay/enemies/zombie-factory.ts src/gameplay/enemies/zombie-ai.ts src/scenes/village.ts
+git commit -m "feat(enemies): add zombies with wave spawn and attack ai"</code></pre>
+      <div class="expect">밤이 되면 외곽에서 좀비(초록 원) 스폰, 마을 중심(바리게이트/모닥불/플레이어 쪽)으로 이동. 사거리 내면 공격해 Health 감소.</div>
+    </div>
+
+    <!-- ========================================================= -->
+    <div class="task">
+      <h3>Task 17: 플레이어 자동 공격 + 좀비 처치</h3>
+
+      <div class="files">
+        <strong>Create:</strong>
+        <code>src/gameplay/combat/attack-controller.ts</code>,
+        <code>src/gameplay/combat/combat-system.ts</code>
+        <br /><strong>Modify:</strong> <code>src/scenes/village.ts</code> (플레이어 표시 + 공격 호출)
+      </div>
+
+      <div class="step"><strong>Step 1</strong> <span class="checkbox">[ ]</span> attack-controller (쿨다운 + 타겟 감지)</div>
+      <p>파일: <code>C:/Users/bada/6_IL/src/gameplay/combat/attack-controller.ts</code></p>
+      <pre><code>import { defineQuery } from 'bitecs';
+import { type GameWorld } from '@/ecs/world';
+import { Position } from '@/ecs/components/position';
+import { Weapon } from '@/ecs/components/weapon';
+import { Health } from '@/ecs/components/health';
+import { ZombieTag } from '@/ecs/components/tags';
+import { WEAPONS } from './weapon-definitions';
+import { calcDamage } from './damage-calc';
+import { distance } from '@/util/math';
+import type { Rng } from '@/util/rng';
+
+const zombieQuery = defineQuery([ZombieTag, Position, Health]);
+
+/**
+ * 플레이어 eid의 Weapon 쿨다운 감소 → 사거리 내 가장 가까운 좀비를 찾아 대미지.
+ */
+export function playerAttackSystem(world: GameWorld, playerEid: number, rng: Rng): number | null {
+  const dt = world.deltaTime;
+  if (Weapon.cooldown[playerEid] &gt; 0) {
+    Weapon.cooldown[playerEid] -= dt;
+    return null;
+  }
+  const weapon = WEAPONS.longsword; // MVP: 단일 무기
+  const px = Position.x[playerEid];
+  const py = Position.y[playerEid];
+
+  let nearest: { eid: number; dist: number } | null = null;
+  const zombies = zombieQuery(world);
+  for (const zeid of zombies) {
+    const d = distance(px, py, Position.x[zeid], Position.y[zeid]);
+    if (d &lt;= weapon.range &amp;&amp; (!nearest || d &lt; nearest.dist)) {
+      nearest = { eid: zeid, dist: d };
+    }
+  }
+  if (!nearest) return null;
+
+  const dmg = calcDamage({
+    base: weapon.baseDamage,
+    armor: 0,
+    critRoll: rng.next(),
+    critChance: weapon.critChance,
+    critMult: weapon.critMult,
+  });
+  Health.current[nearest.eid] -= dmg;
+  if (Health.current[nearest.eid] &lt;= 0) Health.dead[nearest.eid] = 1;
+  Weapon.cooldown[playerEid] = weapon.cooldownSec;
+  return nearest.eid;
+}
+</code></pre>
+
+      <div class="step"><strong>Step 2</strong> <span class="checkbox">[ ]</span> VillageScene — 플레이어 스프라이트 표시 + 공격 호출</div>
+      <p>파일: <code>C:/Users/bada/6_IL/src/scenes/village.ts</code> — <code>create</code>에 플레이어 표시, <code>update</code>에 playerAttackSystem 호출</p>
+      <pre><code>// create() 내부 (drawGrid() 호출 후 추가)
+// 플레이어 스프라이트 등록 (ECS 엔티티는 Snowfield에서 이미 만들어진 것 유지)
+const playerEid = this.findPlayerEid();
+if (playerEid !== undefined) {
+  const gid = this.nextGid();
+  const spr = this.add.image(Position.x[playerEid] ?? 384, Position.y[playerEid] ?? 384, 'player');
+  this.spriteMap.set(gid, spr);
+  SpriteRef.gid[playerEid] = gid;
+  this.playerEid = playerEid;
+}</code></pre>
+
+      <p>파일 위쪽에 헬퍼 메서드와 필드 추가:</p>
+      <pre><code>import { defineQuery } from 'bitecs';
+import { PlayerTag } from '@/ecs/components/tags';
+import { Position } from '@/ecs/components/position';
+import { Weapon } from '@/ecs/components/weapon';
+import { Health } from '@/ecs/components/health';
+import { playerAttackSystem } from '@/gameplay/combat/attack-controller';
+import { createRng, type Rng } from '@/util/rng';
+
+const playerQuery = defineQuery([PlayerTag]);
+
+// class 필드 추가
+private playerEid?: number;
+private rng: Rng = createRng(2026);
+
+private findPlayerEid(): number | undefined {
+  const list = playerQuery(this.world);
+  return list[0];
+}
+</code></pre>
+
+      <p><code>update</code> 내부에 추가 (zombieAiSystem 전에):</p>
+      <pre><code>if (this.playerEid !== undefined) {
+  playerAttackSystem(this.world, this.playerEid, this.rng);
+}</code></pre>
+
+      <div class="step"><strong>Step 3</strong> <span class="checkbox">[ ]</span> typecheck·build·수동 검증·commit</div>
+      <pre><code class="cmd">npm run typecheck
+npm run build
+git add src/gameplay/combat/attack-controller.ts src/scenes/village.ts
+git commit -m "feat(combat): add player auto-attack against zombies"</code></pre>
+      <div class="expect">밤에 좀비가 사거리 내 들어오면 플레이어가 자동으로 공격, 좀비 스프라이트 사라짐.</div>
+    </div>
+
+    <!-- ========================================================= -->
+    <div class="task">
+      <h3>Task 18: 시야 마스크 (단순 원형)</h3>
+
+      <div class="files">
+        <strong>Create:</strong> <code>src/gameplay/vision/vision-mask.ts</code>
+        <br /><strong>Modify:</strong>
+        <code>src/scenes/snowfield.ts</code>,
+        <code>src/scenes/village.ts</code> (각 신에 적용)
+      </div>
+
+      <div class="step"><strong>Step 1</strong> <span class="checkbox">[ ]</span> vision-mask.ts</div>
+      <p>파일: <code>C:/Users/bada/6_IL/src/gameplay/vision/vision-mask.ts</code></p>
+      <pre><code>import Phaser from 'phaser';
+
+/**
+ * 단순 원형 시야. 카메라에 검은 오버레이를 씌우고 플레이어 위치에 원형 구멍.
+ */
+export class VisionMask {
+  private readonly overlay: Phaser.GameObjects.Graphics;
+  private readonly mask: Phaser.GameObjects.Graphics;
+  private radius: number;
+
+  constructor(
+    private readonly scene: Phaser.Scene,
+    private readonly width: number,
+    private readonly height: number,
+    initialRadius: number,
+  ) {
+    this.radius = initialRadius;
+    this.overlay = scene.add.graphics();
+    this.overlay.fillStyle(0x000000, 0.85);
+    this.overlay.fillRect(0, 0, width, height);
+    this.overlay.setScrollFactor(0);
+    this.overlay.setDepth(1000);
+
+    this.mask = scene.make.graphics({ x: 0, y: 0 });
+    const bitmapMask = this.mask.createGeometryMask();
+    bitmapMask.invertAlpha = true;
+    this.overlay.setMask(bitmapMask);
+  }
+
+  update(worldX: number, worldY: number): void {
+    this.mask.clear();
+    this.mask.fillStyle(0xffffff, 1);
+    // 카메라 기준 화면 좌표로 변환
+    const cam = this.scene.cameras.main;
+    const sx = worldX - cam.scrollX;
+    const sy = worldY - cam.scrollY;
+    this.mask.fillCircle(sx, sy, this.radius);
+  }
+
+  setRadius(px: number): void {
+    this.radius = px;
+  }
+
+  destroy(): void {
+    this.overlay.destroy();
+    this.mask.destroy();
+  }
+}
+</code></pre>
+
+      <div class="step"><strong>Step 2</strong> <span class="checkbox">[ ]</span> SnowfieldScene에 적용 — <code>create</code>에 VisionMask 생성, <code>update</code>에 plyr 위치 넘겨 갱신</div>
+      <pre><code>// 추가 import
+import { VisionMask } from '@/gameplay/vision/vision-mask';
+import { VISION } from '@/config/balance';
+import { TILE_SIZE, GAME_WIDTH, GAME_HEIGHT } from '@/config/constants';
+
+// class 필드
+private vision!: VisionMask;
+
+// create() 마지막에
+this.vision = new VisionMask(this, GAME_WIDTH, GAME_HEIGHT, VISION.dayRadiusTiles * TILE_SIZE);
+
+// update() 마지막에
+this.vision.update(Position.x[this.playerEid], Position.y[this.playerEid]);
+</code></pre>
+
+      <div class="step"><strong>Step 3</strong> <span class="checkbox">[ ]</span> VillageScene에도 동일 적용 (nightRadius 사용)</div>
+      <pre><code>// 추가 import 및 필드 동일
+
+// create() 마지막에
+const isNight = this.cycle.phase === 'night' || this.cycle.phase === 'evening';
+const r = (isNight ? VISION.nightRadiusTiles : VISION.dayRadiusTiles) * TILE_SIZE;
+this.vision = new VisionMask(this, GAME_WIDTH, GAME_HEIGHT, r);
+
+// night:started 이벤트에서 반경 줄이기
+this.bus.on('night:started', () =&gt; {
+  this.vision.setRadius(VISION.nightRadiusTiles * TILE_SIZE);
+});
+this.bus.on('dawn:started', () =&gt; {
+  this.vision.setRadius(VISION.dayRadiusTiles * TILE_SIZE);
+});
+
+// update() 마지막에 (playerEid가 정의된 경우에만)
+if (this.playerEid !== undefined) {
+  this.vision.update(Position.x[this.playerEid], Position.y[this.playerEid]);
+}
+</code></pre>
+
+      <div class="step"><strong>Step 4</strong> <span class="checkbox">[ ]</span> typecheck·build·수동 검증·commit</div>
+      <pre><code class="cmd">npm run typecheck
+npm run build
+git add src/gameplay/vision/ src/scenes/snowfield.ts src/scenes/village.ts
+git commit -m "feat(vision): add simple circular fog of war"</code></pre>
+      <div class="expect">플레이어 주변만 밝고 나머지는 어두움. 밤엔 더 좁아짐.</div>
+    </div>
+
+    <!-- ========================================================= -->
+    <div class="task">
+      <h3>Task 19: 플레이어 사망 처리</h3>
+
+      <div class="files">
+        <strong>Modify:</strong>
+        <code>src/scenes/village.ts</code>,
+        <code>src/gameplay/player/player-controller.ts</code>
+      </div>
+
+      <div class="step"><strong>Step 1</strong> <span class="checkbox">[ ]</span> VillageScene <code>update</code>에 사망 체크 추가</div>
+      <pre><code>// update() 초반 — 플레이어 HP 체크
+if (this.playerEid !== undefined &amp;&amp; Health.current[this.playerEid] &lt;= 0 &amp;&amp; !this.playerDied) {
+  this.playerDied = true;
+  this.bus.emit('player:died', { day: this.cycle.day });
+  this.cameras.main.shake(300, 0.01);
+  this.time.delayedCall(2000, () =&gt; {
+    // 간단 부활: HP 회복 + 마을 중앙 위치로
+    Health.current[this.playerEid!] = 100;
+    Health.dead[this.playerEid!] = 0;
+    Position.x[this.playerEid!] = 384;
+    Position.y[this.playerEid!] = 384;
+    this.playerDied = false;
+  });
+}
+</code></pre>
+
+      <p>class 필드 추가: <code>private playerDied = false;</code></p>
+
+      <div class="step"><strong>Step 2</strong> <span class="checkbox">[ ]</span> 죽은 동안 입력 무시 (player-controller에 가드)</div>
+      <p>파일: <code>C:/Users/bada/6_IL/src/gameplay/player/player-controller.ts</code> (전체 교체)</p>
+      <pre><code>import { Velocity } from '@/ecs/components/velocity';
+import { Health } from '@/ecs/components/health';
+import { vec2Normalize } from '@/util/math';
+import { PLAYER } from '@/config/balance';
+import type { InputAdapter } from './input-adapter';
+
+export function updatePlayerInput(eid: number, input: InputAdapter): void {
+  if (Health.current[eid] &lt;= 0 || Health.dead[eid] === 1) {
+    Velocity.vx[eid] = 0;
+    Velocity.vy[eid] = 0;
+    return;
+  }
+  const ax = input.axis('left', 'right');
+  const ay = input.axis('up', 'down');
+  const [nx, ny] = vec2Normalize(ax, ay);
+  Velocity.vx[eid] = nx * PLAYER.moveSpeed;
+  Velocity.vy[eid] = ny * PLAYER.moveSpeed;
+}
+</code></pre>
+
+      <div class="step"><strong>Step 3</strong> <span class="checkbox">[ ]</span> typecheck·build·수동 검증·commit</div>
+      <pre><code class="cmd">npm run typecheck
+npm run build
+git add src/scenes/village.ts src/gameplay/player/player-controller.ts
+git commit -m "feat(player): handle death with camera shake and respawn"</code></pre>
+    </div>
+
+    <!-- ========================================================= -->
+    <div class="task">
+      <h3>Task 20: 자동 세이브 / 로드 연동</h3>
+
+      <div class="files">
+        <strong>Modify:</strong>
+        <code>src/scenes/snowfield.ts</code>,
+        <code>src/scenes/village.ts</code>,
+        <code>src/gameplay/cycle/day-night-controller.ts</code> (이미 snapshot 제공)
+      </div>
+
+      <div class="step"><strong>Step 1</strong> <span class="checkbox">[ ]</span> 매 새벽마다 자동 저장</div>
+      <p>VillageScene <code>create</code>에 dawn 리스너 추가:</p>
+      <pre><code>import { saveGame } from '@/gameplay/persistence/save-load';
+
+// create() 안
+this.bus.on('dawn:started', () =&gt; {
+  saveGame({
+    version: 1,
+    currentDay: this.cycle.day,
+    resources: this.resources.snapshot(),
+    weatherRng: 42,
+  });
+});
+</code></pre>
+
+      <div class="step"><strong>Step 2</strong> <span class="checkbox">[ ]</span> 첫 프레임에 세이브가 있으면 복원</div>
+      <p>SnowfieldScene <code>init</code> 교체:</p>
+      <pre><code>import { loadGame } from '@/gameplay/persistence/save-load';
+
+init(data: {
+  world?: GameWorld;
+  resources?: ResourceStore;
+  bus?: EventBus&lt;GameEvents&gt;;
+  cycle?: DayNightController;
+}): void {
+  this.world = data.world ?? createGameWorld();
+  this.resources = data.resources ?? createResourceStore();
+  this.bus = data.bus ?? new EventBus&lt;GameEvents&gt;();
+  this.cycle = data.cycle ?? createDayNightController(DAY_CYCLE, this.bus);
+
+  if (!data.cycle) {
+    const save = loadGame();
+    if (save) {
+      this.resources.restore(save.resources);
+      this.cycle.restore({ day: save.currentDay, phase: 'day', elapsedInPhase: 0 });
+    }
+  }
+
+  this.spriteMap = new Map();
+}
+</code></pre>
+
+      <div class="step"><strong>Step 3</strong> <span class="checkbox">[ ]</span> typecheck·build·수동 검증·commit</div>
+      <pre><code class="cmd">npm run typecheck
+npm run build
+git add src/scenes/snowfield.ts src/scenes/village.ts
+git commit -m "feat(persistence): autosave at dawn, load on start"</code></pre>
+      <div class="expect">새벽 도달 후 브라우저 새로고침 → 자원·Day 유지.</div>
+    </div>
+
+    <!-- ========================================================= -->
+    <div class="task">
+      <h3>Task 21: 밸런스 조정 — 낮·밤 짧게 (테스트용 값)</h3>
+
+      <div class="files"><strong>Modify:</strong> <code>src/config/balance.ts</code></div>
+
+      <p>Phase 1 동안 1일 루프를 빠르게 확인하려면 테스트용 짧은 시간 값 사용. Phase 2에서 정식 값으로 복원.</p>
+
+      <div class="step"><strong>Step 1</strong> <span class="checkbox">[ ]</span> <code>DAY_CYCLE</code> 테스트용 값으로 변경</div>
+      <pre><code>export const DAY_CYCLE = {
+  dayDurationSec: 45,     // 정식 540 → MVP 45
+  nightDurationSec: 30,   // 정식 360 → MVP 30
+  eveningTransitionSec: 5,
+  dawnTransitionSec: 5,
+} as const;
+</code></pre>
+
+      <div class="step"><strong>Step 2</strong> <span class="checkbox">[ ]</span> commit</div>
+      <pre><code class="cmd">git add src/config/balance.ts
+git commit -m "chore(balance): shorten day/night for MVP testing"</code></pre>
+    </div>
+
+    <!-- ========================================================= -->
+    <div class="task">
+      <h3>Task 22: 수동 통합 테스트 — 1일 루프 완주</h3>
+
+      <p>코드 변경 없음. 플레이어가 한 번 낮→저녁→밤→새벽을 완주할 수 있는지 확인.</p>
+
+      <div class="step"><strong>Step 1</strong> <span class="checkbox">[ ]</span> 개발 서버 기동</div>
+      <pre><code class="cmd">npm run dev</code></pre>
+
+      <div class="step"><strong>Step 2</strong> <span class="checkbox">[ ]</span> 낮 단계 체크 (45초)</div>
+      <ul>
+        <li>[ ] WASD로 이동</li>
+        <li>[ ] 나무 근처 E → 4초 후 나무 사라지고 Wood +3</li>
+        <li>[ ] 돌 근처 E → 6초 후 Stone +2</li>
+        <li>[ ] 사슴 쫓아가며 E → 사슴 처치 → Meat +2</li>
+        <li>[ ] 45초 후 PhaseBanner가 "저녁"으로 바뀜</li>
+      </ul>
+
+      <div class="step"><strong>Step 3</strong> <span class="checkbox">[ ]</span> 저녁 단계 체크 (5초)</div>
+      <ul>
+        <li>[ ] Village 신으로 전환</li>
+        <li>[ ] 그리드 렌더링 확인</li>
+        <li>[ ] 키 1 → 바리게이트 커서 표시</li>
+        <li>[ ] 클릭 → 바리게이트 설치 (Wood 5 소모)</li>
+        <li>[ ] 키 2 → 모닥불 커서</li>
+        <li>[ ] 클릭 → 모닥불 설치 (Wood 5 소모)</li>
+      </ul>
+
+      <div class="step"><strong>Step 4</strong> <span class="checkbox">[ ]</span> 밤 단계 체크 (30초)</div>
+      <ul>
+        <li>[ ] PhaseBanner "밤"</li>
+        <li>[ ] 시야 좁아짐</li>
+        <li>[ ] 좀비(초록 원) 외곽에서 스폰, 중앙으로 이동</li>
+        <li>[ ] 바리게이트/모닥불 근처에서 좀비가 공격 시작 → HP 감소</li>
+        <li>[ ] 플레이어 근처로 온 좀비는 자동 공격 → 죽음</li>
+      </ul>
+
+      <div class="step"><strong>Step 5</strong> <span class="checkbox">[ ]</span> 새벽 체크 (5초)</div>
+      <ul>
+        <li>[ ] PhaseBanner "새벽"</li>
+        <li>[ ] 자동 저장 (localStorage.getItem('6il.save.v1') 비어있지 않음, DevTools에서 확인)</li>
+        <li>[ ] Snowfield로 복귀, Day 2 시작</li>
+      </ul>
+
+      <div class="step"><strong>Step 6</strong> <span class="checkbox">[ ]</span> 새로고침 후 세이브 유지 확인</div>
+      <ul>
+        <li>[ ] F5 새로고침</li>
+        <li>[ ] Day 2에서 시작, 자원 유지</li>
+      </ul>
+
+      <div class="note">이 태스크에서 발견되는 버그는 관련 파일을 수정 → 이전 태스크 커밋 위에 새 커밋으로 해결. 완주 후에만 Task 23로.</div>
+    </div>
+
+    <!-- ========================================================= -->
+    <div class="task">
+      <h3>Task 23: Phase 1 완료 검증 + 태그</h3>
+
+      <div class="step"><strong>Step 1</strong> <span class="checkbox">[ ]</span> 전체 파이프라인</div>
+      <pre><code class="cmd">npm run lint
+npm run typecheck
+npm test
+npm run build</code></pre>
+      <div class="expect">모두 통과. 테스트 카운트: Phase 0 18 + Phase 1 추가 테스트 = 40+ 개.</div>
+
+      <div class="step"><strong>Step 2</strong> <span class="checkbox">[ ]</span> 체크리스트</div>
+      <ul>
+        <li>[ ] 플레이어 WASD 이동 + 카메라 추종</li>
+        <li>[ ] 나무·돌·사슴 채집 + 진행 완료</li>
+        <li>[ ] 자원 카운터 실시간 갱신</li>
+        <li>[ ] 저녁 전환 + Village 신 전환</li>
+        <li>[ ] 그리드 기반 바리게이트/모닥불 배치</li>
+        <li>[ ] 밤 웨이브 스폰 + 좀비 AI (추격·공격)</li>
+        <li>[ ] 플레이어 자동 공격 + 좀비 처치</li>
+        <li>[ ] 시야 마스크 (낮·밤 반경 다름)</li>
+        <li>[ ] 플레이어 사망 + 부활</li>
+        <li>[ ] 건물 파괴 (좀비 공격으로 HP 0)</li>
+        <li>[ ] 새벽 → Snowfield 복귀 + Day+1</li>
+        <li>[ ] 자동 세이브 / 로드</li>
+        <li>[ ] HUD: 자원·HP·단계 배너</li>
+      </ul>
+
+      <div class="step"><strong>Step 3</strong> <span class="checkbox">[ ]</span> 완료 태그</div>
+      <pre><code class="cmd">git tag -a phase-1-complete -m "Phase 1: vertical slice complete"
+git push origin main
+git push origin phase-1-complete</code></pre>
+    </div>
+
+    <hr />
+
+    <h2>Phase 1 이후</h2>
+
+    <p>Phase 2부터 콘텐츠/깊이 추가: 동료 시스템, 추가 무기·룬, 보스, 초대형 눈보라, 밭·식량, 대장간·강화. 각각 별도 플랜 문서로 작성.</p>
+
+    <h2>스코프 리스크</h2>
+
+    <ul>
+      <li><strong>ECS·Phaser 혼합 복잡도</strong>: spriteMap 동기화가 일관되지 않으면 메모리 누수 가능. cleanupSystem이 빠뜨린 엔티티가 있는지 Task 22 때 DevTools Memory 탭으로 확인.</li>
+      <li><strong>Phase 1 빌드 시간 예상</strong>: 풀타임 4~6주. 한 태스크가 2~5시간 걸려도 정상. 빨리 끝나면 즉시 수동 테스트 반복으로 버그 찾기.</li>
+      <li><strong>Phaser 신 간 상태 전달</strong>: data 파라미터로 수동 전달 중. 나중에 전역 서비스 컨테이너 고려 (Phase 2).</li>
+      <li><strong>좀비 수 &gt; 100 성능</strong>: 웨이브 크기 테스트 시 FPS 측정. 30FPS 이하면 Phase 2에서 flow field로 최적화.</li>
+    </ul>
+  </body>
+</html>

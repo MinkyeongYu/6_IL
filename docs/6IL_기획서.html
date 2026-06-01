@@ -3,234 +3,183 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>6_IL — 눈보라 마을 기획서</title>
+<title>InisLand — 눈보라 마을 기획서</title>
 <style>
-  :root { --bg: #0f1117; --card: #1a1d27; --border: #2a2d3a; --text: #e0e0e8; --dim: #888; --accent: #4488ff; --accent2: #44aa44; --warn: #ff6622; }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: 'Segoe UI', -apple-system, sans-serif; background: var(--bg); color: var(--text); line-height: 1.7; padding: 2rem; max-width: 960px; margin: 0 auto; }
-  h1 { font-size: 2rem; color: var(--accent); border-bottom: 2px solid var(--accent); padding-bottom: .5rem; margin-bottom: 1.5rem; }
-  h2 { font-size: 1.4rem; color: var(--accent); margin-top: 2.5rem; margin-bottom: 1rem; border-left: 4px solid var(--accent); padding-left: .8rem; }
-  h3 { font-size: 1.1rem; color: #aab; margin-top: 1.5rem; margin-bottom: .6rem; }
-  p, li { margin-bottom: .4rem; }
-  ul, ol { padding-left: 1.5rem; }
-  table { width: 100%; border-collapse: collapse; margin: 1rem 0; }
-  th, td { border: 1px solid var(--border); padding: .5rem .8rem; text-align: left; }
-  th { background: var(--card); color: var(--accent); font-weight: 600; }
-  td { background: #12141c; }
-  code { background: var(--card); padding: .15rem .4rem; border-radius: 3px; font-size: .9em; color: var(--accent2); }
-  pre { background: var(--card); border: 1px solid var(--border); border-radius: 6px; padding: 1rem; overflow-x: auto; margin: 1rem 0; font-size: .85em; line-height: 1.5; }
-  pre code { background: none; padding: 0; }
-  .badge { display: inline-block; padding: .2rem .6rem; border-radius: 12px; font-size: .8rem; font-weight: 600; }
-  .badge-done { background: #1a3a1a; color: #44aa44; border: 1px solid #2a5a2a; }
-  .badge-todo { background: #3a2a1a; color: #ff8844; border: 1px solid #5a3a1a; }
-  .badge-ver { background: #1a2a3a; color: #4488ff; border: 1px solid #2a3a5a; }
-  .meta { color: var(--dim); font-size: .9rem; margin-bottom: 2rem; }
-  .section { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 1.5rem; margin: 1rem 0; }
-  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
-  @media (max-width: 640px) { .grid-2 { grid-template-columns: 1fr; } body { padding: 1rem; } }
-  blockquote { border-left: 3px solid var(--accent); padding-left: 1rem; color: var(--dim); font-style: italic; margin: 1rem 0; }
-  .pillar { background: #12141c; border: 1px solid var(--border); border-radius: 6px; padding: 1rem; margin: .5rem 0; }
-  .pillar strong { color: var(--accent); }
+  :root {
+    --bg: #0d1117; --surface: #161b22; --surface2: #21262d;
+    --border: #30363d; --text: #e6edf3; --text-dim: #8b949e;
+    --blue: #58a6ff; --green: #3fb950; --orange: #f0883e;
+    --red: #f85149; --purple: #bc8cff;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family: -apple-system,'Segoe UI','Noto Sans KR',sans-serif; background:var(--bg); color:var(--text); line-height:1.7; }
+  .hero {
+    background: linear-gradient(135deg, #0d2137 0%, #0d1117 50%, #1a0d2e 100%);
+    padding: 60px 40px 48px; text-align:center; position:relative; overflow:hidden;
+    border-bottom: 1px solid var(--border);
+  }
+  .hero::before {
+    content:''; position:absolute; inset:0;
+    background: radial-gradient(ellipse at 30% 60%, rgba(88,166,255,0.07) 0%, transparent 60%),
+                radial-gradient(ellipse at 70% 40%, rgba(188,140,255,0.05) 0%, transparent 60%);
+  }
+  .hero-label { font-size:.75rem; color:var(--text-dim); letter-spacing:.15em; text-transform:uppercase; margin-bottom:12px; position:relative; }
+  .hero h1 { font-size:2.4rem; font-weight:800; color:var(--text); position:relative; margin-bottom:10px; }
+  .hero h1 span { color:var(--blue); }
+  .hero .subtitle { font-size:1rem; color:var(--text-dim); position:relative; max-width:540px; margin:0 auto 24px; }
+  .hero .quote { font-style:italic; color:var(--purple); font-size:.9rem; margin-bottom:20px; position:relative; }
+  .badges { display:flex; flex-wrap:wrap; justify-content:center; gap:8px; position:relative; }
+  .badge { padding:4px 12px; border-radius:20px; font-size:.78rem; font-weight:500; border:1px solid; }
+  .badge-blue { background:rgba(88,166,255,.1); color:var(--blue); border-color:rgba(88,166,255,.3); }
+  .badge-green { background:rgba(63,185,80,.1); color:var(--green); border-color:rgba(63,185,80,.3); }
+  .badge-purple { background:rgba(188,140,255,.1); color:var(--purple); border-color:rgba(188,140,255,.3); }
+  .badge-orange { background:rgba(240,136,62,.1); color:var(--orange); border-color:rgba(240,136,62,.3); }
+
+  .preview-wrap { max-width:900px; margin:28px auto 0; position:relative; padding:0 24px; }
+  .preview-wrap img { width:100%; border-radius:10px; border:1px solid var(--border); display:block; }
+
+  .container { max-width:900px; margin:0 auto; padding:40px 24px; }
+  .section { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:28px; margin-bottom:20px; }
+  .section h2 { font-size:1.15rem; font-weight:700; margin-bottom:16px; padding-bottom:12px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:8px; }
+  .section h3 { font-size:.95rem; font-weight:600; color:var(--blue); margin:16px 0 8px; }
+  p { font-size:.9rem; color:var(--text-dim); margin-bottom:10px; }
+  ul { padding-left:20px; }
+  li { font-size:.88rem; color:var(--text-dim); margin-bottom:4px; }
+  strong { color:var(--text); }
+
+  .loop-flow { display:flex; flex-direction:column; gap:0; margin:12px 0; }
+  .loop-step { background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:12px 16px; font-size:.87rem; position:relative; }
+  .loop-step + .loop-step { margin-top:6px; }
+  .loop-step .phase { font-weight:700; color:var(--blue); }
+  .loop-step .phase.night { color:var(--purple); }
+  .loop-step .phase.dawn { color:var(--orange); }
+  .loop-arrow { text-align:center; color:var(--text-dim); font-size:.8rem; padding:2px 0; }
+
+  table { width:100%; border-collapse:collapse; font-size:.85rem; margin:10px 0; }
+  th { background:var(--surface2); padding:8px 12px; text-align:left; color:var(--text-dim); font-weight:600; border-bottom:1px solid var(--border); }
+  td { padding:8px 12px; border-bottom:1px solid var(--border); color:var(--text-dim); }
+  tr:last-child td { border-bottom:none; }
+
+  .kpi-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:12px; }
+  .kpi-card { background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:14px 16px; }
+  .kpi-card .num { font-size:1.5rem; font-weight:700; color:var(--green); }
+  .kpi-card .label { font-size:.78rem; color:var(--text-dim); margin-top:2px; }
+
+  .changelog tr:first-child { background:rgba(63,185,80,.05); }
+  .footer { text-align:center; padding:24px; color:var(--text-dim); font-size:.78rem; border-top:1px solid var(--border); margin-top:8px; }
 </style>
 </head>
 <body>
 
-<h1>6_IL — 눈보라 마을</h1>
-<div class="meta">
-  <span class="badge badge-ver">v0.2.0</span>
-  <span class="badge badge-done">Phase 1 Complete</span>
-  &nbsp;|&nbsp; 최종 업데이트: 2026-05-20
+<div class="hero">
+  <div class="hero-label">Game Design Document · 6_IL · v0.2.0</div>
+  <h1>Inis<span>Land</span> — 눈보라 마을</h1>
+  <p class="quote">"끝없는 겨울. 마지막 마을의 마지막 수호자."</p>
+  <p class="subtitle">뱀서바이벌 × 낮/밤 베이스 디펜스 × 탑다운 설원 생존</p>
+  <div class="badges">
+    <span class="badge badge-blue">⚡ Phaser 3 + TypeScript</span>
+    <span class="badge badge-purple">🧬 bitecs ECS</span>
+    <span class="badge badge-green">🧪 Vitest 72 tests</span>
+    <span class="badge badge-orange">📦 Electron Portable</span>
+  </div>
 </div>
 
-<h2>플레이 미리보기</h2>
-
-<h3>플레이 미리보기</h3>
-<img src="./6IL_gameplay_preview.png" alt="플레이 미리보기" style="max-width:100%;border-radius:8px;margin:12px 0;">
-
-<h2>1. 게임 개요</h2>
-<div class="section">
-  <blockquote>눈보라 치는 판타지 설원, 낮에는 사냥꾼·밤에는 마을 방어자. 영속으로 쌓이는 마을과 잃으면 돌아오지 않는 동료들 사이에서, 얼마나 오래 버틸 수 있는가.</blockquote>
-  <p><strong>장르:</strong> 뱀서류 + 낮/밤 서바이벌 + 타워디펜스 + 핵앤슬래시</p>
-
-  <h3>기술 스택</h3>
-  <table>
-    <tr><th>항목</th><th>선택</th></tr>
-    <tr><td>게임 엔진</td><td>Phaser 3</td></tr>
-    <tr><td>언어</td><td>TypeScript (strict)</td></tr>
-    <tr><td>ECS</td><td>bitecs</td></tr>
-    <tr><td>빌드</td><td>Vite</td></tr>
-    <tr><td>테스트</td><td>Vitest</td></tr>
-    <tr><td>데스크톱</td><td>Electron + electron-builder</td></tr>
-  </table>
+<div class="preview-wrap">
+  <img src="./6IL_gameplay_preview.png" alt="플레이 미리보기">
 </div>
 
-<h2>2. 핵심 게임플레이 루프</h2>
-<div class="section">
-  <h3>하루 구조</h3>
-  <pre><code>하루 = 낮(Day) → 저녁(Evening) → 밤(Night) → 새벽(Dawn)</code></pre>
-  <table>
-    <tr><th>단계</th><th>길이</th><th>행동</th></tr>
-    <tr><td>낮</td><td>120초</td><td>설원 탐험, 자원 수집, 사냥</td></tr>
-    <tr><td>저녁</td><td>10초</td><td>전환 경고, 마을 귀환</td></tr>
-    <tr><td>밤</td><td>90초</td><td>좀비 웨이브 방어</td></tr>
-    <tr><td>새벽</td><td>10초</td><td>정리, 다음 날 준비</td></tr>
-  </table>
+<div class="container">
 
-  <h3>4가지 게임플레이 기둥</h3>
-  <div class="pillar"><strong>1. 낮의 사냥꾼</strong> — 설원 탐험, 자원 수집, 사냥</div>
-  <div class="pillar"><strong>2. 밤의 성주</strong> — 모닥불 방어, 바리게이트 배치, 좀비 웨이브 격퇴</div>
-  <div class="pillar"><strong>3. 영속하는 마을, 잃어버리는 동료들</strong> — 마을은 성장, 동료는 영구 사망</div>
-  <div class="pillar"><strong>4. 초대형 눈보라</strong> — 드문 극한 이벤트 (Phase 3 예정)</div>
-</div>
+  <div class="section">
+    <h2>🎯 문제 정의</h2>
+    <p>"혼자서도 짧은 세션 안에 <strong>생존과 경영 두 재미</strong>를 모두 느낄 수 있는 게임이 없다."</p>
+    <p>낮에는 설원 탐험가, 밤에는 마을 수호자 — 두 역할이 하나의 세션(15~25분) 안에서 자연스럽게 전환된다.</p>
+  </div>
 
-<h2>3. 현재 구현 상태 (v0.2.0)</h2>
+  <div class="section">
+    <h2>👤 페르소나</h2>
+    <p><strong>이진혁, 27세, 직장인</strong></p>
+    <ul>
+      <li>자투리 시간(20~30분)에 게임. 긴 캠페인 불가.</li>
+      <li>로그라이크/생존류 선호, 복잡한 조작은 부담.</li>
+      <li>"오늘 밤은 버텼다"는 성취감이 핵심 동기.</li>
+    </ul>
+  </div>
 
-<div class="section">
-  <h3>플레이어</h3>
-  <ul>
-    <li>WASD/방향키 이동 (속도 120px/s)</li>
-    <li>근접 자동 공격 (롱소드: 데미지 25, 사거리 48px, 쿨다운 600ms)</li>
-    <li>HP 100, 사망 시 게임오버 화면</li>
-    <li>R키로 재시작</li>
-  </ul>
-
-  <h3>설원 탐험</h3>
-  <div class="grid-2">
-    <div class="pillar">
-      <strong>나무</strong> — F키 벌목, 나무 3개 획득
-    </div>
-    <div class="pillar">
-      <strong>바위</strong> — F키 채광, 돌 2개 획득
-    </div>
-    <div class="pillar">
-      <strong>사슴</strong> — 도망 AI, 사냥 시 고기 2개 드랍
-    </div>
-    <div class="pillar">
-      <strong>수집</strong> — 진행 바 표시
+  <div class="section">
+    <h2>🔄 코어 루프</h2>
+    <div class="loop-flow">
+      <div class="loop-step"><span class="phase">☀ 낮 (40s+)</span> — 설원 탐험 · 나무/돌/고기 채집 · 동물 사냥 · 동료 영입 · 건물 건설</div>
+      <div class="loop-arrow">↓ 저녁 — 자동 텔레포트 (플레이어+동료+펫 마을로)</div>
+      <div class="loop-step"><span class="phase night">🌙 밤 (40s+)</span> — 좀비 웨이브 격퇴 · 모닥불 방어 · 바리케이드 사수 · 25킬마다 보스 등장</div>
+      <div class="loop-arrow">↓ 새벽 — HP 전회복 · 건물 +25%HP · NPC 1명 스폰 · 자동 저장</div>
+      <div class="loop-step"><span class="phase dawn">🌅 다음 낮</span> — 레벨 업 (페이즈 길이 ×1.25), 반복</div>
     </div>
   </div>
 
-  <h3>자원 시스템</h3>
-  <table>
-    <tr><th>자원</th><th>획득</th><th>상태</th></tr>
-    <tr><td>나무 (Wood)</td><td>벌목</td><td><span class="badge badge-done">구현</span></td></tr>
-    <tr><td>돌 (Stone)</td><td>채광</td><td><span class="badge badge-done">구현</span></td></tr>
-    <tr><td>고기 (Meat)</td><td>사슴 사냥</td><td><span class="badge badge-done">구현</span></td></tr>
-    <tr><td>철 (Iron)</td><td>심경 광맥</td><td><span class="badge badge-todo">미구현</span></td></tr>
-    <tr><td>식량 (Food)</td><td>밭</td><td><span class="badge badge-todo">미구현</span></td></tr>
-    <tr><td>눈꽃 결정</td><td>보스/눈보라</td><td><span class="badge badge-todo">미구현</span></td></tr>
-  </table>
+  <div class="section">
+    <h2>🏗️ 건물 시스템 (10종)</h2>
+    <table>
+      <thead><tr><th>건물</th><th>역할</th><th>HP</th><th>비용</th></tr></thead>
+      <tbody>
+        <tr><td>🔥 Campfire</td><td>좀비 화상 오라(2.5u DPS 6) + 마을 온도 유지</td><td>280</td><td>5W</td></tr>
+        <tr><td>🏠 House</td><td>인구 한도 +4 (동료 영입 필수)</td><td>140</td><td>6W</td></tr>
+        <tr><td>🥕 Fence</td><td>외곽 차단 (마을 크기에 따라 자동 확장)</td><td>14</td><td>1W</td></tr>
+        <tr><td>📦 Storage</td><td>자원 캡 +50, 농장 한도 +1</td><td>200</td><td>8W</td></tr>
+        <tr><td>🌾 Farm</td><td>식량 생산 (노인 워커 +5 보너스)</td><td>90</td><td>6W</td></tr>
+        <tr><td>🏹 Watchtower</td><td>야간 자동 사격 + 동료 데미지 ×1.5</td><td>160</td><td>8W+4S</td></tr>
+      </tbody>
+    </table>
+  </div>
 
-  <h3>마을 방어</h3>
-  <ul>
-    <li>모닥불 (마을 중심): 반경 128px 내 좀비에 5 DPS</li>
-    <li>바리게이트 12개 자동 배치 (동서남북 방향)</li>
-    <li>HP 200, 좀비가 공격하여 파괴 가능</li>
-  </ul>
+  <div class="section">
+    <h2>👥 동료 / NPC 아키타입</h2>
+    <table>
+      <thead><tr><th>타입</th><th>특성</th></tr></thead>
+      <tbody>
+        <tr><td>아이</td><td>이동 빠름 · 전투력 낮음 · 비전투 역할</td></tr>
+        <tr><td>노인</td><td>이동 느림 · 농장 수확 +5 보너스</td></tr>
+        <tr><td>사냥꾼</td><td>원거리 공격 특화</td></tr>
+        <tr><td>치유사</td><td>주변 아군 HP 회복</td></tr>
+        <tr><td>무사</td><td>근접 전투 특화 · 바리케이드 방어</td></tr>
+      </tbody>
+    </table>
+  </div>
 
-  <h3>좀비 웨이브</h3>
-  <ul>
-    <li>밤마다 3개 웨이브</li>
-    <li>웨이브당 좀비 수: 8 + (day-1)&times;4 + (wave-1)&times;2</li>
-    <li>마을 외곽 원형 스폰</li>
-    <li>좀비 스탯: HP 60, 데미지 10, 방어 2, 속도 40px/s</li>
-  </ul>
+  <div class="section">
+    <h2>📊 성공 KPI</h2>
+    <div class="kpi-grid">
+      <div class="kpi-card"><div class="num">50%</div><div class="label">Day 3 생존율 목표</div></div>
+      <div class="kpi-card"><div class="num">15~25분</div><div class="label">목표 세션 길이</div></div>
+      <div class="kpi-card"><div class="num">7/10</div><div class="label">밤 격퇴 성취감 설문 목표</div></div>
+      <div class="kpi-card"><div class="num">72</div><div class="label">Vitest 단위 테스트 수</div></div>
+    </div>
+  </div>
 
-  <h3>시야 시스템</h3>
-  <ul>
-    <li>낮: 넓은 시야</li>
-    <li>밤: 좁은 시야 (어두운 사각형 마스크)</li>
-  </ul>
+  <div class="section">
+    <h2>🛠️ 기술 스택</h2>
+    <ul>
+      <li><strong>렌더링</strong>: Phaser 3.60 (Canvas 2D)</li>
+      <li><strong>ECS</strong>: bitecs — 유닛/자원/이펙트 컴포넌트 분리</li>
+      <li><strong>언어</strong>: TypeScript 5.x + Vite 번들러</li>
+      <li><strong>패키징</strong>: Electron 35 + electron-builder (Windows Portable)</li>
+      <li><strong>테스트</strong>: Vitest</li>
+    </ul>
+  </div>
 
-  <h3>UI/HUD</h3>
-  <ul>
-    <li>좌상단: 자원 현황 (나무/돌/고기)</li>
-    <li>우상단: 일차/단계/남은시간</li>
-    <li>좌하단: HP 바</li>
-    <li>우하단: 웨이브 정보 (밤)</li>
-    <li>게임오버: 생존 일수, 처치 수, R키 재시작</li>
-  </ul>
+  <div class="section">
+    <h2>📝 변경 이력</h2>
+    <table class="changelog">
+      <thead><tr><th>버전</th><th>날짜</th><th>내용</th></tr></thead>
+      <tbody>
+        <tr><td>v0.2.0</td><td>2026-05-29</td><td>UX 온보딩 씬 추가 (낮/밤 페이즈 2슬라이드 설명)</td></tr>
+        <tr><td>v0.1.0</td><td>2026-05-20</td><td>ECS 기반 프로토타입 — 낮/밤 사이클, 자원 수집, 좀비 웨이브</td></tr>
+      </tbody>
+    </table>
+  </div>
+
 </div>
 
-<h2>4. 미구현 (Phase 2+)</h2>
-<div class="section">
-  <h3>Phase 2 — 핵심 시스템 확장</h3>
-  <ul>
-    <li>동료 영입 + 스탠스 3종 + 영구 사망</li>
-    <li>동료 타입 5종 (아이/청년/아저씨/아줌마/노인)</li>
-    <li>건물 7종 + 업그레이드</li>
-    <li>밭 + 식량 + 사기 시스템</li>
-    <li>설원 구역 3단계</li>
-    <li>룬 시스템 + 레벨업 + 진화 무기</li>
-  </ul>
-
-  <h3>Phase 3 — 콘텐츠 폭</h3>
-  <ul>
-    <li>보스 3~5종 + 초대형 눈보라</li>
-    <li>바리게이트 3종</li>
-    <li>튜토리얼</li>
-    <li>메타 프로그레션</li>
-    <li>오디오 + 픽셀 아트</li>
-  </ul>
-
-  <h3>Phase 4 — 폴리시 & 출시</h3>
-  <ul>
-    <li>UI 정제, 밸런스 패스</li>
-    <li>Steam 통합</li>
-    <li>로컬라이제이션</li>
-  </ul>
-</div>
-
-<h2>5. 밸런스 상수</h2>
-<div class="section">
-  <table>
-    <tr><th>항목</th><th>값</th></tr>
-    <tr><td>플레이어 HP</td><td>100</td></tr>
-    <tr><td>플레이어 속도</td><td>120 px/s</td></tr>
-    <tr><td>롱소드 데미지</td><td>25</td></tr>
-    <tr><td>롱소드 사거리</td><td>48 px</td></tr>
-    <tr><td>롱소드 쿨다운</td><td>600 ms</td></tr>
-    <tr><td>좀비 HP</td><td>60</td></tr>
-    <tr><td>좀비 데미지</td><td>10</td></tr>
-    <tr><td>좀비 속도</td><td>40 px/s</td></tr>
-    <tr><td>모닥불 DPS</td><td>5</td></tr>
-    <tr><td>모닥불 반경</td><td>128 px</td></tr>
-    <tr><td>바리게이트 HP</td><td>200</td></tr>
-    <tr><td>벌목 → 나무</td><td>3개</td></tr>
-    <tr><td>채광 → 돌</td><td>2개</td></tr>
-    <tr><td>사냥 → 고기</td><td>2개</td></tr>
-    <tr><td>기본 웨이브 좀비 수</td><td>8</td></tr>
-  </table>
-</div>
-
-<h2>6. 조작법</h2>
-<div class="section">
-  <table>
-    <tr><th>키</th><th>행동</th></tr>
-    <tr><td>WASD / 방향키</td><td>이동</td></tr>
-    <tr><td>F</td><td>상호작용 (벌목/채광)</td></tr>
-    <tr><td>자동</td><td>근접 범위 적 자동 공격</td></tr>
-    <tr><td>R</td><td>게임오버 시 재시작</td></tr>
-  </table>
-</div>
-
-<h2>7. 빌드 & 실행</h2>
-<div class="section">
-<pre><code># 개발 서버
-npm run dev
-
-# 프로덕션 빌드
-npm run build
-
-# Electron 실행
-npm start
-
-# 포터블 exe 빌드
-npm run dist
-
-# 테스트
-npm test</code></pre>
-</div>
-
+<div class="footer">InisLand — 눈보라 마을 기획서 v0.2.0 · 2026-05-29 · 오진우</div>
 </body>
 </html>

@@ -1,9 +1,8 @@
 {
   "name": "6il",
-  "version": "0.2.0",
+  "version": "0.1.0",
   "private": true,
   "type": "module",
-  "main": "main.cjs",
   "description": "Snowfield colony survival + auto-battler. Fantasy medieval VS-like.",
   "scripts": {
     "dev": "vite",
@@ -13,40 +12,11 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "test": "vitest run",
-    "test:watch": "vitest",
-    "start": "electron .",
-    "dist": "electron-builder --win --x64"
-  },
-  "build": {
-    "appId": "com.6il.game",
-    "productName": "6IL",
-    "copyright": "Copyright 2026",
-    "win": {
-      "target": [
-        {
-          "target": "portable",
-          "arch": [
-            "x64"
-          ]
-        }
-      ]
-    },
-    "portable": {
-      "artifactName": "6IL_v0.2.0_portable.exe"
-    },
-    "files": [
-      "main.cjs",
-      "dist/**/*"
-    ],
-    "directories": {
-      "output": "release"
-    }
+    "test:watch": "vitest"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.4",
     "@types/node": "^25.6.0",
-    "electron": "^33.4.11",
-    "electron-builder": "^24.13.3",
     "eslint": "^9.39.4",
     "eslint-config-prettier": "^10.1.8",
     "prettier": "^3.8.3",

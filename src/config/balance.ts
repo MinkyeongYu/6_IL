@@ -1,13 +1,12 @@
 /**
- * 게임 밸런스 단일 소스. 런타임 변경 시 여기만 수정.
- * Phase 1에서 실제 값들(무기 대미지, 자원 양, 웨이브 크기 등)이 채워짐.
+ * 게임 밸런스 단일 소스.
  */
 
 export const DAY_CYCLE = {
-  dayDurationSec: 540, // 9분
-  nightDurationSec: 360, // 6분
-  eveningTransitionSec: 30,
-  dawnTransitionSec: 30,
+  dayDurationSec: 180, // 3분
+  nightDurationSec: 180, // 3분
+  eveningTransitionSec: 5,
+  dawnTransitionSec: 5,
 } as const;
 
 export const VISION = {
@@ -18,46 +17,63 @@ export const VISION = {
 
 export const RESOURCES = {
   startingWood: 15,
-  startingStone: 5,
-  startingIron: 0,
   startingMeat: 0,
   startingFood: 5,
   startingFrostbloom: 0,
 } as const;
 
+export const GATHER = {
+  treeDurationSec: 4,
+  deerDurationSec: 2,
+  treeWoodYield: 3,
+  deerMeatYield: 2,
+} as const;
+
 export const PLAYER = {
   maxHp: 100,
-  speed: 120,
+  moveSpeed: 180, // px/s
+  respawnSec: 3,
+  armor: 0,
 } as const;
 
-export const GATHERING = {
-  treeWood: 3,
-  treeGatherMs: 4000,
-  rockStone: 2,
-  rockGatherMs: 6000,
-  deerMeat: 2,
+export const ZOMBIE = {
+  maxHp: 20,
+  moveSpeed: 60,
+  attackDamage: 8,
+  attackCooldownSec: 1,
+  attackRange: 36,
+  armor: 0,
 } as const;
 
-export const BONFIRE = {
-  damagePerSec: 5,
-  radius: 128,
-  buffAttack: 0.15,
+export const WAVE = {
+  baseCount: 8,
+  perDay: 4,
+  maxCount: 300,
+} as const;
+
+export const BUILDING_HP = {
+  campfire: 400,
+  barricadeWood: 200,
 } as const;
 
 export type BalanceConfig = {
   dayCycle: typeof DAY_CYCLE;
   vision: typeof VISION;
   resources: typeof RESOURCES;
+  gather: typeof GATHER;
   player: typeof PLAYER;
-  gathering: typeof GATHERING;
-  bonfire: typeof BONFIRE;
+  zombie: typeof ZOMBIE;
+  wave: typeof WAVE;
+  buildingHp: typeof BUILDING_HP;
 };
 
 export const BALANCE: BalanceConfig = {
   dayCycle: DAY_CYCLE,
   vision: VISION,
   resources: RESOURCES,
+  gather: GATHER,
   player: PLAYER,
-  gathering: GATHERING,
-  bonfire: BONFIRE,
+  zombie: ZOMBIE,
+  wave: WAVE,
+  buildingHp: BUILDING_HP,
 };
