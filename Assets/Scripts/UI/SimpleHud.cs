@@ -2193,7 +2193,13 @@ namespace IL6
         {
             if (string.IsNullOrEmpty(key)) return null;
             if (_hudIconCache.TryGetValue(key, out var cached)) return cached;
-            var tex = Resources.Load<Texture2D>($"UI/hud/hud-{key}");
+            string path = $"UI/hud/hud-{key}";
+            var tex = Resources.Load<Texture2D>(path);
+            if (tex == null)
+            {
+                var sprite = Resources.Load<Sprite>(path);
+                if (sprite != null) tex = sprite.texture;
+            }
             _hudIconCache[key] = tex;
             return tex;
         }

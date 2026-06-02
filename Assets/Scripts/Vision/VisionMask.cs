@@ -59,14 +59,6 @@ namespace IL6
             _unsubE?.Invoke(); _unsubN?.Invoke(); _unsubD?.Invoke(); _unsubA?.Invoke();
         }
 
-        private static void EnsureWhiteTex()
-        {
-            if (_whiteTex != null) return;
-            _whiteTex = new Texture2D(1, 1);
-            _whiteTex.SetPixel(0, 0, Color.white);
-            _whiteTex.Apply();
-        }
-
         private void OnGUI()
         {
             if (!_isNight) return;
