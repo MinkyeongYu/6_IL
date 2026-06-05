@@ -143,3 +143,4 @@
 - HUD icons were revised again to match the applied gameplay/reference pixel art more closely: transparent object icons, dark pixel outlines, and no circular badge frame.
 - Low-detail procedural art made with PowerShell System.Drawing was removed from runtime resources. HUD icons now reuse approved generated UI icons, and tree variants are restored/extracted from existing project art sources.
 - Tree runtime sprites were re-extracted with alpha-trimmed padding so no tree variant touches the 64x64 sprite edge, and the mistaken vertical-fence crop was removed from tree spawning.
+- Runtime character, animal, enemy, and prop sprites were re-extracted as single 64x64 transparent frames with safe padding so applied Resources sprites no longer show clipped edges or full animation sheets.
