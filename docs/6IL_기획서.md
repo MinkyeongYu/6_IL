@@ -133,6 +133,7 @@
 - Church reduces morale-loss severity by chance. Level 1 starts at 20%, then increases by 10% per level. When triggered, the morale loss is halved.
 - When companion morale is high, an active Church improves companion efficiency. Morale 80+ grants +5% damage and movement/work efficiency per Church level.
 - Companion catch-up spawning added. If the village has fewer than 3 companions, recruitable NPCs spawn closer to the village, spawn more often, and allow a higher alive NPC cap. If the village has 3-5 companions, NPCs still spawn slightly closer and faster than normal.
+- Wolf encounters are excluded from animal spawn rolls while the village has 3 or fewer companions.
 
 ### 2026-06-05 Visual Update: HUD and Tree Readability
 - HUD icon resources replaced with a cohesive cozy winter pixel style, keeping 64x64 transparent PNGs and existing resource paths.

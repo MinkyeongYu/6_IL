@@ -55,6 +55,8 @@ namespace IL6
         public float ScarceNpcIntervalSec = 12f;
         public float LowNpcIntervalSec = 20f;
         public int ScarceMaxAliveNpcs = 5;
+        private const int WolfSafeCompanionThreshold = 3;
+        private const string WolfAnimalName = "Wolf_proc";
 
         private void Update()
         {
@@ -494,12 +496,13 @@ namespace IL6
 
             // 현재 게임 일자 — 일자별 출현 제한 적용
             int day = session != null && session.Cycle != null ? session.Cycle.Day : 1;
+            int companionCount = RecruitableNpc.CurrentCompanionCount();
 
             // 가중치 추첨 — 출현 가능한 종만
             float total = 0f;
             for (int i = 0; i < _animals.Length; i++)
             {
-                if (day < _animals[i].MinDay) continue;
+                if (!CanSpawnAnimal(_animals[i], day, companionCount)) continue;
                 total += _animals[i].Weight;
             }
             if (total <= 0f) return;
@@ -508,7 +511,7 @@ namespace IL6
             float acc = 0f;
             for (int i = 0; i < _animals.Length; i++)
             {
-                if (day < _animals[i].MinDay) continue;
+                if (!CanSpawnAnimal(_animals[i], day, companionCount)) continue;
                 acc += _animals[i].Weight;
                 if (roll <= acc) { a = _animals[i]; break; }
             }
@@ -527,6 +530,13 @@ namespace IL6
                 // 동물은 자유롭게 이동 → 죽거나 멀어질 때까지 영속.
                 CreateOneAnimal(a, x + ox, y + oy, yield, hp);
             }
+        }
+
+        private static bool CanSpawnAnimal(AnimalArchetype animal, int day, int companionCount)
+        {
+            if (day < animal.MinDay) return false;
+            if (companionCount <= WolfSafeCompanionThreshold && animal.Name == WolfAnimalName) return false;
+            return true;
         }
 
         public static GameObject CreateOneAnimal(AnimalArchetype a, float x, float y, int yieldOverride, int hpOverride)
