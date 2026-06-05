@@ -1048,8 +1048,8 @@ namespace IL6
                 };
 
             // StatCard(12+14+9+22+4=61) 아래
-            const int W = 280, H = 24;
-            var panel = new Rect(12, 63, W, H);
+            const int W = 300, H = 30;
+            var panel = new Rect(Mathf.Max(12, Screen.width - W - 12), 12, W, H);
             UiTheme.Rect(panel, new Color(0.05f, 0.07f, 0.12f, 0.90f));
             UiTheme.Rect(new Rect(panel.x - 1, panel.y - 1, panel.width + 2, panel.height + 2), UiTheme.PanelBorderDim);
 
@@ -1061,19 +1061,19 @@ namespace IL6
                 var k = kinds[i];
                 int cur = session.Resources.Get(k);
                 int cap = session.Resources.GetCap(k);
-                int x = (int)panel.x + i * itemW + 6;
+                int x = (int)panel.x + i * itemW + 8;
 
-                DrawHudIcon(new Rect(x, (int)panel.y + 4, 18, 18), ResourceIconKey(k));
+                DrawHudIcon(new Rect(x, (int)panel.y + 5, 20, 20), ResourceIconKey(k));
 
                 var oldC = GUI.contentColor;
                 GUI.contentColor = cur >= cap ? UiTheme.TextDanger : UiTheme.TextCream;
-                GUI.Label(new Rect(x + 23, (int)panel.y + 6, itemW - 27, 22),
+                GUI.Label(new Rect(x + 26, (int)panel.y + 7, itemW - 30, 22),
                     $"{cur}", _resStyle);
                 GUI.contentColor = oldC;
 
                 // 구분선 (마지막 제외)
                 if (i < kinds.Length - 1)
-                    UiTheme.Rect(new Rect(panel.x + (i + 1) * itemW, panel.y + 6, 1, H - 12), UiTheme.PanelBorderDim);
+                    UiTheme.Rect(new Rect(panel.x + (i + 1) * itemW, panel.y + 7, 1, H - 14), UiTheme.PanelBorderDim);
             }
         }
 
@@ -1974,17 +1974,20 @@ namespace IL6
             UiTheme.Rect(new Rect(panel.x - 2, panel.y - 2, panel.width + 4, panel.height + 4), new Color(0.95f, 0.78f, 0.35f, 0.85f * fade));
             UiTheme.Rect(panel, new Color(0.055f, 0.07f, 0.10f, 0.96f * fade));
 
-            var portraitRect = new Rect(panel.x + 22, panel.y - 178, 260, 360);
+            float portraitW = Mathf.Min(260f, panel.width * 0.32f);
+            float portraitH = Mathf.Min(360f, Mathf.Max(150f, panel.y - 16f));
+            float portraitY = Mathf.Max(16f, panel.y - portraitH + 52f);
+            var portraitRect = new Rect(panel.x + 22, portraitY, portraitW, portraitH);
             if (_recruitCutPortrait != null)
-                GUI.DrawTexture(portraitRect, _recruitCutPortrait, ScaleMode.ScaleToFit, true);
+                GUI.DrawTexture(InnerRect(portraitRect, 4f), _recruitCutPortrait, ScaleMode.ScaleToFit, true);
 
             var nameStyle = new GUIStyle(_title) { fontSize = 26, alignment = TextAnchor.MiddleLeft };
             var roleStyle = new GUIStyle(_labelSubtle) { fontSize = 16, alignment = TextAnchor.MiddleLeft };
             var dialogStyle = new GUIStyle(_label) { fontSize = 21, wordWrap = true, alignment = TextAnchor.UpperLeft };
             var hintStyle = new GUIStyle(_labelSubtle) { fontSize = 13, alignment = TextAnchor.MiddleRight };
 
-            float tx = panel.x + 300;
-            float tw = panel.width - 330;
+            float tx = panel.x + portraitW + 52f;
+            float tw = panel.width - portraitW - 82f;
             GUI.Label(new Rect(tx, panel.y + 24, tw, 34), $"{_recruitCutName}", nameStyle);
             GUI.Label(new Rect(tx, panel.y + 58, tw, 22), $"새 동료 · {_recruitCutRole}", roleStyle);
             UiTheme.Separator(new Rect(tx, panel.y + 88, tw, 1));
@@ -2254,10 +2257,16 @@ namespace IL6
             var icon = HudIcon(key);
             if (icon != null)
             {
-                GUI.DrawTexture(rect, icon, ScaleMode.ScaleToFit, true);
+                GUI.DrawTexture(InnerRect(rect, 1.5f), icon, ScaleMode.ScaleToFit, true);
                 return;
             }
-            UiTheme.Icon(rect, UiTheme.TextSubtle);
+            UiTheme.Icon(InnerRect(rect, 1.5f), UiTheme.TextSubtle);
+        }
+
+        private static Rect InnerRect(Rect rect, float pad)
+        {
+            float p = Mathf.Min(pad, rect.width * 0.25f, rect.height * 0.25f);
+            return new Rect(rect.x + p, rect.y + p, Mathf.Max(1f, rect.width - p * 2f), Mathf.Max(1f, rect.height - p * 2f));
         }
 
         private static string ResourceIconKey(ResourceKind kind)
