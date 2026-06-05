@@ -21,6 +21,13 @@ namespace IL6
         private readonly System.Collections.Generic.Dictionary<string, Texture2D> _hudIconCache = new();
 
         private GUIStyle _label, _labelSubtle, _title, _section, _weapon, _bigDeath, _btn, _smallBtn;
+        private string _recruitCutName = "";
+        private string _recruitCutRole = "";
+        private string _recruitCutDialog = "";
+        private Texture2D _recruitCutPortrait;
+        private float _recruitCutLeft;
+        private float _recruitCutPrevTimeScale = 1f;
+        private bool _recruitCutPaused;
 
         // 장비 모드: 근접 / 원거리 / 건축. BuildHotbar 는 건축에서만, 무기는 모드 따라 자동 전환.
         public enum HudMode { Melee, Ranged, Build }
@@ -1171,7 +1178,7 @@ namespace IL6
                 var oldC = GUI.contentColor;
                 GUI.contentColor = new Color(0.95f, 0.5f, 0.5f);
                 DrawHudIcon(new Rect(innerX, y + 1, 18, 18), "wave");
-                GUI.Label(new Rect(innerX + 24, y, innerW - 24, 22), "Village stable", _labelSubtle);
+                GUI.Label(new Rect(innerX + 24, y, innerW - 24, 22),
                     $"활성 {Night.ActiveZombies}  ·  대기 {Night.WavePending}", _section);
                 GUI.contentColor = oldC;
                 y += 24;
@@ -1768,7 +1775,7 @@ namespace IL6
             if (best.HarvestReady)
             {
                 int yield = best.BaseYield + best.Workers.Count * best.PerWorkerBonus;
-                actions.Add(new ContextAction(50, $"Harvest +{yield}", true, best.Harvest));
+                actions.Add(new ContextAction(50, $"Harvest +{yield}", true, () => best.Harvest()));
             }
             else if (best.Workers.Count < best.MaxWorkers)
             {
@@ -2576,11 +2583,11 @@ namespace IL6
                 }
 
                 var statPanel = HudLayout.CenterModal(360f, 130f);
-
-
-
                 UiTheme.Panel(statPanel);
 
+                int sx = (int)statPanel.x;
+                int sy = (int)statPanel.y;
+                int W = (int)statPanel.width;
                 int row = sy + 12;
                 int lineH = 22;
                 GUI.Label(new Rect(sx + 24, row, W - 48, lineH), $"생존 일수      Day {deathDay}", _section); row += lineH;
@@ -2711,6 +2718,18 @@ namespace IL6
                 if (d < bestDist) { best = n; bestDist = d; }
             }
             return best;
+        }
+
+        private RecruitableNpc NearestRecruitable()
+        {
+            if (Player == null) return null;
+            return FindNearestRecruitable(Player.transform.position, 3.2f);
+        }
+
+        private static string Stars(int value)
+        {
+            int clamped = Mathf.Clamp(value, 0, 5);
+            return new string('★', clamped) + new string('☆', 5 - clamped);
         }
 
         // ====================================================================

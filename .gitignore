@@ -68,6 +68,7 @@ Thumbs.db
 # Electron build outputs
 release/
 InisLand_v*_portable.exe
+6IL_v*_portable.exe
 *.asar
 Build/Windows/
 Build/WebGL/

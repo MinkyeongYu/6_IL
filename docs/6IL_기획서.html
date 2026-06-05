@@ -77,10 +77,10 @@
   <p class="quote">"끝없는 겨울. 마지막 마을의 마지막 수호자."</p>
   <p class="subtitle">뱀서바이벌 × 낮/밤 베이스 디펜스 × 탑다운 설원 생존</p>
   <div class="badges">
-    <span class="badge badge-blue">⚡ Phaser 3 + TypeScript</span>
-    <span class="badge badge-purple">🧬 bitecs ECS</span>
-    <span class="badge badge-green">🧪 Vitest 72 tests</span>
-    <span class="badge badge-orange">📦 Electron Portable</span>
+    <span class="badge badge-blue">⚡ Unity 2022.3 LTS</span>
+    <span class="badge badge-purple">🎮 C# Gameplay</span>
+    <span class="badge badge-green">🧭 HUD/UX Refresh</span>
+    <span class="badge badge-orange">📦 Windows Build</span>
   </div>
 </div>
 
@@ -169,11 +169,11 @@
   <div class="section">
     <h2>🛠️ 기술 스택</h2>
     <ul>
-      <li><strong>렌더링</strong>: Phaser 3.60 (Canvas 2D)</li>
-      <li><strong>ECS</strong>: bitecs — 유닛/자원/이펙트 컴포넌트 분리</li>
-      <li><strong>언어</strong>: TypeScript 5.x + Vite 번들러</li>
-      <li><strong>패키징</strong>: Electron 35 + electron-builder (Windows Portable)</li>
-      <li><strong>테스트</strong>: Vitest</li>
+      <li><strong>엔진</strong>: Unity 2022.3.62f3 LTS</li>
+      <li><strong>언어</strong>: C# gameplay scripts, Unity scenes, prefabs, ProjectSettings</li>
+      <li><strong>렌더링</strong>: Unity 2D + Universal Render Pipeline</li>
+      <li><strong>빌드</strong>: <code>IL6.EditorBuild.BuildScript.BuildWindows</code> → <code>Build/Windows/IL6.exe</code></li>
+      <li><strong>공유 실행파일</strong>: <code>6IL_v0.2.0_portable.exe</code></li>
     </ul>
   </div>
 
@@ -182,15 +182,27 @@
     <table class="changelog">
       <thead><tr><th>버전</th><th>날짜</th><th>내용</th></tr></thead>
       <tbody>
+        <tr><td>v0.2.0-build-refresh</td><td>2026-06-05</td><td>Unity 단독 개발 기준, 프로젝트 넘버링 실행파일, HUD 동일 레이어 비겹침 검증 절차 반영</td></tr>
         <tr><td>v0.2.0</td><td>2026-05-29</td><td>UX 온보딩 씬 추가 (낮/밤 페이즈 2슬라이드 설명)</td></tr>
         <tr><td>v0.1.0</td><td>2026-05-20</td><td>ECS 기반 프로토타입 — 낮/밤 사이클, 자원 수집, 좀비 웨이브</td></tr>
       </tbody>
     </table>
   </div>
 
+  <div class="section">
+    <h2>✅ 최신 빌드/UX/VFX 확인 기준</h2>
+    <ul>
+      <li><strong>권위 빌드 경로</strong>: Unity 빌드가 <code>Build/Windows/IL6.exe</code>를 만들고 루트에는 <code>6IL_v0.2.0_portable.exe</code>만 남긴다.</li>
+      <li><strong>실행파일 최신성</strong>: 소스, 설정, 기획서 변경 이후 마지막에 한 번만 Windows 빌드를 수행하고 수정 시간이 변경 파일보다 최신인지 확인한다.</li>
+      <li><strong>HUD UX 규칙</strong>: 같은 레이어의 HUD 요소는 서로 겹치지 않게 배치하고, 자원/체력/목표/선택 피드백은 즉시 읽히게 한다.</li>
+      <li><strong>VFX 기준</strong>: 공격, 피격, 채집, 건설, 동료 합류, 아이템 획득, 웨이브 시작/종료에는 시작-결과 피드백을 둔다.</li>
+      <li><strong>공유 이미지</strong>: 아래 리소스 미리보기 이미지는 문서와 <code>assets/</code> 폴더를 함께 공유했을 때 열리는 상대 경로를 유지한다.</li>
+    </ul>
+  </div>
+
 </div>
 
-<div class="footer">InisLand — 눈보라 마을 기획서 v0.2.0 · 2026-05-29 · 오진우</div>
+<div class="footer">InisLand — 눈보라 마을 기획서 v0.2.0-build-refresh · 2026-06-05 · 오진우</div>
 <!-- APPLIED_RESOURCES_START -->
 <section class="applied-resources">
   <h2>적용 리소스</h2>
