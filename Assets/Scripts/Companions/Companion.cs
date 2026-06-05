@@ -43,12 +43,18 @@ namespace IL6
         /// <summary>레벨 + 장비 보정 적용된 실제 데미지.</summary>
         public int EffectiveDamage()
         {
-            float mul = 1f + (Level - 1) * 0.10f; // 레벨당 +10%
-            if (Equipped == Equip.SharpenedBlade) mul *= 1.30f; // 근접용
-            if (Equipped == Equip.Crossbow) mul *= 1.20f; // 원거리용
+            float mul = 1f + (Level - 1) * 0.10f;
+            if (Equipped == Equip.SharpenedBlade) mul *= 1.30f;
+            if (Equipped == Equip.Crossbow) mul *= 1.20f;
             mul *= CompanionTrait.DamageMultiplierFor(this);
             mul *= BuildingUpgradeRules.TrainingDamageMultiplier();
+            mul *= BuildingUpgradeRules.HighMoraleEfficiencyMultiplier(Morale);
             return Mathf.RoundToInt(Damage * mul);
+        }
+
+        private float EffectiveMoveSpeed()
+        {
+            return MoveSpeed * BuildingUpgradeRules.HighMoraleEfficiencyMultiplier(Morale);
         }
 
         /// <summary>레벨 + 장비 보정된 MaxHp.</summary>
@@ -371,11 +377,12 @@ namespace IL6
 
         private Vector2 ComputeFollowVelocity()
         {
+            float speed = EffectiveMoveSpeed();
             if (CurrentStance == Stance.Hold)
             {
                 Vector2 toAnchor = (Vector2)_holdAnchor - (Vector2)transform.position;
                 Vector2 sep = SeparationFromOthers();
-                if (toAnchor.magnitude > 0.3f) return toAnchor.normalized * MoveSpeed * 0.7f + sep;
+                if (toAnchor.magnitude > 0.3f) return toAnchor.normalized * speed * 0.7f + sep;
                 return sep;
             }
 
@@ -398,7 +405,7 @@ namespace IL6
                     Vector2 toE = (Vector2)enemy.position - (Vector2)transform.position;
                     float de = toE.magnitude;
                     Vector2 sep = SeparationFromOthers();
-                    if (de > AttackRange * 0.85f) return toE.normalized * MoveSpeed + sep;
+                    if (de > AttackRange * 0.85f) return toE.normalized * speed + sep;
                     return sep; // 사거리 안 — 멈추고 자동 공격
                 }
                 // 적이 없고 플레이어가 가까이 있으면 자리 유지
@@ -432,12 +439,12 @@ namespace IL6
                     {
                         Vector2 alignTarget = doorPos + outward * alongOutward;
                         Vector2 toAlign = alignTarget - (Vector2)transform.position;
-                        return toAlign.normalized * MoveSpeed * SprintSpeedMul;
+                        return toAlign.normalized * speed * SprintSpeedMul;
                     }
 
                     // Step 2: 정렬 완료 — 문 통과 (selfInside면 바깥으로, 아니면 안으로)
                     Vector2 throughDir = selfInside ? outward : -outward;
-                    return throughDir * MoveSpeed * SprintSpeedMul;
+                    return throughDir * speed * SprintSpeedMul;
                 }
             }
 
@@ -455,7 +462,7 @@ namespace IL6
             moveDir += SeparationFromOthers();
             if (moveDir.sqrMagnitude < 0.0001f) return Vector2.zero;
             float mag = Mathf.Clamp01(moveDir.magnitude);
-            return moveDir.normalized * MoveSpeed * mag;
+            return moveDir.normalized * speed * mag;
         }
 
         private Vector2 ComputeWorkingVelocity()
@@ -473,7 +480,7 @@ namespace IL6
                 return Vector2.zero;
             }
             var dir = toTarget.normalized + SeparationFromOthers() * 0.5f;
-            return dir.normalized * MoveSpeed;
+            return dir.normalized * EffectiveMoveSpeed();
         }
 
         private Vector2 ComputeFarmingVelocity()
@@ -482,7 +489,7 @@ namespace IL6
             Vector2 toFarm = (Vector2)FarmStation.position - (Vector2)transform.position;
             float d = toFarm.magnitude;
             if (d < 0.4f) return Vector2.zero;
-            return toFarm.normalized * MoveSpeed * 0.6f;
+            return toFarm.normalized * EffectiveMoveSpeed() * 0.6f;
         }
 
         private Vector2 ComputeFleeVelocity()

@@ -7,20 +7,20 @@ namespace IL6
     {
         private static readonly string[] MaleNames =
         {
-            "도윤", "서원", "은규", "지운", "한결", "무영",
-            "태오", "이준", "시우", "건우", "하람", "현준"
+            "Joon", "Seo", "Tae", "Min", "Haru", "Kye",
+            "Ian", "Ren", "Noa", "Gun", "Ari", "Sol"
         };
 
         private static readonly string[] FemaleNames =
         {
-            "려화", "혜인", "선유", "여린", "아린", "서하",
-            "나래", "하윤", "다온", "유나", "소율", "가은"
+            "Ina", "Yuna", "Mira", "Sera", "Rin", "Hana",
+            "Nari", "Soo", "Dara", "Lia", "Ara", "Moa"
         };
 
         private static readonly string[] ChildNames =
         {
-            "이나", "별하", "온유", "다솜", "하루", "로운",
-            "나린", "소미", "초아", "은호", "유리", "보라"
+            "Bomi", "Nuel", "Roa", "Hayan", "Dami", "Yul",
+            "Lumi", "Sori", "Noel", "Bora", "Nuri", "Iru"
         };
 
         public static string GenerateForRole(string role, SeededRng rng)
@@ -46,13 +46,10 @@ namespace IL6
 
         private static string[] PoolForRole(string role)
         {
-            return role switch
-            {
-                "농부" => FemaleNames,
-                "노인" => FemaleNames,
-                "아이" => ChildNames,
-                _ => MaleNames,
-            };
+            string r = role ?? "";
+            if (r.Contains("Child") || r.Contains("child") || r.Contains("아이")) return ChildNames;
+            if (r.Contains("Farmer") || r.Contains("Cook") || r.Contains("Elder") || r.Contains("농부") || r.Contains("노인")) return FemaleNames;
+            return MaleNames;
         }
 
         private static HashSet<string> CollectUsedNames()

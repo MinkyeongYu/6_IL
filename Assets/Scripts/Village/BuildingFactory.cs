@@ -273,5 +273,22 @@ namespace IL6
             go.AddComponent<Building>().Initialize(BuildingKind.Sawmill);
             return go;
         }
+
+        public static GameObject SpawnChurch(Vector3 pos)
+        {
+            var go = new GameObject("Church");
+            go.transform.position = pos;
+            go.transform.localScale = new Vector3(1.05f, 1.15f, 1f);
+            var sr = go.AddComponent<SpriteRenderer>();
+            sr.sortingOrder = 3;
+            ApplySprite(sr, SpriteBank.Cabin());
+            var col = go.AddComponent<BoxCollider2D>(); col.size = Vector2.one;
+            var cf = go.AddComponent<ColorFallback>();
+            cf.Tint = new Color(0.78f, 0.78f, 0.95f);
+            cf.Shape = FallbackShape.Rounded; cf.Circle = false; cf.PixelSize = 64;
+            cf.OutlineWidth = 2; cf.OutlineColor = new Color(0.42f, 0.36f, 0.72f, 1f);
+            go.AddComponent<Building>().Initialize(BuildingKind.Church);
+            return go;
+        }
     }
 }

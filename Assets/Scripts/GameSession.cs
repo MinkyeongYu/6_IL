@@ -149,7 +149,8 @@ namespace IL6
                 {
                     var c = comps[i];
                     if (c == null) continue;
-                    c.Morale -= 15;
+                    int moraleLoss = BuildingUpgradeRules.ReduceMoraleLoss(15, unchecked((uint)day * 2654435761u + (uint)i * 97u));
+                    c.Morale -= moraleLoss;
                     if (c.Morale <= 0)
                     {
                         OnCompanionLost();

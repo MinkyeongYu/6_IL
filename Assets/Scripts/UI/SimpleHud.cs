@@ -206,6 +206,7 @@ namespace IL6
                         break;
                     case BuildingKind.LookoutPost: SpawnLookoutPost(p); break;
                     case BuildingKind.Sawmill: SpawnSawmill(p); break;
+                    case BuildingKind.Church: SpawnChurch(p); break;
                     case BuildingKind.House: SpawnHouse(p); break;
                     case BuildingKind.Fence: VillageStarter.SpawnFence(p, 0f); break;
                     case BuildingKind.Storage:
@@ -1394,6 +1395,11 @@ namespace IL6
                     CostStone = BuildCost(BuildingKind.Sawmill).Stone,
                     Kind = BuildingKind.Sawmill, Available = true,
                     Color = new Color(0.55f, 0.36f, 0.18f) },
+                new BuildSlot { Icon = "U", Name = "Church",
+                    CostWood = BuildCost(BuildingKind.Church).Wood,
+                    CostStone = BuildCost(BuildingKind.Church).Stone,
+                    Kind = BuildingKind.Church, Available = true,
+                    Color = new Color(0.78f, 0.78f, 0.95f) },
             };
 
             const int CellH = 72, Gap = 4;
@@ -2752,5 +2758,6 @@ namespace IL6
         private void SpawnFoodStorage(Vector3 p) => BuildingFactory.SpawnFoodStorage(p);
         private void SpawnLookoutPost(Vector3 p) => BuildingFactory.SpawnLookoutPost(p);
         private void SpawnSawmill(Vector3 p) => BuildingFactory.SpawnSawmill(p);
+        private void SpawnChurch(Vector3 p) => BuildingFactory.SpawnChurch(p);
     }
 }

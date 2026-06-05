@@ -22,7 +22,8 @@ namespace IL6
         TrainingCamp,
         FoodStorage,
         LookoutPost,
-        Sawmill
+        Sawmill,
+        Church
     }
 
     public sealed class Building : MonoBehaviour
@@ -173,6 +174,7 @@ namespace IL6
                 BuildingKind.FoodStorage => new Color(0.95f, 0.78f, 0.4f),
                 BuildingKind.LookoutPost => new Color(0.55f, 0.8f, 1f),
                 BuildingKind.Sawmill => new Color(0.55f, 0.36f, 0.18f),
+                BuildingKind.Church => new Color(0.78f, 0.78f, 0.95f),
                 BuildingKind.Barricade => new Color(0.6f, 0.4f, 0.2f),
                 _ => new Color(0.5f, 0.85f, 0.5f),
             };

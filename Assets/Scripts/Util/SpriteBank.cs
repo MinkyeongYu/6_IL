@@ -56,7 +56,7 @@ namespace IL6
         {
             string r = role ?? "";
             return r.Contains("Aunt") || r.Contains("aunt")
-                || r.Contains("Farmer") || r.Contains("Elder")
+                || r.Contains("Farmer") || r.Contains("Elder") || r.Contains("Cook")
                 || r.Contains("\uB18D") || r.Contains("\uB178\uC778")
                 || r.Contains("?띾?") || r.Contains("?몄씤");
         }
@@ -89,6 +89,7 @@ namespace IL6
             BuildingKind.FoodStorage => Logs(),
             BuildingKind.LookoutPost => Watchtower(),
             BuildingKind.Sawmill => Logs(),
+            BuildingKind.Church => Cabin(),
             BuildingKind.Fence => FenceVertical(),
             BuildingKind.Barricade => WoodBarricade(),
             BuildingKind.Watchtower => Watchtower(),

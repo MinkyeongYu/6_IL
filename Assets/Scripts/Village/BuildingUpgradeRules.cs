@@ -76,6 +76,7 @@ namespace IL6
             BuildingKind.FoodStorage => 10,
             BuildingKind.LookoutPost => 9,
             BuildingKind.Sawmill => 14,
+            BuildingKind.Church => 12,
             _ => 5,
         };
 
@@ -90,6 +91,7 @@ namespace IL6
             BuildingKind.FoodStorage => 3,
             BuildingKind.LookoutPost => 6,
             BuildingKind.Sawmill => 8,
+            BuildingKind.Church => 6,
             _ => 0,
         };
 
@@ -141,6 +143,7 @@ namespace IL6
             BuildingKind.FoodStorage => b.FoodStorageHp,
             BuildingKind.LookoutPost => b.LookoutPostHp,
             BuildingKind.Sawmill => b.SawmillHp,
+            BuildingKind.Church => 180,
             BuildingKind.Barricade => b.BarricadeHp,
             BuildingKind.Fence => b.FenceHp,
             BuildingKind.House => 140,
@@ -208,6 +211,28 @@ namespace IL6
             return 1f + 0.15f * sawmill;
         }
 
+        public static float ChurchMoraleLossReductionChance()
+        {
+            int church = HighestLevel(BuildingKind.Church);
+            return church <= 0 ? 0f : Mathf.Clamp01(0.20f + 0.10f * (church - 1));
+        }
+
+        public static int ReduceMoraleLoss(int baseLoss, uint seed)
+        {
+            if (baseLoss <= 0) return 0;
+            float chance = ChurchMoraleLossReductionChance();
+            if (chance <= 0f) return baseLoss;
+            var rng = new SeededRng(seed);
+            return rng.Next() < chance ? Mathf.CeilToInt(baseLoss * 0.5f) : baseLoss;
+        }
+
+        public static float HighMoraleEfficiencyMultiplier(int morale)
+        {
+            int church = HighestLevel(BuildingKind.Church);
+            if (church <= 0 || morale < 80) return 1f;
+            return 1f + 0.05f * church;
+        }
+
         public static string UpgradeSummary(BuildingKind kind, int nextLevel) => kind switch
         {
             BuildingKind.SeedStorage => $"작물 해금/수확 +{nextLevel * 15}%",
@@ -218,6 +243,7 @@ namespace IL6
             BuildingKind.FoodStorage => $"+{FoodStorageCapPerLevel} Food 보관",
             BuildingKind.LookoutPost => "밤 시야 반경 증가",
             BuildingKind.Sawmill => $"목재 채집 +{nextLevel * 15}%",
+            BuildingKind.Church => $"Morale protection {20 + (nextLevel - 1) * 10}% / high morale efficiency +{nextLevel * 5}%",
             BuildingKind.Farm => "수확량 증가",
             BuildingKind.Fence => "내구도 증가",
             BuildingKind.Campfire => "열/시야/연료량 증가",

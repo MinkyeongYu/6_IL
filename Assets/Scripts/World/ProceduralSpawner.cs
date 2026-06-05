@@ -50,6 +50,11 @@ namespace IL6
         private float _dailyNpcTimer;
         public float DailyNpcIntervalSec = 30f; // 낮 1분당 ~2명 (마을당 동시 최대 2명까지)
         public int MaxAliveNpcs = 3;             // 월드에 동시 살아있는 영입 가능 NPC 상한
+        public int ScarceCompanionCount = 3;
+        public int LowCompanionCount = 6;
+        public float ScarceNpcIntervalSec = 12f;
+        public float LowNpcIntervalSec = 20f;
+        public int ScarceMaxAliveNpcs = 5;
 
         private void Update()
         {
@@ -71,13 +76,36 @@ namespace IL6
             if (isDay)
             {
                 _dailyNpcTimer += Time.deltaTime;
-                if (_dailyNpcTimer >= DailyNpcIntervalSec)
+                if (_dailyNpcTimer >= EffectiveDailyNpcIntervalSec())
                 {
                     _dailyNpcTimer = 0f;
                     SpawnDailyVillageNpc();
                 }
             }
             else _dailyNpcTimer = 0f;
+        }
+
+        private float EffectiveDailyNpcIntervalSec()
+        {
+            int companions = RecruitableNpc.CurrentCompanionCount();
+            if (companions < ScarceCompanionCount) return ScarceNpcIntervalSec;
+            if (companions < LowCompanionCount) return LowNpcIntervalSec;
+            return DailyNpcIntervalSec;
+        }
+
+        private int EffectiveMaxAliveNpcs()
+        {
+            return RecruitableNpc.CurrentCompanionCount() < ScarceCompanionCount
+                ? Mathf.Max(MaxAliveNpcs, ScarceMaxAliveNpcs)
+                : MaxAliveNpcs;
+        }
+
+        private Vector2 DailyNpcSpawnDistanceRange()
+        {
+            int companions = RecruitableNpc.CurrentCompanionCount();
+            if (companions < ScarceCompanionCount) return new Vector2(4.5f, 7.0f);
+            if (companions < LowCompanionCount) return new Vector2(5.5f, 8.0f);
+            return new Vector2(6.5f, 9.0f);
         }
 
         private void EnsureLoaded(int pcx, int pcy)
@@ -152,7 +180,7 @@ namespace IL6
                 {
                     // 월드 NPC 캡 적용
                     int alive = Object.FindObjectsByType<RecruitableNpc>(FindObjectsSortMode.None).Length;
-                    if (alive < MaxAliveNpcs) CreateNpc(x, y, rng);
+                    if (alive < EffectiveMaxAliveNpcs()) CreateNpc(x, y, rng);
                 }
             }
 
@@ -567,8 +595,8 @@ namespace IL6
         {
             new NpcArchetype
             {
-                Role = "사냥꾼",
-                Dialog = "활을 들고 합류하지요. 멀리서 돕겠습니다.",
+                Role = "Hunter",
+                Dialog = "I tracked smoke from the camp. Let me help guard the village.",
                 IsCombat = true,
                 CombatRating = 4, FarmRating = 2,
                 MoveSpeed = 4.6f, AttackRange = 6.5f, AttackDamage = 5, AttackCooldown = 1.4f,
@@ -576,8 +604,8 @@ namespace IL6
             },
             new NpcArchetype
             {
-                Role = "전사",
-                Dialog = "검 한 자루로 살아남아 왔습니다. 데려가 주십시오.",
+                Role = "Warrior",
+                Dialog = "My axe still has strength. Point me at the dead.",
                 IsCombat = true,
                 CombatRating = 5, FarmRating = 1,
                 MoveSpeed = 4.2f, AttackRange = 4.5f, AttackDamage = 9, AttackCooldown = 1.0f,
@@ -585,8 +613,8 @@ namespace IL6
             },
             new NpcArchetype
             {
-                Role = "농부",
-                Dialog = "씨를 뿌리고 거두는 일이라면 자신 있어요.",
+                Role = "Farmer",
+                Dialog = "If there is soil under the snow, I can make food from it.",
                 IsCombat = false,
                 CombatRating = 1, FarmRating = 5,
                 MoveSpeed = 4.0f, AttackRange = 1.5f, AttackDamage = 2, AttackCooldown = 2.0f,
@@ -594,8 +622,8 @@ namespace IL6
             },
             new NpcArchetype
             {
-                Role = "아이",
-                Dialog = "...혼자 살아남았어요. 같이 가도 될까요?",
+                Role = "Child",
+                Dialog = "I saw your fire. Can I stay near it?",
                 IsCombat = false,
                 CombatRating = 0, FarmRating = 2,
                 MoveSpeed = 5.5f, AttackRange = 1.0f, AttackDamage = 1, AttackCooldown = 2.5f,
@@ -603,12 +631,12 @@ namespace IL6
             },
             new NpcArchetype
             {
-                Role = "노인",
-                Dialog = "젊은 시절엔 농사로 마을을 먹여살렸지... 도울 수 있을 게야.",
+                Role = "Cook",
+                Dialog = "Keep me alive and I will stretch every meal.",
                 IsCombat = false,
                 CombatRating = 1, FarmRating = 5,
                 MoveSpeed = 3.0f, AttackRange = 1.5f, AttackDamage = 2, AttackCooldown = 2.2f,
-                Tint = new Color(0.85f, 0.85f, 0.95f), Shape = FallbackShape.Rounded, // 흰머리 회백
+                Tint = new Color(0.85f, 0.85f, 0.95f), Shape = FallbackShape.Rounded,
             },
         };
 
@@ -623,12 +651,13 @@ namespace IL6
 
             // 월드에 이미 살아있는 NPC 가 상한 이상이면 스폰 스킵 — 누적 방지
             int alive = Object.FindObjectsByType<RecruitableNpc>(FindObjectsSortMode.None).Length;
-            if (alive >= MaxAliveNpcs) return;
+            if (alive >= EffectiveMaxAliveNpcs()) return;
 
             uint seed = Seed ^ unchecked((uint)Time.frameCount);
             var rng = new SeededRng(seed);
             float angle = rng.Next() * Mathf.PI * 2f;
-            float dist = 6.5f + rng.Next() * 2.5f;
+            Vector2 spawnRange = DailyNpcSpawnDistanceRange();
+            float dist = spawnRange.x + rng.Next() * Mathf.Max(0.1f, spawnRange.y - spawnRange.x);
             float x = GameConstants.VillageCenterX + Mathf.Cos(angle) * dist;
             float y = GameConstants.VillageCenterY + Mathf.Sin(angle) * dist;
             CreateNpc(x, y, rng);
