@@ -139,3 +139,4 @@
 - Tree resources expanded from two base sprites to nine variants: pine, bare, and snow-covered silhouettes.
 - Procedural tree spawning now picks deterministic variants by world position for more natural map variety.
 - Tree collision is reduced to the visible trunk/base area instead of the full canopy, making movement blocking easier to read.
+- HUD icons were revised again to match the applied gameplay/reference pixel art more closely: transparent object icons, dark pixel outlines, and no circular badge frame.
