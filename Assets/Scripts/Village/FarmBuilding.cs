@@ -12,10 +12,15 @@ namespace IL6
     /// </summary>
     public sealed class FarmBuilding : MonoBehaviour
     {
-        public int NightsToRipe = 2;
-        public int BaseYield = 10;
-        public int PerWorkerBonus = 6;
-        public int MaxWorkers = 2;
+        public enum CropKind { Potato, Turnip, Wheat }
+
+        public CropKind CurrentCrop = CropKind.Potato;
+        public int BaseMaxWorkers = 2;
+
+        public int NightsToRipe => EffectiveGrowthNights(CurrentCrop);
+        public int BaseYield => CropBaseYield(CurrentCrop);
+        public int PerWorkerBonus => CropWorkerBonus(CurrentCrop);
+        public int MaxWorkers => BaseMaxWorkers + (FarmLevel >= 3 ? 1 : 0) + (FarmLevel >= 5 ? 1 : 0);
 
         /// <summary>최대 농장 수 = 1(기본) + 창고 수. 창고를 지을 때마다 농장 한도 +1.</summary>
         public static int MaxFarmsAllowed()
@@ -42,6 +47,14 @@ namespace IL6
         public readonly List<Companion> Workers = new();
 
         private Action _unsub;
+        private int FarmLevel
+        {
+            get
+            {
+                var building = GetComponent<Building>();
+                return building != null ? Mathf.Max(1, building.Level) : 1;
+            }
+        }
 
         private void Start()
         {
@@ -57,6 +70,12 @@ namespace IL6
         private void OnNight()
         {
             if (HarvestReady) return;
+            if (IsBlizzardStalled())
+            {
+                GameFeel.FloatText(transform.position, $"{CropDisplayName(CurrentCrop)} stalled", new Color(0.55f, 0.85f, 1f));
+                return;
+            }
+
             NightsPassed++;
             if (NightsPassed >= NightsToRipe) HarvestReady = true;
         }
@@ -74,7 +93,8 @@ namespace IL6
         {
             if (!HarvestReady) return 0;
             int baseYield = BaseYield + Workers.Count * PerWorkerBonus;
-            int yield = Mathf.Max(1, Mathf.RoundToInt(baseYield * BuildingUpgradeRules.CropYieldMultiplier()));
+            float farmLevelBonus = 1f + 0.15f * (FarmLevel - 1);
+            int yield = Mathf.Max(1, Mathf.RoundToInt(baseYield * BuildingUpgradeRules.CropYieldMultiplier() * farmLevelBonus));
             var session = GameSession.Instance;
             if (session != null) session.Resources.Add(ResourceKind.Food, yield);
             GameFeel.FloatText(transform.position, $"+{yield} Food", new Color(0.7f, 0.95f, 0.5f));
@@ -83,6 +103,97 @@ namespace IL6
             NightsPassed = 0;
             HarvestReady = false;
             return yield;
+        }
+
+        public int EstimatedYield()
+        {
+            int baseYield = BaseYield + Workers.Count * PerWorkerBonus;
+            float farmLevelBonus = 1f + 0.15f * (FarmLevel - 1);
+            return Mathf.Max(1, Mathf.RoundToInt(baseYield * BuildingUpgradeRules.CropYieldMultiplier() * farmLevelBonus));
+        }
+
+        public bool CanChangeCrop()
+        {
+            return !HarvestReady && NightsPassed == 0 && Workers.Count == 0 && UnlockedCrops().Count > 1;
+        }
+
+        public bool CycleCrop()
+        {
+            if (!CanChangeCrop()) return false;
+            var crops = UnlockedCrops();
+            if (crops.Count <= 1) return false;
+            int current = crops.IndexOf(CurrentCrop);
+            CurrentCrop = crops[(current + 1 + crops.Count) % crops.Count];
+            GameFeel.FloatText(transform.position, CropDisplayName(CurrentCrop), new Color(0.95f, 0.9f, 0.45f));
+            return true;
+        }
+
+        public string CropLabel()
+        {
+            return $"{CropDisplayName(CurrentCrop)} {NightsPassed}/{NightsToRipe}";
+        }
+
+        public static string CropDisplayName(CropKind crop) => crop switch
+        {
+            CropKind.Turnip => "Turnip",
+            CropKind.Wheat => "Wheat",
+            _ => "Potato",
+        };
+
+        public static int CropBaseYield(CropKind crop) => crop switch
+        {
+            CropKind.Turnip => 6,
+            CropKind.Wheat => 22,
+            _ => 10,
+        };
+
+        public static int CropWorkerBonus(CropKind crop) => crop switch
+        {
+            CropKind.Turnip => 3,
+            CropKind.Wheat => 8,
+            _ => 6,
+        };
+
+        public static int CropGrowthNights(CropKind crop) => crop switch
+        {
+            CropKind.Turnip => 1,
+            CropKind.Wheat => 3,
+            _ => 2,
+        };
+
+        public static int RequiredSeedStorageLevel(CropKind crop) => crop switch
+        {
+            CropKind.Turnip => 2,
+            CropKind.Wheat => 3,
+            _ => 0,
+        };
+
+        public static bool IsCropUnlocked(CropKind crop)
+        {
+            return BuildingUpgradeRules.HighestLevel(BuildingKind.SeedStorage) >= RequiredSeedStorageLevel(crop);
+        }
+
+        public static List<CropKind> UnlockedCrops()
+        {
+            var result = new List<CropKind> { CropKind.Potato };
+            if (IsCropUnlocked(CropKind.Turnip)) result.Add(CropKind.Turnip);
+            if (IsCropUnlocked(CropKind.Wheat)) result.Add(CropKind.Wheat);
+            return result;
+        }
+
+        private int EffectiveGrowthNights(CropKind crop)
+        {
+            int nights = CropGrowthNights(crop);
+            if (FarmLevel >= 4) nights = Mathf.Max(1, nights - 1);
+            return nights;
+        }
+
+        private bool IsBlizzardStalled()
+        {
+            if (CurrentCrop == CropKind.Turnip) return false;
+            if (FarmLevel >= 4) return false;
+            var nights = UnityEngine.Object.FindObjectsByType<NightController>(FindObjectsSortMode.None);
+            return nights != null && nights.Length > 0 && nights[0] != null && nights[0].IsBlizzard;
         }
     }
 }

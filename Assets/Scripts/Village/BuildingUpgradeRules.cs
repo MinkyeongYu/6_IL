@@ -244,7 +244,7 @@ namespace IL6
             BuildingKind.LookoutPost => "밤 시야 반경 증가",
             BuildingKind.Sawmill => $"목재 채집 +{nextLevel * 15}%",
             BuildingKind.Church => $"Morale protection {20 + (nextLevel - 1) * 10}% / high morale efficiency +{nextLevel * 5}%",
-            BuildingKind.Farm => "수확량 증가",
+            BuildingKind.Farm => "수확량/농부/성장 개선",
             BuildingKind.Fence => "내구도 증가",
             BuildingKind.Campfire => "열/시야/연료량 증가",
             _ => "HP와 기능 효율 증가",

@@ -145,3 +145,4 @@
 - Tree runtime sprites were re-extracted with alpha-trimmed padding so no tree variant touches the 64x64 sprite edge, and the mistaken vertical-fence crop was removed from tree spawning.
 - Runtime character, animal, enemy, and prop sprites were re-extracted as single 64x64 transparent frames with safe padding so applied Resources sprites no longer show clipped edges or full animation sheets.
 - Always-on HUD frames were removed or made translucent so status, resources, phase, mode tabs, build slots, and context actions block less of the game view.
+- Crop farming was expanded with Potato, Turnip, and Wheat crop choices. Seed Storage levels unlock advanced crops, blizzards stall vulnerable crops unless farms are upgraded, and Farm levels improve yield, worker slots, and late-stage growth speed.

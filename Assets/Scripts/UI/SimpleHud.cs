@@ -1759,14 +1759,19 @@ namespace IL6
             }
             if (best == null) return;
 
+            if (best.CanChangeCrop())
+            {
+                actions.Add(new ContextAction(48, $"Crop: {best.CropLabel()}", true, () => best.CycleCrop()));
+            }
+
             if (best.HarvestReady)
             {
-                int yield = best.BaseYield + best.Workers.Count * best.PerWorkerBonus;
+                int yield = best.EstimatedYield();
                 actions.Add(new ContextAction(50, $"Harvest +{yield}", true, () => best.Harvest()));
             }
             else if (best.Workers.Count < best.MaxWorkers)
             {
-                actions.Add(new ContextAction(50, $"Assign farmer {best.Workers.Count}/{best.MaxWorkers}", true, () =>
+                actions.Add(new ContextAction(50, $"{best.CropLabel()} - Farmer {best.Workers.Count}/{best.MaxWorkers}", true, () =>
                 {
                     var c = FindNearestFreeCompanion(best.transform.position);
                     if (c != null) best.TryAssignWorker(c);
@@ -2216,14 +2221,14 @@ namespace IL6
 
                 if (farm.HarvestReady)
                 {
-                    int yield = farm.BaseYield + farm.Workers.Count * farm.PerWorkerBonus;
+                    int yield = farm.EstimatedYield();
                     var rect = new Rect(guiX - 60, guiY - 26, 120, 22);
-                    if (UiTheme.Button(rect, $"🌾 수확 +{yield}", _smallBtn)) farm.Harvest();
+                    if (UiTheme.Button(rect, $"Harvest +{yield}", _smallBtn)) farm.Harvest();
                 }
                 else
                 {
                     GUI.Label(new Rect(guiX - 60, guiY - 26, 120, 18),
-                        $"성장중 {farm.NightsPassed}/{farm.NightsToRipe}", _labelSubtle);
+                        farm.CropLabel(), _labelSubtle);
                 }
 
                 if (!farm.HarvestReady && farm.Workers.Count < farm.MaxWorkers && Player != null)
@@ -2231,7 +2236,7 @@ namespace IL6
                     if (Vector2.Distance(Player.transform.position, farm.transform.position) < 3f)
                     {
                         var rect2 = new Rect(guiX - 60, guiY - 4, 120, 20);
-                        if (UiTheme.Button(rect2, $"동료 배치 {farm.Workers.Count}/{farm.MaxWorkers}", _smallBtn))
+                        if (UiTheme.Button(rect2, $"Farmer {farm.Workers.Count}/{farm.MaxWorkers}", _smallBtn))
                         {
                             var c = FindNearestFreeCompanion(farm.transform.position);
                             if (c != null) farm.TryAssignWorker(c);
