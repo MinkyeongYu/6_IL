@@ -12,9 +12,11 @@ namespace IL6
         public WeaponDefinition Weapon;
         public uint RngSeed = 2026u;
         public PlayerProgression Progression;
+        public float RecentlyAttackingWindowSec = 0.8f;
 
         public int WeaponIndex { get; private set; } = -1;
         public Color CurrentProjectileColor { get; private set; } = new Color(1f, 0.92f, 0.3f);
+        public bool IsRecentlyAttacking => Time.time - _lastAttackAt <= RecentlyAttackingWindowSec;
 
         public void SwitchToWeapon(int idx)
         {
@@ -31,6 +33,7 @@ namespace IL6
         }
 
         private float _cooldown;
+        private float _lastAttackAt = -100f;
         private SeededRng _rng;
         private Transform _self;
 
@@ -81,6 +84,7 @@ namespace IL6
             }
             float cdMul = Progression != null ? Progression.CooldownMultiplier : 1f;
             _cooldown = Weapon.CooldownSec * cdMul;
+            _lastAttackAt = Time.time;
         }
 
         private void SpawnProjectileSpread(MonoBehaviour target, int dmg, int count)

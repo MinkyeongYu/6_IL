@@ -47,6 +47,7 @@ namespace IL6
         public readonly List<Companion> Workers = new();
 
         private Action _unsub;
+        private float _coldYieldMultiplier = 1f;
         private int FarmLevel
         {
             get
@@ -70,6 +71,20 @@ namespace IL6
         private void OnNight()
         {
             if (HarvestReady) return;
+            float coldTempC = CurrentFarmTemperatureCelsius();
+            float protectedTempC = FarmProtectedTemperature(coldTempC);
+            if (!SurvivesColdNight(protectedTempC))
+            {
+                NightsPassed = 0;
+                _coldYieldMultiplier = 1f;
+                foreach (var w in Workers) if (w != null) w.ReleaseFarm();
+                Workers.Clear();
+                GameFeel.FloatText(transform.position, $"{CropDisplayName(CurrentCrop)} withered", new Color(0.95f, 0.55f, 0.45f));
+                return;
+            }
+
+            _coldYieldMultiplier = Mathf.Min(_coldYieldMultiplier, CropColdYieldMultiplier(CurrentCrop, protectedTempC));
+
             if (IsBlizzardStalled())
             {
                 GameFeel.FloatText(transform.position, $"{CropDisplayName(CurrentCrop)} stalled", new Color(0.55f, 0.85f, 1f));
@@ -94,7 +109,7 @@ namespace IL6
             if (!HarvestReady) return 0;
             int baseYield = BaseYield + Workers.Count * PerWorkerBonus;
             float farmLevelBonus = 1f + 0.15f * (FarmLevel - 1);
-            int yield = Mathf.Max(1, Mathf.RoundToInt(baseYield * BuildingUpgradeRules.CropYieldMultiplier() * farmLevelBonus));
+            int yield = Mathf.Max(1, Mathf.RoundToInt(baseYield * BuildingUpgradeRules.CropYieldMultiplier() * farmLevelBonus * _coldYieldMultiplier));
             var session = GameSession.Instance;
             if (session != null) session.Resources.Add(ResourceKind.Food, yield);
             GameFeel.FloatText(transform.position, $"+{yield} Food", new Color(0.7f, 0.95f, 0.5f));
@@ -102,6 +117,7 @@ namespace IL6
             Workers.Clear();
             NightsPassed = 0;
             HarvestReady = false;
+            _coldYieldMultiplier = 1f;
             return yield;
         }
 
@@ -109,7 +125,7 @@ namespace IL6
         {
             int baseYield = BaseYield + Workers.Count * PerWorkerBonus;
             float farmLevelBonus = 1f + 0.15f * (FarmLevel - 1);
-            return Mathf.Max(1, Mathf.RoundToInt(baseYield * BuildingUpgradeRules.CropYieldMultiplier() * farmLevelBonus));
+            return Mathf.Max(1, Mathf.RoundToInt(baseYield * BuildingUpgradeRules.CropYieldMultiplier() * farmLevelBonus * _coldYieldMultiplier));
         }
 
         public bool CanChangeCrop()
@@ -124,6 +140,7 @@ namespace IL6
             if (crops.Count <= 1) return false;
             int current = crops.IndexOf(CurrentCrop);
             CurrentCrop = crops[(current + 1 + crops.Count) % crops.Count];
+            _coldYieldMultiplier = 1f;
             GameFeel.FloatText(transform.position, CropDisplayName(CurrentCrop), new Color(0.95f, 0.9f, 0.45f));
             return true;
         }
@@ -161,6 +178,48 @@ namespace IL6
             _ => 2,
         };
 
+        public static float CropColdSurvivalChance(CropKind crop, float temperatureCelsius)
+        {
+            float hardyLimit = crop switch
+            {
+                CropKind.Turnip => -34f,
+                CropKind.Potato => -26f,
+                CropKind.Wheat => -18f,
+                _ => -24f,
+            };
+
+            float pressure = Mathf.Max(0f, hardyLimit - temperatureCelsius);
+            float lossPerDegree = crop switch
+            {
+                CropKind.Turnip => 0.018f,
+                CropKind.Potato => 0.035f,
+                CropKind.Wheat => 0.055f,
+                _ => 0.04f,
+            };
+            return Mathf.Clamp(1f - pressure * lossPerDegree, 0.1f, 1f);
+        }
+
+        public static float CropColdYieldMultiplier(CropKind crop, float temperatureCelsius)
+        {
+            float yieldLimit = crop switch
+            {
+                CropKind.Turnip => -28f,
+                CropKind.Potato => -18f,
+                CropKind.Wheat => -10f,
+                _ => -16f,
+            };
+
+            float pressure = Mathf.Max(0f, yieldLimit - temperatureCelsius);
+            float lossPerDegree = crop switch
+            {
+                CropKind.Turnip => 0.018f,
+                CropKind.Potato => 0.028f,
+                CropKind.Wheat => 0.042f,
+                _ => 0.03f,
+            };
+            return Mathf.Clamp(1f - pressure * lossPerDegree, 0.25f, 1f);
+        }
+
         public static int RequiredSeedStorageLevel(CropKind crop) => crop switch
         {
             CropKind.Turnip => 2,
@@ -194,6 +253,40 @@ namespace IL6
             if (FarmLevel >= 4) return false;
             var nights = UnityEngine.Object.FindObjectsByType<NightController>(FindObjectsSortMode.None);
             return nights != null && nights.Length > 0 && nights[0] != null && nights[0].IsBlizzard;
+        }
+
+        private bool SurvivesColdNight(float temperatureCelsius)
+        {
+            float chance = CropColdSurvivalChance(CurrentCrop, temperatureCelsius);
+            return UnityEngine.Random.value <= chance;
+        }
+
+        private float FarmProtectedTemperature(float temperatureCelsius)
+        {
+            return temperatureCelsius + Mathf.Max(0, FarmLevel - 1) * 2f;
+        }
+
+        private static float CurrentFarmTemperatureCelsius()
+        {
+            var session = GameSession.Instance;
+            if (session == null || session.Cycle == null) return -8f;
+
+            float baseTemp = session.Cycle.Phase switch
+            {
+                Phase.Day => -8f,
+                Phase.Evening => -18f,
+                Phase.Night => -28f,
+                Phase.Dawn => -14f,
+                _ => -8f
+            };
+            float progress = session.Cycle.PhaseDurationSec > 0f
+                ? session.Cycle.ElapsedInPhase / session.Cycle.PhaseDurationSec
+                : 0f;
+            float nightDrop = session.Cycle.Phase == Phase.Night ? -8f * progress : 0f;
+
+            var night = UnityEngine.Object.FindFirstObjectByType<NightController>();
+            float blizzardDrop = night != null && night.IsBlizzard ? -8f : 0f;
+            return baseTemp + nightDrop + blizzardDrop;
         }
     }
 }

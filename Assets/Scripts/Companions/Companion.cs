@@ -144,6 +144,8 @@ namespace IL6
         private CircleCollider2D _col;
         private System.Action _unsubNight;
         private System.Action _unsubDawn;
+        private Rigidbody2D _playerRb;
+        private PlayerAttackController _playerAttack;
 
         public void AssignGather(Gatherable target)
         {
@@ -228,6 +230,7 @@ namespace IL6
                 var p = GameObject.FindWithTag("Player");
                 if (p != null) Player = p.transform;
             }
+            CachePlayerStateReaders();
             _unsubNight = EventBus.Instance.Subscribe<NightStartedPayload>(_ => OnNightStarted());
             _unsubDawn = EventBus.Instance.Subscribe<DawnStartedPayload>(_ => OnDawnStarted());
         }
@@ -387,16 +390,18 @@ namespace IL6
             }
 
             if (Player == null) return Vector2.zero;
+            CachePlayerStateReaders();
 
             // 우선순위: 플레이어가 시야를 벗어났으면 적 무시하고 따라감.
             float playerDist = Vector2.Distance((Vector2)transform.position, (Vector2)Player.position);
             bool playerInSight = playerDist < SightRange;
+            bool prioritizeFollow = playerDist > PriorityFollowDistance(SightRange, FormationRadius, IsPlayerMoving(), IsPlayerAttacking());
             if (!playerInSight)
             {
                 // formation slot 으로 빠르게 — 마을 사각/문 통과는 아래 분기에서 처리
                 // 그냥 fall-through 해서 마을/문/포메이션 follow 로 진행
             }
-            else if (IsCombat)
+            else if (IsCombat && !prioritizeFollow)
             {
                 // 플레이어 시야 안 + 적 시야 안 → 적 우선 추격
                 Transform enemy = FindAnyHostileInSight();
@@ -463,6 +468,31 @@ namespace IL6
             if (moveDir.sqrMagnitude < 0.0001f) return Vector2.zero;
             float mag = Mathf.Clamp01(moveDir.magnitude);
             return moveDir.normalized * speed * mag;
+        }
+
+        public static float PriorityFollowDistance(float sightRange, float formationRadius, bool playerMoving, bool playerAttacking)
+        {
+            float idle = Mathf.Max(formationRadius * 3.2f, sightRange * 0.72f);
+            if (playerAttacking) return Mathf.Max(idle, sightRange * 1.12f);
+            if (playerMoving) return Mathf.Max(formationRadius * 2.0f, sightRange * 0.42f);
+            return idle;
+        }
+
+        private void CachePlayerStateReaders()
+        {
+            if (Player == null) return;
+            if (_playerRb == null) _playerRb = Player.GetComponent<Rigidbody2D>();
+            if (_playerAttack == null) _playerAttack = Player.GetComponent<PlayerAttackController>();
+        }
+
+        private bool IsPlayerMoving()
+        {
+            return _playerRb != null && _playerRb.velocity.sqrMagnitude > 0.05f;
+        }
+
+        private bool IsPlayerAttacking()
+        {
+            return _playerAttack != null && _playerAttack.IsRecentlyAttacking;
         }
 
         private Vector2 ComputeWorkingVelocity()
