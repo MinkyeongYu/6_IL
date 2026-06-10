@@ -17,6 +17,7 @@ namespace IL6
         public const float MinHalfSize = 5f;
         public const float MaxHalfSize = 14f;
         public const float HalfSizePerBuilding = 0.4f; // 비-펜스 건물 1당 +0.4u
+        private enum FencePieceType { Left, Center, Right }
 
         /// <summary>비-펜스 건물 수에 따른 목표 halfSize.</summary>
         public static float TargetHalfSize()
@@ -54,7 +55,7 @@ namespace IL6
                 Vector3 pos = center + new Vector3(lx, -halfSize, 0f);
                 if (TooCloseToFence(pos, 0.4f)) continue;
                 if (i == gateSlot && !HasGateNear(pos, 1.2f)) SpawnGate(pos);
-                else if (Mathf.Abs(i - gateSlot) > 1) SpawnFence(pos, 0f);
+                else if (Mathf.Abs(i - gateSlot) > 1) SpawnFence(pos, 0f, GetFencePieceTypeWithGate(i, slots - 1, gateSlot));
             }
             // 북쪽
             for (int i = 0; i < slots; i++)
@@ -62,7 +63,7 @@ namespace IL6
                 float lx = startOffset + i * spacing;
                 Vector3 pos = center + new Vector3(lx, halfSize, 0f);
                 if (TooCloseToFence(pos, 0.4f)) continue;
-                SpawnFence(pos, 0f);
+                SpawnFence(pos, 0f, GetFencePieceType(i, slots - 1));
             }
             // 동/서
             for (int i = 0; i < slots; i++)
@@ -70,8 +71,9 @@ namespace IL6
                 float ly = startOffset + i * spacing;
                 Vector3 wpos = center + new Vector3(-halfSize, ly, 0f);
                 Vector3 epos = center + new Vector3(halfSize, ly, 0f);
-                if (!TooCloseToFence(wpos, 0.4f)) SpawnFence(wpos, 90f);
-                if (!TooCloseToFence(epos, 0.4f)) SpawnFence(epos, 90f);
+                var piece = GetFencePieceType(i, slots - 1);
+                if (!TooCloseToFence(wpos, 0.4f)) SpawnFence(wpos, 90f, piece);
+                if (!TooCloseToFence(epos, 0.4f)) SpawnFence(epos, 90f, piece);
             }
         }
 
@@ -136,7 +138,7 @@ namespace IL6
             foreach (var slot in OuterFenceSlots(center, CurrentHalfSize, spacing))
             {
                 if (TooCloseToFence(slot.Position, 0.4f)) continue;
-                SpawnFence(slot.Position, slot.RotationDeg);
+                SpawnFence(slot.Position, slot.RotationDeg, slot.PieceType);
                 built++;
             }
             return built;
@@ -146,11 +148,13 @@ namespace IL6
         {
             public readonly Vector3 Position;
             public readonly float RotationDeg;
+            public readonly FencePieceType PieceType;
 
-            public FenceSlot(Vector3 position, float rotationDeg)
+            public FenceSlot(Vector3 position, float rotationDeg, FencePieceType pieceType)
             {
                 Position = position;
                 RotationDeg = rotationDeg;
+                PieceType = pieceType;
             }
         }
 
@@ -164,20 +168,21 @@ namespace IL6
             {
                 if (Mathf.Abs(i - gateSlot) <= 1) continue;
                 float lx = startOffset + i * spacing;
-                yield return new FenceSlot(center + new Vector3(lx, -halfSize, 0f), 0f);
+                yield return new FenceSlot(center + new Vector3(lx, -halfSize, 0f), 0f, GetFencePieceTypeWithGate(i, slots - 1, gateSlot));
             }
 
             for (int i = 0; i < slots; i++)
             {
                 float lx = startOffset + i * spacing;
-                yield return new FenceSlot(center + new Vector3(lx, halfSize, 0f), 0f);
+                yield return new FenceSlot(center + new Vector3(lx, halfSize, 0f), 0f, GetFencePieceType(i, slots - 1));
             }
 
             for (int i = 0; i < slots; i++)
             {
                 float ly = startOffset + i * spacing;
-                yield return new FenceSlot(center + new Vector3(-halfSize, ly, 0f), 90f);
-                yield return new FenceSlot(center + new Vector3(halfSize, ly, 0f), 90f);
+                var piece = GetFencePieceType(i, slots - 1);
+                yield return new FenceSlot(center + new Vector3(-halfSize, ly, 0f), 90f, piece);
+                yield return new FenceSlot(center + new Vector3(halfSize, ly, 0f), 90f, piece);
             }
         }
 
@@ -206,14 +211,14 @@ namespace IL6
                 float lx = startOffset + i * spacing;
                 Vector3 pos = center + new Vector3(lx, -halfSize, 0f);
                 if (i == gateSlot) SpawnGate(pos);
-                else if (Mathf.Abs(i - gateSlot) > 1) SpawnFence(pos, 0f);
+                else if (Mathf.Abs(i - gateSlot) > 1) SpawnFence(pos, 0f, GetFencePieceTypeWithGate(i, slotsPerSide - 1, gateSlot));
             }
             // 북쪽 변
             for (int i = 0; i < slotsPerSide; i++)
             {
                 float lx = startOffset + i * spacing;
                 Vector3 pos = center + new Vector3(lx, halfSize, 0f);
-                SpawnFence(pos, 0f);
+                SpawnFence(pos, 0f, GetFencePieceType(i, slotsPerSide - 1));
             }
             // 서쪽/동쪽 — 코너 포함 전 구간. 모서리에서 가로 펜스와 시각적으로 겹치지만 빈틈 없음.
             for (int i = 0; i < slotsPerSide; i++)
@@ -221,8 +226,9 @@ namespace IL6
                 float ly = startOffset + i * spacing;
                 Vector3 wpos = center + new Vector3(-halfSize, ly, 0f);
                 Vector3 epos = center + new Vector3(halfSize, ly, 0f);
-                SpawnFence(wpos, 90f);
-                SpawnFence(epos, 90f);
+                var piece = GetFencePieceType(i, slotsPerSide - 1);
+                SpawnFence(wpos, 90f, piece);
+                SpawnFence(epos, 90f, piece);
             }
         }
 
@@ -271,6 +277,11 @@ namespace IL6
 
         public static GameObject SpawnFence(Vector3 pos, float rotDeg)
         {
+            return SpawnFence(pos, rotDeg, FencePieceType.Center);
+        }
+
+        private static GameObject SpawnFence(Vector3 pos, float rotDeg, FencePieceType pieceType)
+        {
             var go = new GameObject("Fence");
             go.transform.position = pos;
             go.transform.rotation = Quaternion.Euler(0, 0, rotDeg);
@@ -280,7 +291,13 @@ namespace IL6
             var sr = go.AddComponent<SpriteRenderer>();
             sr.sortingOrder = 3;
             // 수평 방향 스프라이트 사용 — 폭이 넓은 판자 형태
-            var fSpr = SpriteBank.SnowFenceH();
+            Sprite fSpr = pieceType switch
+            {
+                FencePieceType.Left => SpriteBank.SnowFenceLeft(),
+                FencePieceType.Right => SpriteBank.SnowFenceRight(),
+                _ => SpriteBank.SnowFenceCenter()
+            };
+            if (fSpr == null) fSpr = SpriteBank.SnowFenceH();
             if (fSpr != null) sr.sprite = fSpr;
 
             var col = go.AddComponent<BoxCollider2D>();
@@ -298,6 +315,20 @@ namespace IL6
             var b = go.AddComponent<Building>();
             b.Initialize(BuildingKind.Fence);
             return go;
+        }
+
+        private static FencePieceType GetFencePieceType(int index, int lastIndex)
+        {
+            if (index <= 0) return FencePieceType.Left;
+            if (index >= lastIndex) return FencePieceType.Right;
+            return FencePieceType.Center;
+        }
+
+        private static FencePieceType GetFencePieceTypeWithGate(int index, int lastIndex, int gateSlot)
+        {
+            if (index < gateSlot) return GetFencePieceType(index, gateSlot - 1);
+            if (index > gateSlot) return GetFencePieceType(index - gateSlot - 1, lastIndex - gateSlot - 1);
+            return FencePieceType.Center;
         }
 
         public static GameObject SpawnCampfire(Vector3 pos)

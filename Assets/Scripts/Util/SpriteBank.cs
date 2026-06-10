@@ -11,6 +11,18 @@ namespace IL6
             return s;
         }
 
+        public static Sprite LoadSubSprite(string path, string spriteName)
+        {
+            var sprites = Resources.LoadAll<Sprite>($"Sprites/{path}");
+            foreach (var s in sprites)
+            {
+                if (s != null && s.name == spriteName) return s;
+            }
+
+            Debug.LogWarning($"[SpriteBank] Missing sub sprite: Sprites/{path}/{spriteName}");
+            return null;
+        }
+
         public static Sprite Deer() => Load("Animals/deer");
         public static Sprite Wolf() => Load("Animals/wolf");
         public static Sprite Rabbit() => Load("Animals/rabbit");
@@ -98,6 +110,9 @@ namespace IL6
         public static Sprite Watchtower() => Load("Props/watchtower");
         public static Sprite FenceVertical() => Load("Props/fence_vertical");
         public static Sprite SnowFenceH() => Load("Props/snow_fence_h");
+        public static Sprite SnowFenceLeft() => LoadSubSprite("Props/Fence", "wooden_fence_Left");
+        public static Sprite SnowFenceCenter() => LoadSubSprite("Props/Fence", "wooden_fence_Center");
+        public static Sprite SnowFenceRight() => LoadSubSprite("Props/Fence", "wooden_fence_Right");
         public static Sprite WoodBarricade() => Load("Props/wood_barricade");
         public static Sprite StoneWall() => Load("Props/stone_wall");
         public static Sprite SpikeBarricade() => Load("Props/spike_barricade");
@@ -114,7 +129,7 @@ namespace IL6
             BuildingKind.LookoutPost => Watchtower(),
             BuildingKind.Sawmill => Logs(),
             BuildingKind.Church => Cabin(),
-            BuildingKind.Fence => FenceVertical(),
+            BuildingKind.Fence => SnowFenceCenter(),
             BuildingKind.Barricade => WoodBarricade(),
             BuildingKind.Watchtower => Watchtower(),
             BuildingKind.House => Cabin(),
