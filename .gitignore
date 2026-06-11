@@ -69,6 +69,11 @@ Thumbs.db
 release/
 InisLand_v*_portable.exe
 6IL_v*_portable.exe
+6IL_v*_portable_Data/
+InisLand_v*_portable_Data/
+MonoBleedingEdge/
+UnityPlayer.dll
+UnityCrashHandler64.exe
 *.asar
 Build/Windows/
 Build/WebGL/

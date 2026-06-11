@@ -97,7 +97,7 @@
 
 ## 8. 최신 빌드/UX/VFX 확인 기준
 
-- **권위 빌드 경로**: Unity `IL6.EditorBuild.BuildScript.BuildWindows`가 `Build/Windows/IL6.exe`를 만들고, 루트에는 공유용 `6IL_v0.2.0_portable.exe`만 남긴다.
+- **권위 빌드 경로**: Unity `IL6.EditorBuild.BuildScript.BuildWindows`가 `Build/Windows/IL6.exe`를 만들고, 루트에는 공유용 `6IL_v0.2.0_portable.exe`와 실행에 필요한 `6IL_v0.2.0_portable_Data/`, `UnityPlayer.dll`, `MonoBleedingEdge/` 런타임 파일을 함께 배치한다.
 - **실행파일 최신성**: 모든 소스, 설정, 기획서 변경 이후 마지막에 한 번만 Windows 빌드를 수행하고 `LastWriteTime`이 변경 파일보다 최신인지 확인한다.
 - **HUD UX 규칙**: 같은 레이어의 HUD 요소는 서로 겹치지 않는 것을 기본값으로 하며, 자원/체력/목표/선택 피드백은 플레이 액션 근처에서 즉시 읽히게 한다.
 - **VFX 기준**: 공격, 피격, 채집, 건설, 동료 합류, 아이템 획득, 웨이브 시작/종료는 시작-결과 피드백이 보여야 한다. 명확한 일회성 효과는 스프라이트 시트, 반복/잔류 효과는 파티클이나 경량 절차형 효과를 우선한다.

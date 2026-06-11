@@ -96,9 +96,15 @@ namespace IL6.EditorBuild
                     File.Delete(old);
                 foreach (var old in Directory.GetFiles(repoRoot, "6IL_v*_portable.exe"))
                     File.Delete(old);
+                foreach (var old in Directory.GetDirectories(repoRoot, "6IL_v*_portable_Data"))
+                    Directory.Delete(old, recursive: true);
 
                 File.Copy(exe, dest, overwrite: true);
                 File.SetLastWriteTimeUtc(dest, DateTime.UtcNow);
+                CopyRuntimeFile(outDir, repoRoot, "UnityPlayer.dll");
+                CopyRuntimeFile(outDir, repoRoot, "UnityCrashHandler64.exe");
+                CopyRuntimeDirectory(Path.Combine(outDir, "MonoBleedingEdge"), Path.Combine(repoRoot, "MonoBleedingEdge"));
+                CopyRuntimeDirectory(Path.Combine(outDir, "IL6_Data"), Path.Combine(repoRoot, Path.GetFileNameWithoutExtension(PortableExeName) + "_Data"));
                 Debug.Log($"[BuildScript] Portable exe → {dest}");
             }
 
@@ -123,6 +129,47 @@ namespace IL6.EditorBuild
                 if (p.StartsWith("Assets/")) fallback.Add(p);
             }
             return fallback.ToArray();
+        }
+
+        private static void CopyRuntimeFile(string sourceDir, string destDir, string fileName)
+        {
+            string source = Path.Combine(sourceDir, fileName);
+            if (!File.Exists(source)) return;
+
+            string dest = Path.Combine(destDir, fileName);
+            File.Copy(source, dest, overwrite: true);
+            File.SetLastWriteTimeUtc(dest, DateTime.UtcNow);
+        }
+
+        private static void CopyRuntimeDirectory(string sourceDir, string destDir)
+        {
+            if (!Directory.Exists(sourceDir)) return;
+            if (Directory.Exists(destDir)) Directory.Delete(destDir, recursive: true);
+
+            Directory.CreateDirectory(destDir);
+            foreach (string dir in Directory.GetDirectories(sourceDir, "*", SearchOption.AllDirectories))
+            {
+                string relative = MakeRelativePath(sourceDir, dir);
+                Directory.CreateDirectory(Path.Combine(destDir, relative));
+            }
+
+            foreach (string file in Directory.GetFiles(sourceDir, "*", SearchOption.AllDirectories))
+            {
+                string relative = MakeRelativePath(sourceDir, file);
+                string dest = Path.Combine(destDir, relative);
+                string parent = Path.GetDirectoryName(dest);
+                if (!string.IsNullOrEmpty(parent)) Directory.CreateDirectory(parent);
+                File.Copy(file, dest, overwrite: true);
+            }
+        }
+
+        private static string MakeRelativePath(string root, string path)
+        {
+            string normalizedRoot = Path.GetFullPath(root).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) + Path.DirectorySeparatorChar;
+            string normalizedPath = Path.GetFullPath(path);
+            return normalizedPath.StartsWith(normalizedRoot, StringComparison.OrdinalIgnoreCase)
+                ? normalizedPath.Substring(normalizedRoot.Length)
+                : Path.GetFileName(path);
         }
     }
 }
