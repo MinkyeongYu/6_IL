@@ -242,6 +242,13 @@ namespace IL6
                     break;
             }
 
+            var discoverySprite = DiscoverySite.SpriteFor(site.RewardKind);
+            if (discoverySprite != null)
+            {
+                sr.sprite = discoverySprite;
+                sr.color = Color.white;
+            }
+
             var col = go.AddComponent<CircleCollider2D>();
             col.radius = 0.45f;
 

@@ -157,7 +157,7 @@ namespace IL6
                 {
                     Title = d.Title,
                     Detail = d.Detail,
-                    Progress = s != null ? d.Progress(s) : "",
+                    Progress = s != null && s.Resources != null ? d.Progress(s) : "",
                     Completed = done,
                 });
             }

@@ -1,239 +1,196 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ko">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>InisLand — 눈보라 마을 기획서</title>
-<style>
-  :root {
-    --bg: #0d1117; --surface: #161b22; --surface2: #21262d;
-    --border: #30363d; --text: #e6edf3; --text-dim: #8b949e;
-    --blue: #58a6ff; --green: #3fb950; --orange: #f0883e;
-    --red: #f85149; --purple: #bc8cff;
-  }
-  * { margin:0; padding:0; box-sizing:border-box; }
-  body { font-family: -apple-system,'Segoe UI','Noto Sans KR',sans-serif; background:var(--bg); color:var(--text); line-height:1.7; }
-  .hero {
-    background: linear-gradient(135deg, #0d2137 0%, #0d1117 50%, #1a0d2e 100%);
-    padding: 60px 40px 48px; text-align:center; position:relative; overflow:hidden;
-    border-bottom: 1px solid var(--border);
-  }
-  .hero::before {
-    content:''; position:absolute; inset:0;
-    background: radial-gradient(ellipse at 30% 60%, rgba(88,166,255,0.07) 0%, transparent 60%),
-                radial-gradient(ellipse at 70% 40%, rgba(188,140,255,0.05) 0%, transparent 60%);
-  }
-  .hero-label { font-size:.75rem; color:var(--text-dim); letter-spacing:.15em; text-transform:uppercase; margin-bottom:12px; position:relative; }
-  .hero h1 { font-size:2.4rem; font-weight:800; color:var(--text); position:relative; margin-bottom:10px; }
-  .hero h1 span { color:var(--blue); }
-  .hero .subtitle { font-size:1rem; color:var(--text-dim); position:relative; max-width:540px; margin:0 auto 24px; }
-  .hero .quote { font-style:italic; color:var(--purple); font-size:.9rem; margin-bottom:20px; position:relative; }
-  .badges { display:flex; flex-wrap:wrap; justify-content:center; gap:8px; position:relative; }
-  .badge { padding:4px 12px; border-radius:20px; font-size:.78rem; font-weight:500; border:1px solid; }
-  .badge-blue { background:rgba(88,166,255,.1); color:var(--blue); border-color:rgba(88,166,255,.3); }
-  .badge-green { background:rgba(63,185,80,.1); color:var(--green); border-color:rgba(63,185,80,.3); }
-  .badge-purple { background:rgba(188,140,255,.1); color:var(--purple); border-color:rgba(188,140,255,.3); }
-  .badge-orange { background:rgba(240,136,62,.1); color:var(--orange); border-color:rgba(240,136,62,.3); }
-
-  .preview-wrap { max-width:900px; margin:28px auto 0; position:relative; padding:0 24px; }
-  .preview-wrap img { width:100%; border-radius:10px; border:1px solid var(--border); display:block; }
-
-  .container { max-width:900px; margin:0 auto; padding:40px 24px; }
-  .section { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:28px; margin-bottom:20px; }
-  .section h2 { font-size:1.15rem; font-weight:700; margin-bottom:16px; padding-bottom:12px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:8px; }
-  .section h3 { font-size:.95rem; font-weight:600; color:var(--blue); margin:16px 0 8px; }
-  p { font-size:.9rem; color:var(--text-dim); margin-bottom:10px; }
-  ul { padding-left:20px; }
-  li { font-size:.88rem; color:var(--text-dim); margin-bottom:4px; }
-  strong { color:var(--text); }
-
-  .loop-flow { display:flex; flex-direction:column; gap:0; margin:12px 0; }
-  .loop-step { background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:12px 16px; font-size:.87rem; position:relative; }
-  .loop-step + .loop-step { margin-top:6px; }
-  .loop-step .phase { font-weight:700; color:var(--blue); }
-  .loop-step .phase.night { color:var(--purple); }
-  .loop-step .phase.dawn { color:var(--orange); }
-  .loop-arrow { text-align:center; color:var(--text-dim); font-size:.8rem; padding:2px 0; }
-
-  table { width:100%; border-collapse:collapse; font-size:.85rem; margin:10px 0; }
-  th { background:var(--surface2); padding:8px 12px; text-align:left; color:var(--text-dim); font-weight:600; border-bottom:1px solid var(--border); }
-  td { padding:8px 12px; border-bottom:1px solid var(--border); color:var(--text-dim); }
-  tr:last-child td { border-bottom:none; }
-
-  .kpi-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:12px; }
-  .kpi-card { background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:14px 16px; }
-  .kpi-card .num { font-size:1.5rem; font-weight:700; color:var(--green); }
-  .kpi-card .label { font-size:.78rem; color:var(--text-dim); margin-top:2px; }
-
-  .changelog tr:first-child { background:rgba(63,185,80,.05); }
-  .footer { text-align:center; padding:24px; color:var(--text-dim); font-size:.78rem; border-top:1px solid var(--border); margin-top:8px; }
-</style>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Ini's Land 기획서</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #10151b;
+      --panel: #17212b;
+      --panel-2: #1d2a35;
+      --text: #edf4f7;
+      --muted: #aebdc5;
+      --line: #31414d;
+      --accent: #f0bf64;
+      --cool: #8fc7f0;
+      --green: #93d28c;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: "Malgun Gothic", "Apple SD Gothic Neo", system-ui, sans-serif;
+      line-height: 1.65;
+    }
+    main {
+      width: min(1120px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 36px 0 64px;
+    }
+    header {
+      padding: 28px;
+      background: linear-gradient(180deg, #1d2b36, #16202a);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+    }
+    h1, h2, h3 { margin: 0 0 14px; line-height: 1.25; }
+    h1 { font-size: clamp(32px, 4vw, 52px); letter-spacing: 0; }
+    h2 { color: var(--accent); margin-top: 32px; }
+    p { margin: 0 0 12px; }
+    code, pre { font-family: Consolas, "Courier New", monospace; }
+    pre {
+      overflow: auto;
+      background: #0c1117;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 16px;
+    }
+    .badges { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      min-height: 28px;
+      padding: 4px 10px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: #13202a;
+      color: var(--muted);
+      font-size: 14px;
+    }
+    section {
+      margin-top: 22px;
+      padding: 24px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+    }
+    ul { padding-left: 22px; margin: 0; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+      overflow: hidden;
+      border-radius: 8px;
+    }
+    th, td {
+      border: 1px solid var(--line);
+      padding: 10px 12px;
+      vertical-align: top;
+    }
+    th { background: var(--panel-2); color: var(--cool); text-align: left; }
+    tr:nth-child(even) td { background: rgba(255,255,255,0.025); }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 12px;
+    }
+    .mini {
+      padding: 14px;
+      background: #121a22;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+    }
+    .mini strong { color: var(--green); }
+  </style>
 </head>
 <body>
-
-<div class="hero">
-  <div class="hero-label">Game Design Document · 6_IL · v0.2.0</div>
-  <h1>Inis<span>Land</span> — 눈보라 마을</h1>
-  <p class="quote">"끝없는 겨울. 마지막 마을의 마지막 수호자."</p>
-  <p class="subtitle">뱀서바이벌 × 낮/밤 베이스 디펜스 × 탑다운 설원 생존</p>
-  <div class="badges">
-    <span class="badge badge-blue">⚡ Unity 2022.3 LTS</span>
-    <span class="badge badge-purple">🎮 C# Gameplay</span>
-    <span class="badge badge-green">🧭 HUD/UX Refresh</span>
-    <span class="badge badge-orange">📦 Windows Build</span>
-  </div>
-</div>
-
-<div class="preview-wrap">
-  <img src="./6IL_gameplay_preview.png" alt="플레이 미리보기">
-</div>
-
-<div class="container">
-
-  <div class="section">
-    <h2>🎯 문제 정의</h2>
-    <p>"혼자서도 짧은 세션 안에 <strong>생존과 경영 두 재미</strong>를 모두 느낄 수 있는 게임이 없다."</p>
-    <p>낮에는 설원 탐험가, 밤에는 마을 수호자 — 두 역할이 하나의 세션(15~25분) 안에서 자연스럽게 전환된다.</p>
-  </div>
-
-  <div class="section">
-    <h2>👤 페르소나</h2>
-    <p><strong>이진혁, 27세, 직장인</strong></p>
-    <ul>
-      <li>자투리 시간(20~30분)에 게임. 긴 캠페인 불가.</li>
-      <li>로그라이크/생존류 선호, 복잡한 조작은 부담.</li>
-      <li>"오늘 밤은 버텼다"는 성취감이 핵심 동기.</li>
-    </ul>
-  </div>
-
-  <div class="section">
-    <h2>🔄 코어 루프</h2>
-    <div class="loop-flow">
-      <div class="loop-step"><span class="phase">☀ 낮 (40s+)</span> — 설원 탐험 · 나무/돌/고기 채집 · 동물 사냥 · 동료 영입 · 건물 건설</div>
-      <div class="loop-arrow">↓ 저녁 — 자동 텔레포트 (플레이어+동료+펫 마을로)</div>
-      <div class="loop-step"><span class="phase night">🌙 밤 (40s+)</span> — 좀비 웨이브 격퇴 · 모닥불 방어 · 바리케이드 사수 · 25킬마다 보스 등장</div>
-      <div class="loop-arrow">↓ 새벽 — HP 전회복 · 건물 +25%HP · NPC 1명 스폰 · 자동 저장</div>
-      <div class="loop-step"><span class="phase dawn">🌅 다음 낮</span> — 레벨 업 (페이즈 길이 ×1.25), 반복</div>
+<main>
+  <header>
+    <h1>Ini's Land 기획서</h1>
+    <p>끝없는 겨울 속에서 낮에는 생존 자원을 모으고, 밤에는 마을을 지키는 설원 생존 액션 게임.</p>
+    <div class="badges">
+      <span class="badge">Unity 2022.3.62f3 LTS</span>
+      <span class="badge">C# / Unity 2D / URP</span>
+      <span class="badge">v0.2.0</span>
+      <span class="badge">6IL_v0.2.0_portable.exe</span>
     </div>
-  </div>
+  </header>
 
-  <div class="section">
-    <h2>🏗️ 건물 시스템 (10종)</h2>
+  <section>
+    <h2>코어 루프</h2>
+    <pre>낮 40초+ : 탐험, 채집, 사냥, 동료 영입, 건설/업그레이드
+저녁    : 플레이어와 동료 귀환, 마을 방어 준비
+밤 40초+: 좀비 웨이브, 혹한, 시야 제한, 방어
+새벽    : HP 회복, 건물 수리, NPC 스폰, 저장</pre>
+  </section>
+
+  <section>
+    <h2>구현된 주요 시스템</h2>
+    <div class="grid">
+      <div class="mini"><strong>전투</strong><br>근접/원거리 무기 전환, 레벨업 선택지, 좀비 웨이브, 보스형 적.</div>
+      <div class="mini"><strong>생존</strong><br>낮/밤, 밤 시야 마스크, 모닥불/화로/대장간 온도 오라, 눈보라.</div>
+      <div class="mini"><strong>동료</strong><br>영입 연출, 영입 중 일시정지, 이름/특성/장비, 적은 동료 수 스폰 보정.</div>
+      <div class="mini"><strong>마을</strong><br>18종 건물, 레벨 5 업그레이드, 울타리 확장/일괄 수리, 중기 목표.</div>
+      <div class="mini"><strong>농사</strong><br>감자/순무/밀, 성장/수확/시듦 상태, 저온 생존률과 수확량 차등.</div>
+      <div class="mini"><strong>인구</strong><br>식량 소비 증가, 부부/임신/7일째 출산, 아이 동료.</div>
+    </div>
+  </section>
+
+  <section>
+    <h2>건물 목록</h2>
+    <p>현재 Unity 구현 기준 건물은 18종이며, 모든 건물은 레벨 5까지 업그레이드된다.</p>
     <table>
-      <thead><tr><th>건물</th><th>역할</th><th>HP</th><th>비용</th></tr></thead>
+      <thead><tr><th>건물</th><th>역할</th><th>기본 비용</th></tr></thead>
       <tbody>
-        <tr><td>🔥 Campfire</td><td>좀비 화상 오라(2.5u DPS 6) + 마을 온도 유지</td><td>280</td><td>5W</td></tr>
-        <tr><td>🏠 House</td><td>인구 한도 +4 (동료 영입 필수)</td><td>140</td><td>6W</td></tr>
-        <tr><td>🥕 Fence</td><td>외곽 차단 (마을 크기에 따라 자동 확장)</td><td>14</td><td>1W</td></tr>
-        <tr><td>📦 Storage</td><td>자원 캡 +50, 농장 한도 +1</td><td>200</td><td>8W</td></tr>
-        <tr><td>🌾 Farm</td><td>식량 생산 (노인 워커 +5 보너스)</td><td>90</td><td>6W</td></tr>
-        <tr><td>🏹 Watchtower</td><td>야간 자동 사격 + 동료 데미지 ×1.5</td><td>160</td><td>8W+4S</td></tr>
+        <tr><td>Campfire</td><td>초반 핵심 열원, 밤 시야와 좀비 화상 오라 제공</td><td>5W</td></tr>
+        <tr><td>Brazier</td><td>상위 열원, 더 넓은 온도/시야 지원</td><td>12W + 4S</td></tr>
+        <tr><td>Blacksmith</td><td>동료 무기/도구 강화, 온도 상승 효과</td><td>10W + 8S</td></tr>
+        <tr><td>Fence</td><td>마을 외곽 방어선, 건물 수에 맞춰 자동 확장</td><td>1W</td></tr>
+        <tr><td>Barricade</td><td>임시 방어물, 전투 구역 차단</td><td>5W</td></tr>
+        <tr><td>House</td><td>인구 수용 한도 증가</td><td>6W</td></tr>
+        <tr><td>Storage</td><td>일반 자원 저장 한도 증가</td><td>8W</td></tr>
+        <tr><td>FoodStorage</td><td>식량 저장 한도 증가</td><td>10W + 3S</td></tr>
+        <tr><td>Farm</td><td>감자/순무/밀 재배, 성장/수확/시듦 상태 표시</td><td>6W</td></tr>
+        <tr><td>SeedStorage</td><td>고급 작물 해금과 작물 수확 효율 증가</td><td>8W + 2S</td></tr>
+        <tr><td>Watchtower</td><td>야간 자동 사격</td><td>8W + 4S</td></tr>
+        <tr><td>LookoutPost</td><td>밤 시야 반경 증가</td><td>9W + 6S</td></tr>
+        <tr><td>Infirmary</td><td>주변 동료 회복</td><td>7W</td></tr>
+        <tr><td>HuntersHut</td><td>동물/고기 확보 루트 강화</td><td>8W</td></tr>
+        <tr><td>Carpenter</td><td>울타리 HP 보정과 수리 효율 강화</td><td>12W + 6S</td></tr>
+        <tr><td>TrainingCamp</td><td>동료 전투 효율 강화</td><td>12W + 5S</td></tr>
+        <tr><td>Sawmill</td><td>목재 채집 효율 증가</td><td>14W + 8S</td></tr>
+        <tr><td>Church</td><td>사기 하락 확률 완화, 높은 사기 상태의 효율 보너스</td><td>12W + 6S</td></tr>
       </tbody>
     </table>
-  </div>
+  </section>
 
-  <div class="section">
-    <h2>👥 동료 / NPC 아키타입</h2>
+  <section>
+    <h2>작물 시스템</h2>
     <table>
-      <thead><tr><th>타입</th><th>특성</th></tr></thead>
+      <thead><tr><th>작물</th><th>특징</th></tr></thead>
       <tbody>
-        <tr><td>아이</td><td>이동 빠름 · 전투력 낮음 · 비전투 역할</td></tr>
-        <tr><td>노인</td><td>이동 느림 · 농장 수확 +5 보너스</td></tr>
-        <tr><td>사냥꾼</td><td>원거리 공격 특화</td></tr>
-        <tr><td>치유사</td><td>주변 아군 HP 회복</td></tr>
-        <tr><td>무사</td><td>근접 전투 특화 · 바리케이드 방어</td></tr>
+        <tr><td>Potato</td><td>기본 작물. 추위에 비교적 안정적이고 평균 수확량이 좋다.</td></tr>
+        <tr><td>Turnip</td><td>저온 생존률이 높지만 수확량이 낮다.</td></tr>
+        <tr><td>Wheat</td><td>수확량이 높지만 추위와 눈보라에 취약하다.</td></tr>
       </tbody>
     </table>
-  </div>
+  </section>
 
-  <div class="section">
-    <h2>📊 성공 KPI</h2>
-    <div class="mid-goals">
-      <h3>Mid Goals</h3>
-      <ul>
-        <li><strong>Food Security</strong>: 2 farms, food storage, and 35 food. Reward: food cap and emergency food.</li>
-        <li><strong>Fortified Ring</strong>: 14 fences, carpenter, and a tower/lookout. Reward: wood and building repairs.</li>
-        <li><strong>Warm Core</strong>: campfire Lv.2, brazier, and blacksmith. Reward: stone and frostbloom.</li>
-        <li><strong>Hunting Route</strong>: hunters hut, Day 3, and 20 meat. Reward: meat and wood.</li>
-        <li><strong>Seasoned Party</strong>: training camp, 6 companions, and 10 total companion levels. Reward: companion XP.</li>
-      </ul>
-    </div>
-    <div class="kpi-grid">
-      <div class="kpi-card"><div class="num">50%</div><div class="label">Day 3 생존율 목표</div></div>
-      <div class="kpi-card"><div class="num">15~25분</div><div class="label">목표 세션 길이</div></div>
-      <div class="kpi-card"><div class="num">7/10</div><div class="label">밤 격퇴 성취감 설문 목표</div></div>
-      <div class="kpi-card"><div class="num">72</div><div class="label">Vitest 단위 테스트 수</div></div>
-    </div>
-  </div>
-
-  <div class="section">
-    <h2>🛠️ 기술 스택</h2>
+  <section>
+    <h2>리소스 적용 기준</h2>
     <ul>
-      <li><strong>엔진</strong>: Unity 2022.3.62f3 LTS</li>
-      <li><strong>언어</strong>: C# gameplay scripts, Unity scenes, prefabs, ProjectSettings</li>
-      <li><strong>렌더링</strong>: Unity 2D + Universal Render Pipeline</li>
-      <li><strong>빌드</strong>: <code>IL6.EditorBuild.BuildScript.BuildWindows</code> → <code>Build/Windows/IL6.exe</code></li>
-      <li><strong>공유 실행파일</strong>: <code>6IL_v0.2.0_portable.exe</code></li>
+      <li>Unity 런타임 리소스는 <code>Assets/Resources/</code>와 Unity import <code>.meta</code>를 기준으로 관리한다.</li>
+      <li>이미 프로젝트에 들어온 외부/승인 리소스를 우선 적용한다.</li>
+      <li>PowerShell <code>System.Drawing</code>으로 만든 저품질 절차형 아트는 새 게임 리소스로 사용하지 않는다.</li>
+      <li>스프라이트가 없을 경우 단색 fallback만 남기지 않고, 가능한 기존 HUD/작물/프랍 아이콘을 재사용한다.</li>
     </ul>
-  </div>
+  </section>
 
-  <div class="section">
-    <h2>📝 변경 이력</h2>
-    <ul>
-      <li><strong>작물 상태 비주얼</strong>: 감자/순무/밀 밭은 성장 중, 수확 가능, 시든 상태를 적용된 HUD 작물 스프라이트와 색상으로 표시한다. 시든 밭은 컨텍스트 액션으로 정리할 수 있다.</li>
-      <li><strong>대장간 장비 액션</strong>: 대장간 근처에서 동료에게 검, 석궁, 두꺼운 털옷, 도구 키트를 제작해 지급할 수 있다. 비전투 동료의 도구 키트는 채집 보조 효율을 높인다.</li>
-    </ul>
-    <table class="changelog">
+  <section>
+    <h2>최신 변경 이력</h2>
+    <table>
       <thead><tr><th>버전</th><th>날짜</th><th>내용</th></tr></thead>
       <tbody>
-        <tr><td>v0.2.0-build-refresh</td><td>2026-06-05</td><td>Unity 단독 개발 기준, 프로젝트 넘버링 실행파일, HUD 동일 레이어 비겹침 검증 절차 반영</td></tr>
-        <tr><td>v0.2.0</td><td>2026-05-29</td><td>UX 온보딩 씬 추가 (낮/밤 페이즈 2슬라이드 설명)</td></tr>
-        <tr><td>v0.1.0</td><td>2026-05-20</td><td>ECS 기반 프로토타입 — 낮/밤 사이클, 자원 수집, 좀비 웨이브</td></tr>
+        <tr><td>v0.2.0-parity</td><td>2026-06-11</td><td>기획서의 Unity 기준 정리, 발견물/건물 식별 리소스 연결, 누락 프랍 fallback 정리</td></tr>
+        <tr><td>v0.2.0-crops</td><td>2026-06-10</td><td>작물 선택, 성장/수확/시듦 상태, 저온 생존률/수확량 차등, 대장간 동료 장비 액션</td></tr>
+        <tr><td>v0.2.0-village</td><td>2026-06-08</td><td>교회, 건물 다양화, 중기 목표, 울타리 수리/확장, 동료 스폰 보정</td></tr>
+        <tr><td>v0.2.0-build-refresh</td><td>2026-06-05</td><td>Unity 단독 개발 기준과 프로젝트 번호 기반 Windows 실행파일 정리</td></tr>
       </tbody>
     </table>
-  </div>
-
-  <div class="section">
-    <h2>✅ 최신 빌드/UX/VFX 확인 기준</h2>
-    <ul>
-      <li><strong>권위 빌드 경로</strong>: Unity 빌드가 <code>Build/Windows/IL6.exe</code>를 만들고 루트에는 <code>6IL_v0.2.0_portable.exe</code>와 실행에 필요한 <code>6IL_v0.2.0_portable_Data/</code>, <code>UnityPlayer.dll</code>, <code>MonoBleedingEdge/</code> 런타임 파일을 함께 배치한다.</li>
-      <li><strong>실행파일 최신성</strong>: 소스, 설정, 기획서 변경 이후 마지막에 한 번만 Windows 빌드를 수행하고 수정 시간이 변경 파일보다 최신인지 확인한다.</li>
-      <li><strong>HUD UX 규칙</strong>: 같은 레이어의 HUD 요소는 서로 겹치지 않게 배치하고, 자원/체력/목표/선택 피드백은 즉시 읽히게 한다.</li>
-      <li><strong>VFX 기준</strong>: 공격, 피격, 채집, 건설, 동료 합류, 아이템 획득, 웨이브 시작/종료에는 시작-결과 피드백을 둔다.</li>
-      <li><strong>공유 이미지</strong>: 아래 리소스 미리보기 이미지는 문서와 <code>assets/</code> 폴더를 함께 공유했을 때 열리는 상대 경로를 유지한다.</li>
-    </ul>
-  </div>
-
-</div>
-
-<div class="footer">InisLand — 눈보라 마을 기획서 v0.2.0-build-refresh · 2026-06-05 · 오진우</div>
-<!-- APPLIED_RESOURCES_START -->
-<section class="applied-resources">
-  <h2>적용 리소스</h2>
-  <p>자동 갱신: 2026-06-04. 코드, 씬, 프리팹, 설정 파일에서 참조가 확인된 리소스 기준입니다.</p>
-  <ul>
-    <li><strong>이미지/스프라이트</strong>: <code>assets/art/Sprites/Player/player_survivor_axe.png</code>, <code>assets/art/Sprites/Player/player_survivor_bow.png</code></li>
-    <li><strong>Unity/프리팹</strong>: <code>assets/UniversalRenderPipelineGlobalSettings.asset</code></li>
-  </ul>
-  <p><strong>메모:</strong></p><ul><li>6_IL은 Unity 프로젝트 기준으로 Assets/ 씬, 프리팹, C# 참조를 우선 반영합니다.</li><li>Unity 기준 적용 리소스만 유지하며, 웹 프로토타입용 <code>public/</code> 리소스는 제외했습니다.</li></ul>
-</section>
-<!-- APPLIED_RESOURCES_END -->
-
-<!-- RESOURCE_PREVIEWS_START -->
-<section class="resource-previews">
-  <h2>공유용 이미지 미리보기</h2>
-  <p>자동 갱신: 2026-06-04. 공유 시 문서와 함께 아래 이미지 경로가 포함되어야 합니다.</p>
-  <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:flex-start;">
-<figure style="margin:12px 0;padding:12px;border:1px solid #e5e7eb;border-radius:8px;background:#fff;">
-  <img src="../assets/art/Sprites/Player/player_survivor_axe.png" alt="6_IL player_survivor_axe" style="max-width:220px;max-height:160px;width:auto;height:auto;object-fit:contain;display:block;" />
-  <figcaption style="margin-top:8px;font-size:13px;color:#4b5563;"><code>assets/art/Sprites/Player/player_survivor_axe.png</code></figcaption>
-</figure>
-<figure style="margin:12px 0;padding:12px;border:1px solid #e5e7eb;border-radius:8px;background:#fff;">
-  <img src="../assets/art/Sprites/Player/player_survivor_bow.png" alt="6_IL player_survivor_bow" style="max-width:220px;max-height:160px;width:auto;height:auto;object-fit:contain;display:block;" />
-  <figcaption style="margin-top:8px;font-size:13px;color:#4b5563;"><code>assets/art/Sprites/Player/player_survivor_bow.png</code></figcaption>
-</figure>
-  </div>
-</section>
-<!-- RESOURCE_PREVIEWS_END -->
+  </section>
+</main>
 </body>
 </html>

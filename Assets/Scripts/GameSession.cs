@@ -25,13 +25,13 @@ namespace IL6
             Instance = this;
             DontDestroyOnLoad(gameObject);
 
+            Resources = new ResourceStore();
+            Cycle = new DayNightController(BalanceConfig.Instance);
+
             if (GetComponent<AchievementManager>() == null)
                 gameObject.AddComponent<AchievementManager>();
             if (GetComponent<SettlementGoalManager>() == null)
                 gameObject.AddComponent<SettlementGoalManager>();
-
-            Resources = new ResourceStore();
-            Cycle = new DayNightController(BalanceConfig.Instance);
 
             // 시작 자원 (세이브가 없을 때)
             var b = BalanceConfig.Instance;

@@ -27,5 +27,10 @@ namespace IL6
             ResourceKind.Frostbloom => new Color(0.7f, 0.85f, 1f, 0.9f),
             _ => new Color(0.9f, 0.9f, 0.9f, 0.9f),
         };
+
+        public static Sprite SpriteFor(ResourceKind kind)
+        {
+            return SpriteBank.DiscoveryByReward(kind);
+        }
     }
 }

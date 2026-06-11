@@ -4,6 +4,11 @@ namespace IL6
 {
     public static class SpriteBank
     {
+        private static Sprite LoadQuiet(string path)
+        {
+            return Resources.Load<Sprite>($"Sprites/{path}");
+        }
+
         public static Sprite Load(string path)
         {
             var s = Resources.Load<Sprite>($"Sprites/{path}");
@@ -28,6 +33,18 @@ namespace IL6
             var s = Resources.Load<Sprite>($"UI/{path}");
             if (s == null) Debug.LogWarning($"[SpriteBank] Missing UI sprite: UI/{path}");
             return s;
+        }
+
+        private static Sprite LoadSpriteOrUi(string spritePath, string uiPath)
+        {
+            var s = LoadQuiet(spritePath);
+            if (s != null) return s;
+
+            s = Resources.Load<Sprite>($"UI/{uiPath}");
+            if (s != null) return s;
+
+            Debug.LogWarning($"[SpriteBank] Missing sprite fallback: Sprites/{spritePath} or UI/{uiPath}");
+            return null;
         }
 
         public static Sprite Deer() => Load("Animals/deer");
@@ -80,15 +97,15 @@ namespace IL6
                 || r.Contains("?띾?") || r.Contains("?몄씤");
         }
 
-        public static Sprite PineTree() => Load("Props/pine_tree");
-        public static Sprite PineTree02() => Load("Props/pine_tree_02");
-        public static Sprite PineTree03() => Load("Props/pine_tree_03");
-        public static Sprite PineTree04() => Load("Props/pine_tree_04");
-        public static Sprite BareTree() => Load("Props/bare_tree");
-        public static Sprite BareTree02() => Load("Props/bare_tree_02");
-        public static Sprite BareTree03() => Load("Props/bare_tree_03");
-        public static Sprite SnowTree01() => Load("Props/snow_tree_01");
-        public static Sprite SnowTree02() => Load("Props/snow_tree_02");
+        public static Sprite PineTree() => LoadSpriteOrUi("Props/pine_tree", "hud/hud-wood");
+        public static Sprite PineTree02() => LoadSpriteOrUi("Props/pine_tree_02", "hud/hud-wood");
+        public static Sprite PineTree03() => LoadSpriteOrUi("Props/pine_tree_03", "hud/hud-wood");
+        public static Sprite PineTree04() => LoadSpriteOrUi("Props/pine_tree_04", "hud/hud-wood");
+        public static Sprite BareTree() => LoadSpriteOrUi("Props/bare_tree", "hud/hud-wood");
+        public static Sprite BareTree02() => LoadSpriteOrUi("Props/bare_tree_02", "hud/hud-wood");
+        public static Sprite BareTree03() => LoadSpriteOrUi("Props/bare_tree_03", "hud/hud-wood");
+        public static Sprite SnowTree01() => LoadSpriteOrUi("Props/snow_tree_01", "hud/hud-wood");
+        public static Sprite SnowTree02() => LoadSpriteOrUi("Props/snow_tree_02", "hud/hud-wood");
 
         public static Sprite TreeVariant(int variant)
         {
@@ -106,48 +123,70 @@ namespace IL6
             }
         }
 
-        public static Sprite SnowRocks() => Load("Props/snow_rocks");
-        public static Sprite SmallRocks() => Load("Props/small_rocks");
-        public static Sprite Stump() => Load("Props/stump");
-        public static Sprite SnowBush() => Load("Props/snow_bush");
-        public static Sprite Logs() => Load("Props/logs");
+        public static Sprite SnowRocks() => LoadSpriteOrUi("Props/snow_rocks", "hud/hud-stone");
+        public static Sprite SmallRocks() => LoadSpriteOrUi("Props/small_rocks", "hud/hud-stone");
+        public static Sprite Stump() => LoadSpriteOrUi("Props/stump", "hud/hud-wood");
+        public static Sprite SnowBush() => LoadSpriteOrUi("Props/snow_bush", "hud/hud-wood");
+        public static Sprite Logs() => LoadSpriteOrUi("Props/logs", "hud/hud-wood");
 
         public static Sprite CropPotatoIcon() => LoadUiSprite("hud/hud-crop-potato");
         public static Sprite CropTurnipIcon() => LoadUiSprite("hud/hud-crop-turnip");
         public static Sprite CropWheatIcon() => LoadUiSprite("hud/hud-crop-wheat");
         public static Sprite CropHarvestIcon() => LoadUiSprite("hud/hud-crop-harvest");
         public static Sprite FoodIcon() => LoadUiSprite("hud/hud-food");
+        public static Sprite WoodIcon() => LoadUiSprite("hud/hud-wood");
+        public static Sprite StoneIcon() => LoadUiSprite("hud/hud-stone");
+        public static Sprite MeatIcon() => LoadUiSprite("hud/hud-meat");
+        public static Sprite HomeIcon() => LoadUiSprite("hud/hud-home");
+        public static Sprite TempIcon() => LoadUiSprite("hud/hud-temp");
+        public static Sprite HpIcon() => LoadUiSprite("hud/hud-hp");
+        public static Sprite ThreatIcon() => LoadUiSprite("hud/hud-threat");
+        public static Sprite PopulationIcon() => LoadUiSprite("hud/hud-population");
         public static Sprite UpgradeIcon() => LoadUiSprite("hud/hud-upgrade");
 
-        public static Sprite Campfire() => Load("Props/campfire");
-        public static Sprite Cabin() => Load("Props/cabin");
-        public static Sprite Watchtower() => Load("Props/watchtower");
-        public static Sprite FenceVertical() => Load("Props/fence_vertical");
-        public static Sprite SnowFenceH() => Load("Props/snow_fence_h");
+        public static Sprite Campfire() => LoadSpriteOrUi("Props/campfire", "hud/hud-temp");
+        public static Sprite Cabin() => LoadSpriteOrUi("Props/cabin", "hud/hud-home");
+        public static Sprite Watchtower() => LoadSpriteOrUi("Props/watchtower", "hud/hud-threat");
+        public static Sprite FenceVertical() => LoadQuiet("Props/fence_vertical") ?? SnowFenceCenter();
+        public static Sprite SnowFenceH() => LoadQuiet("Props/snow_fence_h") ?? SnowFenceCenter();
         public static Sprite SnowFenceLeft() => LoadSubSprite("Props/Fence", "wooden_fence_Left");
         public static Sprite SnowFenceCenter() => LoadSubSprite("Props/Fence", "wooden_fence_Center");
         public static Sprite SnowFenceRight() => LoadSubSprite("Props/Fence", "wooden_fence_Right");
-        public static Sprite WoodBarricade() => Load("Props/wood_barricade");
-        public static Sprite StoneWall() => Load("Props/stone_wall");
-        public static Sprite SpikeBarricade() => Load("Props/spike_barricade");
+        public static Sprite WoodBarricade() => LoadQuiet("Props/wood_barricade") ?? SnowFenceCenter() ?? WoodIcon();
+        public static Sprite StoneWall() => LoadSpriteOrUi("Props/stone_wall", "hud/hud-stone");
+        public static Sprite SpikeBarricade() => LoadQuiet("Props/spike_barricade") ?? SnowFenceCenter() ?? ThreatIcon();
 
         public static Sprite BuildingByKind(BuildingKind k) => k switch
         {
             BuildingKind.Campfire => Campfire(),
             BuildingKind.Brazier => Campfire(),
-            BuildingKind.Blacksmith => Cabin(),
-            BuildingKind.SeedStorage => Logs(),
-            BuildingKind.Carpenter => Logs(),
+            BuildingKind.Blacksmith => TempIcon(),
+            BuildingKind.SeedStorage => CropPotatoIcon(),
+            BuildingKind.Carpenter => WoodIcon(),
             BuildingKind.TrainingCamp => WoodBarricade(),
-            BuildingKind.FoodStorage => Logs(),
+            BuildingKind.FoodStorage => FoodIcon(),
             BuildingKind.LookoutPost => Watchtower(),
-            BuildingKind.Sawmill => Logs(),
-            BuildingKind.Church => Cabin(),
+            BuildingKind.Sawmill => WoodIcon(),
+            BuildingKind.Church => HomeIcon(),
             BuildingKind.Fence => SnowFenceCenter(),
             BuildingKind.Barricade => WoodBarricade(),
             BuildingKind.Watchtower => Watchtower(),
             BuildingKind.House => Cabin(),
+            BuildingKind.Storage => Logs(),
+            BuildingKind.Farm => CropPotatoIcon(),
+            BuildingKind.Infirmary => HpIcon(),
+            BuildingKind.HuntersHut => MeatIcon(),
             _ => null,
+        };
+
+        public static Sprite DiscoveryByReward(ResourceKind kind) => kind switch
+        {
+            ResourceKind.Wood => WoodIcon(),
+            ResourceKind.Stone => StoneIcon(),
+            ResourceKind.Meat => MeatIcon(),
+            ResourceKind.Food => FoodIcon(),
+            ResourceKind.Frostbloom => UpgradeIcon(),
+            _ => UpgradeIcon(),
         };
 
         public static Sprite AnimalByName(string procName) => procName switch
